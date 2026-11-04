@@ -2,8 +2,19 @@
 # Skills apply this table. They do not invent statuses or skip a next_rule.
 # state_version 1. A different version means stop and ask the human to migrate.
 # There is no fstack CLI. Nothing in this plugin executes the table.
+# Feature state is not committed and is not pushed. Pull requests carry code only.
 
 state_version: 1
+
+storage:
+  backend: cursor-store
+  # Well-known alias for the current agent's store. Confirmed as a mount
+  # in this cloud-agent environment. Not a home directory and not a store id.
+  store_alias: /cursor/stores/self
+  # Directory created inside that store. Not the published artifacts/ folder.
+  layout: fstack/features/<name>
+  fallback: .fstack/features
+  publish: pull-requests-only
 
 feature_statuses:
   - requirements_draft
@@ -246,7 +257,7 @@ events:
     skill: implement-chunk
     chunk_from: [implementing]
     chunk_to: [needs_verify, blocked]
-    guard: FSTACK_BLOCKED or files outside allowed_files or under features/ or .fstack sets blocked and decrements attempt. Otherwise record pr, base_sha, and head_sha.
+    guard: FSTACK_BLOCKED or a change outside allowed_files sets blocked and decrements attempt. A change under .fstack or the agent store is also blocked. Otherwise record pr, base_sha, and head_sha. Do not commit or push feature state.
   - name: attach_diff
     skill: build-context
     chunk_from: [needs_verify]

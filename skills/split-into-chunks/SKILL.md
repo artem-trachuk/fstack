@@ -18,7 +18,7 @@ Write the stack. Chunk ids look like `01-slug`, in order. The first chunk's base
 
 Copy `.fstack/templates/feature/chunks/chunk.md`. The frontmatter is the only place for status, branch, base, shas, allowed files, and attempt counts. The body has spec, acceptance criteria, and out of scope. Do not add an implementer-notes section.
 
-Allowed files are concrete paths or globs. They must not include `features/`, `.fstack/`, or `.fstack-worktrees/`. One chunk at a time is the v0.1 rule.
+Allowed files are concrete paths or globs. They must not include `.fstack/` or `/cursor/stores`. One chunk at a time is the v0.1 rule.
 
 ## Steps
 

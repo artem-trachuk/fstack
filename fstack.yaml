@@ -1,16 +1,15 @@
 # fstack v0.1
-# Shareable project config. Paths are relative to this file.
-# Session model slugs go in .fstack/resolved.yaml, which is gitignored.
-# Skills follow state/transitions.yaml. This file does not store resolved slugs.
+# Shareable project config. Paths in fallback are relative to this file.
+# Feature state is not committed. Session notes go in the state root.
 
 version: "0.1"
 state_version: 1
 
-workspace: features
-
+# Feature files stay off the repository. cursor-store is the default.
+# fallback is used only when no Cursor agent store is mounted.
 state:
-  backend: git
-  branch_prefix: fstack
+  backend: cursor-store
+  fallback: .fstack/features
 
 # notify does not wait for plan approval. approve waits.
 # The default is off.

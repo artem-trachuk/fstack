@@ -22,7 +22,7 @@ You are the Cursor coding agent for this chunk. Implement it on `{{branch}}`, ba
 
 {{allowed_files}}
 
-Change only those paths. Do not commit `features/`, `.fstack/`, or `.fstack-worktrees/`.
+Change only those paths. Do not read or commit `.fstack/` or `/cursor/stores`. The spec in this prompt is the whole assignment.
 
 ## Stack
 
@@ -31,7 +31,7 @@ Change only those paths. Do not commit `features/`, `.fstack/`, or `.fstack-work
 - Existing pull request: {{pr}}
 - Previous failure summary: {{failure_summary}}
 
-If `{{pr}}` is not `(none)`, push to `{{branch}}` and update that pull request. Otherwise open one into `{{stack_base}}`. The pull request body states the chunk id, the acceptance criteria, and the stack parent.
+If `{{pr}}` is not `(none)`, push to `{{branch}}` and update that pull request. Otherwise open one into `{{stack_base}}`. The pull request body is a short summary of the code change: what behavior changed and which acceptance criteria it covers. Do not include implementer notes, advisor critiques, verify prompts, requirements, decision logs, or diffs copied from fstack state.
 
 Do not merge. Do not release.
 
@@ -39,4 +39,4 @@ If you cannot do the chunk, make no commit and end with this line:
 
 `FSTACK_BLOCKED: <reason>`
 
-Working notes, if you need them, go in the pull request body under a heading named `Implementer notes`. The verify prompt does not include that heading.
+Keep working notes in your own session. Do not put them in the pull request.

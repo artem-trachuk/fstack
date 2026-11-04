@@ -1,7 +1,6 @@
 # Resolved models
 
-setup-project writes this file to `.fstack/resolved.yaml`. It is gitignored.
-Do not copy these values into `fstack.yaml`.
+setup-project writes this file to `/cursor/stores/self/fstack/resolved.yaml` when that store is mounted, and to `.fstack/resolved.yaml` otherwise. Do not commit it. Do not copy these values into `fstack.yaml`.
 
 ```yaml
 resolved_at:

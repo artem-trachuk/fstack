@@ -1,10 +1,8 @@
-# Feature workspace
+# Feature state
 
-Per-feature state is not stored on the chunk branches.
+fstack does not commit this tree and does not push it. The only published artifacts are pull requests that contain the code change.
 
-`state.backend: git` keeps it on `fstack/<feature>/state`, in a worktree under `.fstack-worktrees/<feature>/`. Chunk branches do not contain that branch.
-
-`state.backend: local` keeps it in `.fstack/local/<feature>/`. That copy stays on one machine. setup says so.
+When `/cursor/stores/self` is mounted, the same tree lives at `fstack/features/<name>/` inside that store. This folder is the fallback used when no store is mounted. It stays on one machine.
 
 ```
 features/<name>/
@@ -23,4 +21,4 @@ features/<name>/
   diffs/<NN-slug>/a<attempt>.diff
 ```
 
-The verify prompt is built by the orchestrator. It does not include a feature directory or a pull request URL.
+A coding agent receives the chunk spec in its launch prompt. It does not read this tree from git. Pull request text is a summary of the code change. It does not include implementer notes, advisor critiques, or verify prompts.

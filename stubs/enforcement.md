@@ -4,7 +4,7 @@ These checks are specified so a later change can enforce them. v0.1 does not run
 
 ## TODO: approval record
 
-Intended behavior. On `approve_release`, write `.fstack/approvals/<feature>.yaml` and a copy on the state branch:
+Intended behavior. On `approve_release`, write `approvals/<feature>.yaml` inside the state root (the agent store, or `.fstack/` when the store is not mounted). Do not commit it and do not copy it onto a branch.
 
 ```yaml
 question_id: Q-<feature>-release

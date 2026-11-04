@@ -20,7 +20,7 @@ From a team marketplace, install **fstack** from Customize after an admin import
 
 In the product repository, with the plugin installed:
 
-1. Invoke `/setup-project`. This writes `fstack.yaml` when it is missing, copies templates to `.fstack/templates/`, and writes resolved model names to `.fstack/resolved.yaml`.
+1. Invoke `/setup-project`. This writes `fstack.yaml` when it is missing, ignores `.fstack/`, and puts feature files in the Cursor agent store when `/cursor/stores/self` is mounted. Otherwise it uses `.fstack/features/`.
 2. Invoke `/collect-requirements` and describe the feature. Confirm the requirements file when asked. This is the only way requirements collection starts.
 3. Answer the question card from gap analysis. If nothing is open, the orchestrator says so and continues.
 4. The orchestrator splits the feature into stacked chunks. Plan approval waits only when `plan_review` is `approve`. The shipped value is `notify`, so coding starts after the plan is shown.
@@ -81,7 +81,8 @@ The prompt shape the stub will someday use is unchanged: the orchestrator builds
 
 | Key | Shipped value | Meaning |
 | --- | --- | --- |
-| `state.backend` | `git` | Feature state lives on `fstack/<feature>/state` |
+| `state.backend` | `cursor-store` | Feature files live in the Cursor agent store |
+| `state.fallback` | `.fstack/features` | Used only when no store is mounted. Gitignored. Stays on one machine |
 | `plan_review` | `notify` | Show the plan and continue. `approve` waits for a yes |
 | `review.mode` | `end_of_stack` | One human review for the stack, then one release question |
 | `verify.max_failures_before_escalation` | `2` | Counted with `attempts_since_decision`, using `>=` |
@@ -117,14 +118,20 @@ If the tie-break would use the same model as the verifier, including when both a
 
 Human gates stay fixed: merge, release, and outward messages `require_approval`, and `collect_requirements` `manual_only`. setup stops when a config weakens them. Only a human quote of yes, approve, or approved counts, and only for the question id that was asked.
 
-Roles name an agent and a model. They do not list skills. The agent file is the skill list. The parent that launches a subagent passes the model from `.fstack/resolved.yaml`.
+Roles name an agent and a model. They do not list skills. The agent file is the skill list. The parent that launches a subagent passes the model from the resolved file in the state root.
 
-`implementer.runtime` ships as `cloud`. setup sets `local_worktree` in the resolved file when this session cannot start a cloud agent that opens a pull request onto a non-default base, and it tells the human. A local implementer uses its own worktree.
+`implementer.runtime` ships as `cloud`. setup sets `local_worktree` in the resolved file when this session cannot start a cloud agent that opens a pull request onto a non-default base. The implementer still gets the chunk spec in the launch prompt. setup does not create a worktree for fstack state.
 
-## Workspace
+## Where state lives
+
+`state.backend` is `cursor-store`. setup uses `/cursor/stores/self` when that path is a directory or a symlink to one. Feature files go in `fstack/features/<name>/` inside the store, not in the store's `artifacts/` directory. `artifacts/` is a separate published bucket in this environment, and fstack does not write skill outputs there.
+
+Another agent can read that tree only when it is given the store id and `/cursor/stores/<id>` is mounted for it. fstack does not grant that access. The coding agent does not need it: the chunk spec is in the launch prompt. If the mount is missing, do not wait and do not look in GitHub.
+
+When `/cursor/stores/self` is not mounted, setup says so and uses `.fstack/features/<name>/`. setup puts `.fstack/` in `.gitignore`. That copy stays on one machine. `/fstack-status` reads the store first, then this folder.
 
 ```
-features/<name>/
+fstack/features/<name>/
   feature.yaml
   requirements.md
   questions.md
@@ -140,9 +147,13 @@ features/<name>/
   diffs/<NN-slug>/a<attempt>.diff
 ```
 
-On the git backend those files live in a worktree of `fstack/<name>/state` at `.fstack-worktrees/<name>/`. Chunk branches do not contain them. The local backend uses `.fstack/local/<name>/` and stays on one machine.
+The only files fstack publishes are pull requests: a branch of code changes and a short description of that change.
 
-Chunk frontmatter is the source of truth for status, branch, allowed files, and shas. The body is the spec, the acceptance criteria, and the out-of-scope section. Implementer notes stay in the pull request, under that heading, and the verify prompt omits them.
+What this environment confirmed: `/cursor/stores/self` is the current agent's store, ordinary file tools read and write it, and a store id mounts at `/cursor/stores/<id>` on first access when the agent is authorized. What is not confirmed: that every Cursor surface mounts this path, that a later cloud-agent run remounts the same id, how long files outside `artifacts/` are kept, or a public API for sharing a store. Those gaps are stubbed as "use the mount when it is there; otherwise use the local folder; do not invent a sync step."
+
+## Workspace
+
+The tree above is the feature workspace. It is not a git branch.
 
 A chunk id is `NN-slug`. Status values and the events that change them are only those in [`state/transitions.yaml`](state/transitions.yaml).
 

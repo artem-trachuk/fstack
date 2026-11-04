@@ -7,15 +7,17 @@ description: >
 
 # Status
 
-A new chat does not remember the last turn. The feature files do.
+A new chat does not remember the last turn. The feature files do. They are not in the git repository.
 
 ## When to use
 
-The human names a feature, answers a question id, or asks where the work stands. With no slug, list every feature folder and its `feature_status`.
+The human names a feature, answers a question id, or asks where the work stands. With no slug, list every feature directory under the state root and its `feature_status`.
+
+The state root is `/cursor/stores/self/fstack/features/` when that store is mounted. Otherwise it is `.fstack/features/`. If you were given a store id and `/cursor/stores/<id>/fstack/features/` exists, use that. If the mount is missing, do not wait for it and do not look in GitHub. Say that the state stayed on the machine or agent store where the feature was started.
 
 ## Steps
 
-1. Read `feature.yaml`, `waiting_on`, the lease, and `state/transitions.yaml`. If `state_version` is not 1, stop and say it must be migrated.
+1. Read `feature.yaml` from that local or store folder, plus `waiting_on`, the lease, and `state/transitions.yaml`. If `state_version` is not 1, stop and say it must be migrated. If the folder is missing, stop. Nothing was committed.
 
 2. If the lease belongs to someone else and has not expired, report it and stop. `take_lease` requires a human quote and the new owner. The lease lasts 30 minutes. Two writers can still race. See `stubs/enforcement.md`.
 

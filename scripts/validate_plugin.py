@@ -171,6 +171,8 @@ def main() -> int:
 
     table = yaml.safe_load((ROOT / "state" / "transitions.yaml").read_text(encoding="utf-8"))
     check(table.get("state_version") == 1, "transition table state_version must be 1")
+    check(table.get("storage", {}).get("backend") == "cursor-store", "transition table must use the cursor-store backend")
+    check(table.get("storage", {}).get("fallback") == ".fstack/features", "transition table fallback must be the local folder")
     check(REQUIRED_FEATURE_STATUSES <= set(table.get("feature_statuses") or []), "feature statuses drifted")
     check(REQUIRED_CHUNK_STATUSES <= set(table.get("chunk_statuses") or []), "chunk statuses drifted")
     check(table.get("review_mode") == "end_of_stack", "review mode must be one gate for the stack")
@@ -289,7 +291,10 @@ def main() -> int:
     check("plan_review" in readme and "stubs/enforcement.md" in readme, "README must mention the plan gate and the stubs")
 
     ignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
-    check(".fstack/resolved.yaml" in ignore, "resolved models must be gitignored")
+    check(any(line.strip() == ".fstack/" for line in ignore.splitlines()), ".gitignore must ignore .fstack/")
+    for message in state_publish_errors(ROOT):
+        check(False, message)
+    check(True, "skills do not commit or push feature state")
 
     banned = scan_portable(ROOT)
     check(not banned, "; ".join(banned) if banned else "portable")
@@ -320,10 +325,16 @@ def validate_config(data: dict) -> list[str]:
     if data.get("state_version") != 1:
         errors.append("config state_version must be 1")
     workspace = data.get("workspace")
-    if not isinstance(workspace, str) or workspace.startswith(("/", "\\")) or ".." in workspace.split("/"):
-        errors.append("workspace must be a relative path")
-    if data.get("state", {}).get("backend") not in ("git", "local"):
-        errors.append("state.backend must be git or local")
+    if workspace is not None:
+        errors.append("workspace does not belong in fstack.yaml; state lives outside the repo")
+    state = data.get("state") or {}
+    if state.get("backend") != "cursor-store":
+        errors.append("state.backend must be cursor-store")
+    fallback = state.get("fallback")
+    if fallback != ".fstack/features":
+        errors.append("state.fallback must be .fstack/features")
+    if isinstance(fallback, str) and (".." in fallback.split("/") or fallback.startswith(("/", "\\"))):
+        errors.append("state.fallback must be a relative path")
     if data.get("plan_review") != "notify":
         errors.append("shipped plan_review must be notify")
     if data.get("review", {}).get("mode") != "end_of_stack":
@@ -391,6 +402,37 @@ def split_frontmatter(text: str) -> tuple[dict, str]:
     if not isinstance(loaded, dict):
         return {}, text[end + 5 :]
     return loaded, text[end + 5 :]
+
+
+def state_publish_errors(root: Path) -> list[str]:
+    """Fail when a skill or doc tells an agent to commit or push feature state."""
+    problems = []
+    paths = [root / "state" / "transitions.yaml", root / "README.md", root / "fstack.yaml"]
+    paths += list((root / "skills").glob("*/SKILL.md"))
+    paths += list((root / "templates").rglob("*.md"))
+    paths += list((root / "agents").glob("*.md"))
+    forbidden = (
+        ".fstack-worktrees",
+        "state.backend: git",
+        "orphan branch",
+    )
+    for path in paths:
+        text = path.read_text(encoding="utf-8")
+        relative = path.relative_to(root).as_posix()
+        for phrase in forbidden:
+            if phrase in text:
+                problems.append(f"{relative} still mentions {phrase}")
+        if re.search(r"fstack/<[^>\n]+>/state", text):
+            problems.append(f"{relative} still names a state branch")
+        for line in text.splitlines():
+            if not re.search(r"\bgit\s+(add|commit|push)\b", line, re.IGNORECASE):
+                continue
+            if not re.search(r"\.fstack|feature state|state branch|agent store", line, re.IGNORECASE):
+                continue
+            if re.search(r"\b(do not|never|must not|not commit|not push)\b", line, re.IGNORECASE):
+                continue
+            problems.append(f"{relative} tells an agent to publish state: {line.strip()}")
+    return problems
 
 
 def scan_portable(root: Path) -> list[str]:

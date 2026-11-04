@@ -20,7 +20,7 @@ The next rule is `release_question` or a merging rule. Stack review is already r
 
 2. Accept only a direct reply of yes, approve, or approved to that question id. Vague praise is asked again. A hedge is asked again. If `release.command` or any `verified_sha` changed since the question, do not accept the old reply. Ask again.
 
-3. Record `approve_release`. Set `feature_status: merging` and `release_state: merging`. Write the approval fields onto `feature.yaml` `release_approval`. Also write `.fstack/approvals/<feature>.yaml` as described in `stubs/enforcement.md`. Nothing reads that file yet.
+3. Record `approve_release`. Set `feature_status: merging` and `release_state: merging`. Write the approval fields onto `feature.yaml` `release_approval` in the state root. Also write `approvals/<feature>.yaml` there, as described in `stubs/enforcement.md`. Nothing reads that file yet. Do not commit it.
 
 4. For each chunk in order, by hand:
 
