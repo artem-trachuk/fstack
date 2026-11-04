@@ -269,6 +269,14 @@ def main() -> int:
     check("TODO: intended verifier" in verify_skill, "verify must keep the intended design as a TODO")
     check("not_implemented" in skill_text["pick-next-task"] and "tldr" in skill_text["pick-next-task"], "the orchestrator must relay not_implemented through tldr")
     check("accept_unverified" in skill_text["fstack-status"], "accept_unverified must be logged from fstack-status")
+    advisors_skill = skill_text["advisors"]
+    check("Buy credits or switch to a Grok model" in advisors_skill, "advisors must recognize a credit failure")
+    check("Read,Grep,Glob" in advisors_skill and "Bash" in advisors_skill, "the Claude CLI fallback must be read-only")
+    check("max_calls_per_feature" in advisors_skill and "tldr" in advisors_skill, "a CLI advisor call counts, and a total miss is told to the human")
+    check("subscription terms" in advisors_skill, "local CLI usage must name the user's subscription terms")
+    setup_skill = skill_text["setup-project"]
+    check("auth status" in setup_skill and "Do not print or store" in setup_skill, "setup detects the CLI without recording tokens")
+    check("subscription" in (ROOT / "README.md").read_text(encoding="utf-8"), "README must mention local CLI subscription terms")
     check("not_implemented" in {rule.get("id") for rule in table.get("next_rules") or []}, "the state table must wait on not_implemented")
     check("awaiting_verification_decision" in (by_name["apply_verdict"].get("chunk_to") or []), "apply_verdict must not treat not_implemented as verified")
     gap = skill_text["gap-analysis"]
@@ -351,6 +359,16 @@ def validate_config(data: dict) -> list[str]:
         errors.append("advisor cap drifted")
     if (advisors.get("reserve") or {}).get("verify_tiebreak") != 2:
         errors.append("tie-break reserve must be 2")
+    fallback = advisors.get("fallback")
+    if not isinstance(fallback, list) or not fallback or not isinstance(fallback[0], dict):
+        errors.append("advisors.fallback must list at least one local runtime")
+    else:
+        first = fallback[0]
+        command = str(first.get("command") or "")
+        if first.get("runtime") != "claude-cli" or command != "claude" or first.get("model") != "opus" or first.get("enabled") is not True:
+            errors.append("shipped advisors.fallback must enable the Claude Code CLI for opus")
+        if "/" in command or "\\" in command or command.startswith("."):
+            errors.append("advisor fallback command must be a PATH name")
     roles = data.get("roles") or {}
     for name in ("orchestrator", "verifier", "implementer"):
         role = roles.get(name)

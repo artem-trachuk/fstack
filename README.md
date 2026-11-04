@@ -104,9 +104,16 @@ advisors:
   max_calls_per_feature: 6
   reserve:
     verify_tiebreak: 2
+  fallback:
+    - runtime: claude-cli
+      command: claude
+      model: opus
+      enabled: true
 ```
 
-If the tie-break would use the same model as the verifier, including when both are `inherit`, the orchestrator skips it and asks the human.
+`verify_tiebreak.fallback` is another Cursor model to try inside Cursor. `advisors.fallback` is a local CLI used only when Cursor cannot start the advisor, for example when the account has no credits for that model. The shipped entry is the Claude Code CLI. setup checks that `claude` is on `PATH` and signed in, and it does not read or print tokens. A local CLI runs under the user's own subscription terms.
+
+If the tie-break would use the same model as the verifier, including when both are `inherit`, the orchestrator skips it and asks the human. That independence rule is not a credit failure, so it does not switch to the local CLI.
 
 Human gates stay fixed: merge, release, and outward messages `require_approval`, and `collect_requirements` `manual_only`. setup stops when a config weakens them. Only a human quote of yes, approve, or approved counts, and only for the question id that was asked.
 
@@ -124,6 +131,8 @@ features/<name>/
   plan.md
   decisions.md
   advisors.md
+  advisors/inputs/
+  advisors/outputs/
   events/<nnnn>-<event>.yaml
   chunks/<NN-slug>.md
   prompts/<NN-slug>/a<attempt>/<action>.md
@@ -150,7 +159,7 @@ A chunk id is `NN-slug`. Status values and the events that change them are only 
 | `verify` | Verifier, at the same point in the flow | Returns `not_implemented` and does not judge the chunk |
 | `build-context` | Orchestrator, before an action | Writes the per-attempt prompt |
 | `tldr` | Before a human-facing message | Short prose, verbatim decisions |
-| `advisors` | Gap analysis, split, one dispute per attempt | Read-only critique, reserved tie-break budget |
+| `advisors` | Gap analysis, split, one dispute per attempt | Read-only critique. A local CLI fallback counts toward the same cap |
 | `escalate` | Orchestrator | Stops for retry, accept, a spec change, or stop |
 | `review-stack` | Orchestrator, after every chunk is verified | Asks for review and waits |
 | `release` | Orchestrator, after review | Asks, then merges only the approved shas |

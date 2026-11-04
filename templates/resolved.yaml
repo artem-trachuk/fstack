@@ -17,6 +17,13 @@ roles:
 runtime: cloud
 runtime_note:
 fallbacks: {}
+advisor_cli:
+  - runtime: claude-cli
+    command: claude
+    model: opus
+    enabled: true
+    available: false
+    signed_in: false
 ```
 
-`inherit` means the parent Cursor model. `runtime` is `cloud` or `local_worktree`.
+`inherit` means the parent Cursor model. `runtime` is `cloud` or `local_worktree`. `advisor_cli` records whether a configured local advisor command is on `PATH` and signed in. It stores no paths and no tokens.

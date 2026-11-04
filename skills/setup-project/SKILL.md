@@ -37,7 +37,15 @@ The plugin root is the directory that contains `.cursor-plugin/plugin.json` whos
 
 7. Set `runtime` to `cloud` when this session can start a Cursor cloud agent that opens a pull request against a non-default base. Otherwise set `local_worktree` and tell the human, through the `tldr` skill, that implementers will use a separate worktree. Record the reason in `runtime_note`.
 
-8. Branch protection is not checked. Say that the check was not run. See `stubs/enforcement.md`.
+8. For each `advisors.fallback` entry, record availability in `.fstack/resolved.yaml` under `advisor_cli`. Do not rewrite `fstack.yaml`.
+
+   Skip an entry whose `enabled` is not true. The `command` must be a single name with no slash. Reject a path. Find it with `command -v` and keep only the exit status. Do not write the resolved path into the file or the chat.
+
+   For `runtime: claude-cli`, run `<command> auth status` and keep only the exit status. Exit 0 means signed in. Do not print or store the command's output. Do not read token files, environment values, or a keychain. If the status subcommand is missing, mark the entry unavailable.
+
+   Set `available` and `signed_in` from those exit statuses. A local CLI runs under the user's own subscription terms.
+
+9. Branch protection is not checked. Say that the check was not run. See `stubs/enforcement.md`.
 
 ## Events
 

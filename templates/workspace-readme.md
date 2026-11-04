@@ -14,6 +14,8 @@ features/<name>/
   plan.md
   decisions.md
   advisors.md
+  advisors/inputs/
+  advisors/outputs/
   events/<nnnn>-<event>.yaml
   chunks/<NN-slug>.md
   prompts/<NN-slug>/a<attempt>/<action>.md

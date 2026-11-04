@@ -357,7 +357,7 @@ events:
     guard: record the new default branch sha. Open chunks need restack. Verified chunks need a range-diff.
   - name: advisor_launched
     skill: advisors
-    guard: write the launched row before the call returns. Skip a duplicate artifact hash. Planner calls stop when the tie-break reserve would be eaten.
+    guard: write the launched row before the call returns. A Cursor credit or unavailable-model failure can continue to a local CLI fallback, and that CLI call counts too. Skip a duplicate artifact hash. Planner calls stop when the tie-break reserve would be eaten. If no runtime starts, log the skip and tell the human through tldr.
   - name: advisor_finished
     skill: advisors
     guard: update the launched row. A planner failure does not stop the feature.

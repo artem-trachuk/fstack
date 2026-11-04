@@ -60,6 +60,14 @@ advisors:
   max_calls_per_feature: 6
   reserve:
     verify_tiebreak: 2
+  # Local CLIs used only when Cursor cannot start the advisor.
+  # command is a name on PATH, never a filesystem path.
+  # A local CLI runs under the user's own subscription terms.
+  fallback:
+    - runtime: claude-cli
+      command: claude
+      model: opus
+      enabled: true
 
 # Fixed policy. setup-project stops if a value differs. The validator checks the same.
 human_gates:
