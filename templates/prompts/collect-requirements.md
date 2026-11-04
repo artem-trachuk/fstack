@@ -1,7 +1,6 @@
 # Prompt: collect-requirements
 
 Feature: {{feature}}
-Workspace: {{feature_dir}}
 
 Follow the fstack skill `collect-requirements`. The human invoked it.
 
@@ -9,6 +8,6 @@ Follow the fstack skill `collect-requirements`. The human invoked it.
 
 {{requirements}}
 
-## Still open
+## Open questions
 
 {{open_questions}}

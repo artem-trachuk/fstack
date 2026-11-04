@@ -2,12 +2,4 @@
 
 Status: open
 
-One question per section. Leave Answer empty until the human replies.
-
-## Q1
-
-Why this is open:
-
-What would answer it:
-
-Answer:
+No questions yet. When gap analysis finds nothing open, record `no_open_questions` and do not invent a blank question.

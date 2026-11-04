@@ -1,11 +1,10 @@
 # Prompt: implement-chunk
 
 Feature: {{feature}}
-Workspace: {{feature_dir}}
 Chunk: {{chunk_id}} {{chunk_title}}
 Attempt: {{attempt}}
 
-You are the Cursor coding agent for this chunk. Implement it. Open a stacked pull request. Stop.
+You are the Cursor coding agent for this chunk. Implement it on `{{branch}}`, based on `{{stack_base}}`. Then stop.
 
 ## Spec
 
@@ -15,20 +14,29 @@ You are the Cursor coding agent for this chunk. Implement it. Open a stacked pul
 
 {{acceptance_criteria}}
 
+## Out of scope
+
+{{out_of_scope}}
+
 ## Allowed files
 
 {{allowed_files}}
 
-Change only those paths. When the spec needs another path, stop and say so in the pull request body. Do not widen the chunk yourself.
+Change only those paths. Do not commit `features/`, `.fstack/`, or `.fstack-worktrees/`.
 
 ## Stack
 
-- Base branch: {{stack_base}}
-- Branch to push: {{branch}}
-- Previous failure, when this is a retry: {{failure_summary}}
+- Base: {{stack_base}}
+- Branch: {{branch}}
+- Existing pull request: {{pr}}
+- Previous failure summary: {{failure_summary}}
 
-Commit on `{{branch}}`, based on `{{stack_base}}`. Open a pull request into `{{stack_base}}`. The pull request body states the chunk id, the acceptance criteria, and the stack parent.
+If `{{pr}}` is not `(none)`, push to `{{branch}}` and update that pull request. Otherwise open one into `{{stack_base}}`. The pull request body states the chunk id, the acceptance criteria, and the stack parent.
 
-Do not merge the pull request. Do not release. Do not commit the feature workspace, and do not edit files under `verification/`.
+Do not merge. Do not release.
 
-The orchestrator owns the chunk file. If you need working notes, put them in the pull request body under a heading named `Implementer notes`. The verify prompt does not include that heading.
+If you cannot do the chunk, make no commit and end with this line:
+
+`FSTACK_BLOCKED: <reason>`
+
+Working notes, if you need them, go in the pull request body under a heading named `Implementer notes`. The verify prompt does not include that heading.

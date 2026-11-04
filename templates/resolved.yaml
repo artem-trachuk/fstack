@@ -1,0 +1,22 @@
+# Resolved models
+
+setup-project writes this file to `.fstack/resolved.yaml`. It is gitignored.
+Do not copy these values into `fstack.yaml`.
+
+```yaml
+resolved_at:
+source:
+plugin_version:
+models:
+  opus: inherit
+  argon: inherit
+roles:
+  orchestrator: inherit
+  verifier: inherit
+  implementer: inherit
+runtime: cloud
+runtime_note:
+fallbacks: {}
+```
+
+`inherit` means the parent Cursor model. `runtime` is `cloud` or `local_worktree`.

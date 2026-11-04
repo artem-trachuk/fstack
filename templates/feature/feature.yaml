@@ -1,0 +1,21 @@
+---
+state_version: 1
+slug: {{feature}}
+feature_status: requirements_draft
+requirements_status: draft
+questions_status: open
+waiting_on:
+release_state:
+release_approval:
+review_approval:
+default_branch:
+default_branch_sha:
+handoff_failures: 0
+lease:
+  owner:
+  expires_at:
+---
+
+# {{feature}}
+
+Machine fields live in the frontmatter. The transition table is `state/transitions.yaml`.

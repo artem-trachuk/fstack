@@ -1,52 +1,43 @@
 ---
 name: split-into-chunks
 description: >
-  Turn a feature with answered questions into small stacked chunks a verifier can check.
-  Use when questions.md is answered and plan.md does not yet list the chunks.
-  Runs the planner_review advisor on the draft plan, then hands off to pick-next-task.
+  Turn a feature with settled questions into stacked chunks.
+  Use when feature_status is ready_to_plan and the plan has no chunks, or when the human changes scope before implementation starts.
+  Follows plan_review from fstack.yaml. The default notify does not wait for plan approval.
 ---
 
 # Split into chunks
 
-Turn the feature into a stack of small chunks. Each chunk is one branch, one pull request, and one verification.
+Write the stack. Chunk ids look like `01-slug`, in order. The first chunk's base is the default branch. Each later chunk's base is the previous chunk's branch `fstack/<feature>/<chunk-id>`.
 
 ## When to use
 
-`questions.md` has status `answered`, and the plan does not yet name the chunks. Use it again when the human changes scope and the chunk list has to be rewritten before the next implementation.
+`questions_status` is `answered` or `none`, and no chunk has left `planned`.
 
-## Chunk shape
+## Chunk file
 
-Each chunk file is copied from `templates/feature/chunks/chunk.md` into `chunks/NN-slug.md`.
+Copy `.fstack/templates/feature/chunks/chunk.md`. The frontmatter is the only place for status, branch, base, shas, allowed files, and attempt counts. The body has spec, acceptance criteria, and out of scope. Do not add an implementer-notes section.
 
-- `NN` starts at `01` and matches stack order.
-- The first chunk depends on nothing and is based on the repository default branch.
-- Each later chunk depends on the previous chunk and is based on that chunk's branch.
-- Spec and acceptance criteria are specific enough to judge from the diff alone.
-- Allowed files are concrete paths or globs. A chunk that needs the whole repository is too big; split it.
-- Out of scope names the neighboring work this chunk will not do.
-- The Implementer notes section stays empty here. The coding agent may fill it later. Verification does not read it.
-
-One chunk at a time is the v0.1 rule. Do not plan two chunks that would be implemented in parallel.
+Allowed files are concrete paths or globs. They must not include `features/`, `.fstack/`, or `.fstack-worktrees/`. One chunk at a time is the v0.1 rule.
 
 ## Steps
 
-1. Read `requirements.md` and the answered `questions.md`. Follow `skills/build-context/SKILL.md` for `split-into-chunks`.
+1. Follow `build-context` for `split-into-chunks`.
 
-2. Write `plan.md`: summary, the stack table, risks, and a Release section. The Release section says what "push to production" means in this project. Leave the command empty when merging the approved stack is the whole release, and say that in the section.
+2. Write `plan.md`, including the Release section. Record `default_branch` and `default_branch_sha` on `feature.yaml`.
 
-3. Write the chunk files from `templates/feature/chunks/chunk.md`. Fill the id, title, spec, acceptance criteria, out of scope, and allowed files. Set `depends_on`, `base`, and status `planned`. Leave Implementer notes empty. The orchestrator owns these files. The coding agent does not commit the feature workspace.
+3. Record `save_plan`.
 
-4. Follow `skills/advisors/SKILL.md` for `planner_review` on the plan and the chunk specs. Apply a critique that makes a chunk smaller, testable, or correctly ordered. Record the call.
+   When `plan_review` is `notify`, set `feature_status: building`. Tell the human the chunk list through `tldr`, then continue.
 
-5. Follow `skills/tldr/SKILL.md` and show the human the chunk list: id, title, and what each one proves. The human reviews the pull requests before release. If the human interrupts with a plan change before the handoff, revise the plan and run this skill again. Otherwise follow `pick-next-task`.
+   When `plan_review` is `approve`, set `feature_status: awaiting_plan_approval` and `waiting_on` to `Q-<slug>-plan`. Send the question card and end the turn. `approve_plan` is recorded later by `fstack-status` after a direct yes or approve.
 
-## Writes
+4. Follow `advisors` for `planner_review` once for this plan text, before you treat the plan as saved. Apply a critique that makes a chunk smaller, testable, or correctly ordered. A failed call does not block the plan.
 
-- `plan.md`
-- `chunks/NN-slug.md`
-- `prompts/split-into-chunks.md`
-- `advisors.md` when the advisor ran
+## Events
+
+- `save_plan`
 
 ## Next
 
-Follow `skills/pick-next-task/SKILL.md`.
+`pick-next-task` when the status is `building`.

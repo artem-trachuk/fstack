@@ -1,2 +1,6 @@
 __pycache__/
 *.pyc
+.fstack/resolved.yaml
+.fstack/approvals/
+.fstack/local/
+.fstack-worktrees/

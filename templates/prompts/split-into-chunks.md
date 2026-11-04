@@ -1,9 +1,8 @@
 # Prompt: split-into-chunks
 
 Feature: {{feature}}
-Workspace: {{feature_dir}}
 
-Follow the fstack skill `split-into-chunks`. Write small stacked chunks. Each later chunk is based on the previous chunk's branch.
+Follow the fstack skill `split-into-chunks`. Chunk ids look like `01-slug`. The first base is the default branch. Each later chunk is based on the previous chunk's branch.
 
 ## Requirements
 

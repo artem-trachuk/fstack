@@ -1,42 +1,40 @@
 ---
 name: gap-analysis
 description: >
-  Find the open questions in a feature's requirements and send the human a question card.
-  Use when requirements.md exists and the human has confirmed it, and before the feature is split into chunks.
-  Stop for answers. Do not invent them, and do not start requirements collection.
+  Find open questions in confirmed requirements and send a question card.
+  Use when feature_status is requirements_confirmed, or when the human is answering an open question card.
+  Stop for answers. Do not start requirements collection.
 ---
 
 # Gap analysis
 
-Read the confirmed requirements and list what is still open. The human answers. You do not fill the gaps yourself.
+Read the confirmed requirements and list what is still open.
 
 ## When to use
 
-- `requirements.md` for the feature is confirmed.
-- `questions.md` is missing answers you need before planning.
-- The human has just answered, and you need to check whether anything is still open.
+`feature.yaml` says `requirements_status: confirmed`. If the requirements are still a draft, or the file is only the template, stop and tell the human to invoke `/collect-requirements`. Do not follow that skill yourself.
 
 ## Steps
 
-1. Read `<workspace>/<feature>/requirements.md` and `questions.md`. If the requirements file is missing, stop and tell the human to invoke `/collect-requirements`. Do not follow that skill yourself.
+1. Follow `build-context` for `gap-analysis`.
 
-2. Follow `skills/build-context/SKILL.md` for the action `gap-analysis`.
+2. A question is open when a wrong guess would change the spec, the acceptance criteria, or the scope. Record `record_questions`.
 
-3. Add one section per open question to `questions.md`. A question is open when a wrong guess would change the spec, the acceptance criteria, or the scope. Set the file status to `open` while any Answer line is empty.
+   An empty list is `no_open_questions`. Set `questions_status: none` and `feature_status: ready_to_plan`. Tell the human there is nothing to answer, and log that event. Then continue to `split-into-chunks`.
 
-4. Follow `skills/advisors/SKILL.md` for `planner_review` on the question list. Fold in a critique that names a real missing question. Record the call. The advisor does not edit files itself.
+   A non-empty list sets `questions_status: open` and `feature_status: questions_open`. Each question gets an id `Q-<slug>-<n>`. Leave answers empty.
 
-5. Follow `skills/tldr/SKILL.md` and send the question card to the human in this conversation. Then wait. Do not split the work, and do not launch a coding agent, while a question is unanswered.
+3. Follow `advisors` for `planner_review` once for this question text. A second call with the same text is a duplicate and does not count. Fold in a critique that names a real missing question. A failed advisor call does not stop you.
 
-6. When the human answers, write each answer under its question. When every answer is filled, set the status to `answered`, append a `decisions.md` row, and continue.
+4. Send the question card through `tldr`. Partial answers are allowed. Record each answer with `answer_questions` when the human replies. When any answer is still empty, keep `waiting_on` and end the turn.
 
-## Writes
+5. When every answer is filled, set `questions_status: answered` and `feature_status: ready_to_plan`.
 
-- `questions.md`
-- `prompts/gap-analysis.md`
-- `advisors.md` when the advisor ran
-- `decisions.md` when the questions are answered
+## Events
+
+- `record_questions`
+- `answer_questions`
 
 ## Next
 
-Follow `skills/split-into-chunks/SKILL.md` only after the status is `answered`.
+`split-into-chunks` after the status is `ready_to_plan`. While a question is open, stop.

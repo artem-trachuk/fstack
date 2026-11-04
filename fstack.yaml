@@ -1,55 +1,52 @@
 # fstack v0.1
-# Shareable project config. Paths are relative to the directory that contains
-# this file. Models are Cursor models. setup-project checks the short names
-# and records a resolved slug, or inherit, under models.resolved.
+# Shareable project config. Paths are relative to this file.
+# Session model slugs go in .fstack/resolved.yaml, which is gitignored.
+# Skills follow state/transitions.yaml. This file does not store resolved slugs.
 
 version: "0.1"
+state_version: 1
 
-# Per-feature state. Relative path. setup-project rejects absolute paths and "..".
 workspace: features
+
+state:
+  backend: git
+  branch_prefix: fstack
+
+# notify does not wait for plan approval. approve waits.
+# The default is off.
+plan_review: notify
+
+review:
+  mode: end_of_stack
+
+# conversation means this chat. Any other value is an outward message
+# and waits for approval of the exact text.
+notify: conversation
 
 roles:
   orchestrator:
     description: Runs the feature flow, plans the work, launches coding agents, and reports to the human.
     agent: orchestrator
     model: inherit
-    skills:
-      - setup-project
-      - gap-analysis
-      - split-into-chunks
-      - pick-next-task
-      - implement-chunk
-      - build-context
-      - tldr
-      - advisors
-      - escalate
-      - release
   verifier:
-    description: Checks each chunk against the spec and acceptance criteria, without implementer notes.
+    description: Returns a structured verdict for one chunk. Does not write feature state.
     agent: verifier
     model: inherit
-    skills:
-      - verify
-      - build-context
-      - tldr
-      - advisors
-      - escalate
   implementer:
-    description: Cursor coding agent. Implements one chunk on a branch and opens a stacked pull request.
+    description: Cursor coding agent. Implements one chunk and opens or updates a stacked pull request.
     agent: cursor-coding-agent
     model: inherit
-    skills:
-      - implement-chunk
+    runtime: cloud
 
-# Family prefixes. setup-project turns each one into a detected Cursor slug.
-# opus is Claude Opus in Cursor (Claude Opus 5.5 when that slug is present).
-# argon is Gemini Argon in Cursor (Gemini 4 Argon when that slug is present).
+# Preference order is the list order. The first detected effort wins.
+# opus is Claude Opus in Cursor. argon is Gemini Argon in Cursor.
 models:
-  opus: claude-opus-5-5
-  argon: gemini-4-argon
-  resolved: {}
-  fallbacks: {}
-  resolution: pending
+  opus:
+    match: [claude-opus-5-5, claude-opus]
+    effort: [xhigh, max, high, medium, low]
+  argon:
+    match: [gemini-4-argon, gemini-argon]
+    effort: [high, medium, low]
 
 advisors:
   planner_review:
@@ -58,8 +55,13 @@ advisors:
   verify_tiebreak:
     model: argon       # Gemini 4 Argon in Cursor
     when: [verifier-disputed]
+    fallback: [opus]
+    must_differ_from: verifier
   max_calls_per_feature: 6
+  reserve:
+    verify_tiebreak: 2
 
+# Fixed policy. setup-project stops if a value differs. The validator checks the same.
 human_gates:
   merge: require_approval
   release: require_approval
@@ -68,8 +70,8 @@ human_gates:
 
 verify:
   max_failures_before_escalation: 2
+  commands: []
 
 release:
-  # Optional command for the production update, after an approved merge.
-  # Empty means release is the merge of the stack and nothing further.
+  # Quoted in the release question. Empty means an approved release merges the stack and stops.
   command: ""

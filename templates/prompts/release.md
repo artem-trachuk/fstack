@@ -1,17 +1,24 @@
 # Prompt: release
 
 Feature: {{feature}}
-Workspace: {{feature_dir}}
 
-Follow the fstack skill `release`. Ask the human to approve the effect below. Do not merge and do not run a release command before that approval is quoted in the decision log.
+Follow the fstack skill `release`. Ask the human to approve the effect below. Do not merge and do not run a command before that approval is recorded.
 
 ## Release plan
 
 {{release_plan}}
 
+## Command
+
+{{release_command}}
+
 ## Pull requests, bottom of the stack first
 
 {{pull_requests}}
+
+## Verified shas
+
+{{shas}}
 
 ## Plan
 

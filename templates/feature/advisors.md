@@ -1,6 +1,6 @@
 # Advisor calls: {{feature}}
 
-Cap: {{max_calls}} launched calls for this feature. A skipped call does not count.
+Cap: {{max_calls}} launched calls. Reserve {{reserve}} of them for `verify_tiebreak`. A skipped call does not count. Write the row as `launched` before the call returns, then update it.
 
-| # | advisor | action | model | result |
-| --- | --- | --- | --- | --- |
+| # | advisor | action | artifact | state | note |
+| --- | --- | --- | --- | --- | --- |

@@ -1,11 +1,10 @@
 # Prompt: escalate
 
 Feature: {{feature}}
-Workspace: {{feature_dir}}
 Chunk: {{chunk_id}} {{chunk_title}}
 Attempt: {{attempt}}
 
-Follow the fstack skill `escalate`. Ask the human to unblock this or to decide. Then wait.
+Follow the fstack skill `escalate`. Ask the human to unblock this or to decide, then end the turn.
 
 ## Spec
 
@@ -15,6 +14,10 @@ Follow the fstack skill `escalate`. Ask the human to unblock this or to decide. 
 
 {{acceptance_criteria}}
 
+## Out of scope
+
+{{out_of_scope}}
+
 ## Failure summary
 
 {{failure_summary}}
@@ -22,3 +25,7 @@ Follow the fstack skill `escalate`. Ask the human to unblock this or to decide. 
 ## Pull request
 
 {{pull_requests}}
+
+## Shas
+
+{{shas}}

@@ -1,40 +1,43 @@
 ---
 name: escalate
 description: >
-  Stop a blocked chunk and ask the human to unblock it or decide.
-  Use when verification fails repeatedly, a dispute cannot be settled, or the stack cannot move.
-  Waits for the human. Does not merge, release, or widen the spec on its own.
+  Stop a blocked or capped chunk and ask the human to retry, accept, change the spec, or stop.
+  Use when the next rule is escalate_chunk, a block, a repeated handoff failure, or a same-model tie-break.
+  Waits for the human. Does not merge, release, or change the spec on its own.
 ---
 
 # Escalate
 
-The chunk stops. The human unblocks it or makes the decision. You do not pick the outcome for them.
+The chunk stops. The human chooses. Record `waiting_on` before you end the turn.
 
 ## When to use
 
-- The chunk's verify attempts have reached `verify.max_failures_before_escalation`.
-- A verdict stayed `disputed` after the tie-break, or the advisor cap blocked a tie-break.
-- `pick-next-task` found a stack that cannot move.
-- An implement handoff failed twice on the same chunk.
+- `attempts_since_decision` is greater than or equal to `verify.max_failures_before_escalation`.
+- The chunk is `blocked`. That does not use an attempt.
+- `handoff_failures` reached 2.
+- A dispute was skipped because the tie-break model matches the verifier.
+- No next rule matched.
 
 ## Steps
 
-1. Set the chunk status to `escalated` when a chunk is involved. Follow `skills/build-context/SKILL.md` for `escalate`.
+1. Set the chunk to `escalated` and `feature_status` to `escalated`. Record `escalate_chunk` with the reason, the attempt, and `handoff_failures`. Set `waiting_on` kind `escalation` and question id `Q-<slug>-<chunk-id>-unblock`.
 
-2. Append a `decisions.md` row with the blocker, the attempt count, and the options. Options are concrete. Typical pairs are: change the spec to match the behavior you observed, or keep the spec and name what the next attempt must do differently. Include "stop this feature" when that is a real option.
+2. The options are `retry`, `accept`, `change_spec`, and `stop`. `accept` means ship this sha anyway. Send them through `tldr` and end the turn.
 
-3. Follow `skills/tldr/SKILL.md`. The message starts with the chunk and the blocker, then asks the human to unblock or decide, then lists the options. Send it in this conversation.
+3. The reply is recorded by `fstack-status` as `human_decision`.
 
-4. Stop the feature flow. Do not launch another coding agent, do not start the next chunk, and do not change acceptance criteria while you wait.
+   `retry` sets `attempts_since_decision` back to 0 and returns the chunk to `failed`, or to `planned` when `attempt` is 0. It also clears `handoff_failures`.
 
-5. When the human answers, quote the answer in `decisions.md`. Apply only the option they chose. A decision to retry sets the chunk back to `failed` and returns to `skills/pick-next-task/SKILL.md`. A decision to change the spec edits the chunk's spec or acceptance criteria in place, resets `attempt` to `0`, sets status to `planned`, and returns to `pick-next-task`. A decision to stop leaves the chunk `escalated`.
+   `accept` sets `accepted_by_human`, stores the quote and the sha, and sets `marked_for_review` on later chunks. Later chunks that were already verified also lose `verified_sha` and need a range-diff or a new verify.
 
-## Writes
+   `change_spec` edits the spec or acceptance criteria, resets `attempts_since_decision`, sets the chunk to `planned`, and marks later chunks the same way.
 
-- `prompts/escalate.md`
-- chunk status
-- `decisions.md`
+   `stop` sets `feature_status: stopped`. Pull requests stay open.
+
+## Events
+
+- `escalate_chunk`
 
 ## Next
 
-Wait for the human. After a decision, `pick-next-task`.
+End the turn. `fstack-status` records the decision.

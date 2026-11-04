@@ -1,6 +1,6 @@
 # Decisions: {{feature}}
 
-The human's approvals are quoted in the approval column. A gate without a quote has not been approved.
+Generated view of `events/`. The event files are the log. One file per event, so two chunks do not share a row.
 
-| when | who | decision | approval |
-| --- | --- | --- | --- |
+| event | when | who | result | approval |
+| --- | --- | --- | --- | --- |

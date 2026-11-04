@@ -1,46 +1,41 @@
 ---
 name: implement-chunk
 description: >
-  Hand one chunk to a Cursor coding agent with its spec, stack rules, and allowed files.
-  Use when pick-next-task has selected a planned or failed chunk.
-  The orchestrator records the branch and pull request and does not implement the chunk itself.
+  Hand one chunk to a Cursor coding agent and record the agent id before waiting.
+  Use when the next rule is launch_implementer for a planned, failed, or changes_requested chunk.
+  The orchestrator does not edit product code.
 ---
 
 # Implement a chunk
 
-Hand the chunk to a Cursor coding agent. The orchestrator session does not edit product code for the chunk.
+Hand the chunk off. Do not edit product code in the orchestrator session.
 
 ## When to use
 
-`pick-next-task` selected a chunk whose status is `planned` or `failed`. Also use it when a chunk is `implementing` and the pull request was never recorded.
+The next rule is `launch_implementer`, or an implementer was launched and this session is resuming it.
 
 ## Steps
 
-1. Read the chunk file. Follow `skills/build-context/SKILL.md` for `implement-chunk`. The prompt at `prompts/implement-chunk.md` is what the coding agent receives. It carries the spec, the acceptance criteria, the allowed files, the base branch, and the branch name.
+1. Follow `build-context` for `implement-chunk`. The prompt includes the spec, acceptance criteria, out of scope, allowed files, branch, base, existing pull request, and the previous failure summary.
 
-2. Branch name is `fstack/<feature>/<chunk-id>`, lowercase. The base is the default branch for the first chunk, and the previous chunk's branch for every later chunk. Record both on the chunk file before the handoff.
+2. Read `runtime` from `.fstack/resolved.yaml`. `cloud` uses a Cursor cloud agent that can open a pull request against the chunk base. `local_worktree` uses a separate worktree at `.fstack-worktrees/impl-<chunk-id>/` so the implementer does not share the orchestrator checkout. Tell the human when setup downgraded the runtime. The model is `roles.implementer` in the resolved file. You pass that model when you launch. The agent does not switch itself.
 
-3. Set status to `implementing` and increment `attempt` when the previous attempt finished a verify cycle. The first handoff sets `attempt` to `1`.
+3. Record `agent_launched` with `agent_id` and `launched_at` before you wait. This increments `attempt`. If you stop before that write, the next session can launch a second agent.
 
-4. Start a Cursor coding agent.
+4. On resume, check that agent id and search the forge by the head branch. If the pull request exists, the prompt tells the agent to update it. If the agent is gone and there is no pull request, record `handoff_failed`. The second handoff failure escalates. Neither case increments `attempts_since_decision`.
 
-   - Use `roles.implementer.model`. `inherit` means no model override. `opus` or `argon` means the slug in `models.resolved`. When the resolution is missing, use the parent Cursor model and write that fallback on the chunk.
-   - When this session can start a Cursor cloud agent, start one with `prompts/implement-chunk.md` as its task so it can open a stacked pull request.
-   - When it cannot, start a Cursor subagent with the same prompt and the same model rule.
-   - Give the agent that prompt only. Do not attach the verify prompt, prior verifier grievances beyond the failure summary already in the prompt, or a request to merge.
+5. When the agent returns, record `agent_reported`. A final line `FSTACK_BLOCKED: <reason>`, or a change outside `allowed_files` or under `features/` or `.fstack`, sets `blocked` and decrements `attempt`. Do not send a blocked chunk to verify. Follow `escalate`.
 
-5. The coding agent's job is in the prompt: change only allowed files, commit on the chunk branch, open a pull request into the stack base, and stop. It does not merge and it does not release.
+   Otherwise store `pr`, `base_sha`, and `head_sha`, and set the chunk to `needs_verify`.
 
-6. When the agent returns, record the branch, the pull request URL, and the agent id on the chunk file. Set status to `in_review`. If the agent failed before opening a pull request, leave status at `implementing`, record the blocker, and follow `skills/escalate/SKILL.md` when you cannot repair the handoff by restating the same prompt once.
+6. Do not judge the chunk. The next rule builds the verify prompt and launches the verifier.
 
-7. Append a `decisions.md` row with the branch and the pull request URL.
+## Events
 
-## Writes
-
-- `prompts/implement-chunk.md`
-- the chunk file's status, branch, base, pull request, and attempt
-- `decisions.md`
+- `agent_launched`
+- `handoff_failed`
+- `agent_reported`
 
 ## Next
 
-Start a new verifier agent with `agents/verifier.md`. Give it `prompts/verify.md` and the diff. Do not pass `prompts/implement-chunk.md`, and do not judge the chunk in the orchestrator session. The verifier follows `skills/verify/SKILL.md`. When this session cannot start that agent, stop and tell the human the chunk is waiting for the verifier, with the path to `prompts/verify.md`.
+Return to `pick-next-task`.

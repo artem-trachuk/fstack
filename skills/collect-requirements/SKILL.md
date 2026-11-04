@@ -1,7 +1,7 @@
 ---
 name: collect-requirements
 description: >
-  Write one feature's requirements into the fstack workspace.
+  Write one feature's requirements and ask the human to confirm the file.
   Use only when the human explicitly invokes /collect-requirements.
   Never start this skill from another skill, a schedule, or a guess that a feature needs requirements.
 disable-model-invocation: true
@@ -9,39 +9,33 @@ disable-model-invocation: true
 
 # Collect requirements
 
-This skill runs only when the human invokes `/collect-requirements`. Other skills point the human here. They do not open this skill themselves.
+This skill runs only when the human invokes `/collect-requirements`.
 
 ## When to use
 
-The human typed `/collect-requirements` and wants a feature started. That invocation is the whole trigger.
+The human typed `/collect-requirements` and wants a feature started.
 
 ## Steps
 
-1. Read `fstack.yaml`. If it is missing, or `models.resolution` is not `resolved`, follow `skills/setup-project/SKILL.md`, then continue. The human already started this run.
+1. Read `fstack.yaml`. If it is missing, or `.fstack/resolved.yaml` is missing, follow `setup-project`, then continue.
 
-2. Agree a feature slug with the human: lowercase letters, digits, and hyphens. The workspace folder is `<workspace>/<slug>/` from `fstack.yaml`. When that folder already exists, ask whether to continue it or pick another slug. Do not overwrite an existing `requirements.md`.
+2. Agree a feature slug: lowercase letters, digits, and hyphens. Create the feature folder from `.fstack/templates/feature/` if it is absent. Replace `{{feature}}` and `{{max_calls}}` and `{{reserve}}`. Do not copy a blank question into `questions.md`.
 
-3. Create the folder from the plugin templates when the files are absent. Find templates from the plugin root, the directory that contains `.cursor-plugin/plugin.json` with `"name": "fstack"`. Replace `{{feature}}` with the slug and `{{max_calls}}` with `advisors.max_calls_per_feature` from `fstack.yaml`.
+   With `state.backend: git`, create the orphan branch `fstack/<slug>/state` and a worktree at `.fstack-worktrees/<slug>/`, and put the feature folder there. Do not put that folder on a chunk branch. With `state.backend: local`, use `.fstack/local/<slug>/` and tell the human the state stays on this machine.
 
-   - `requirements.md` from `templates/feature/requirements.md`
-   - `questions.md` from `templates/feature/questions.md`
-   - `plan.md` from `templates/feature/plan.md`
-   - `decisions.md` from `templates/feature/decisions.md`
-   - `advisors.md` from `templates/feature/advisors.md`
-   - `chunks/`, `prompts/`, and `verification/` as empty directories
+   If the folder already has a confirmed requirements file, ask whether to continue that feature or pick another slug.
 
-   The chunk template stays in the plugin until `split-into-chunks` writes a chunk file.
+3. Fill `requirements.md` from the human: problem, people, outcome, constraints, out of scope, and feature acceptance. Leave `feature.yaml` `requirements_status: draft` and `feature_status: requirements_draft`. Record `save_requirements` in `events/`.
 
-4. Fill `requirements.md` from what the human said: problem, people, outcome, constraints, out of scope, and feature acceptance. Where a section is still unknown, ask one concrete question and wait. Write answers into the file. Follow `skills/build-context/SKILL.md` so `prompts/collect-requirements.md` matches the latest text.
+4. Ask the human to confirm the file. The message names the file path and uses the question card `Q-<slug>-requirements`. A 120-word summary is not the thing they confirm. Follow the `tldr` skill, and keep the path and the question id verbatim. End the turn if you are waiting.
 
-5. Rewrite the requirements as a short confirmation with `skills/tldr/SKILL.md` and show it to the human. Continue only after they confirm it matches what they want. On a correction, edit the file and ask again.
+5. On a correction, edit the file and ask again. On yes, approve, or approved, set `requirements_status: confirmed` and `feature_status: requirements_confirmed`, quote them in the event, and record `confirm_requirements`.
 
-6. Append a row to `decisions.md`: the human confirmed the requirements. Quote the confirmation.
+## Events
 
-## Writes
-
-The feature folder listed above, with `requirements.md` filled in.
+- `save_requirements`
+- `confirm_requirements`
 
 ## Next
 
-Follow `skills/gap-analysis/SKILL.md`. The human already opened this feature by invoking this skill. Do not start a second feature in the same run.
+Hand the feature slug to a new orchestrator agent and stop. Do not implement product code in this chat. Tell that agent to read `state/transitions.yaml` and run gap analysis. Do not start a second feature.

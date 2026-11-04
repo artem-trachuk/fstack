@@ -1,0 +1,14 @@
+---
+description: How fstack messages to the human are written. Applies when the repository contains fstack.yaml.
+alwaysApply: true
+---
+
+# fstack messages to the human
+
+If this workspace has no `fstack.yaml`, ignore this rule.
+
+Every bot-to-human message goes through the `tldr` skill before it is sent. Question cards, escalations, review requests, release questions, and status reports all use it.
+
+Keep these verbatim, outside the short rewrite: the question id, the options, the recommended default, the impact lines, `release.command`, verified shas, and pull request URLs.
+
+`notify: conversation` delivers in this chat. Any other notify value is an outward message and waits for approval of the exact text.

@@ -1,9 +1,8 @@
 # Prompt: pick-next-task
 
 Feature: {{feature}}
-Workspace: {{feature_dir}}
 
-Follow the fstack skill `pick-next-task`. Choose one chunk, or release, or a block.
+Follow the fstack skill `pick-next-task`. Apply `next_rules` in `state/transitions.yaml` from top to bottom. Do the first match only.
 
 ## Plan
 
@@ -16,3 +15,7 @@ Follow the fstack skill `pick-next-task`. Choose one chunk, or release, or a blo
 ## Pull requests
 
 {{pull_requests}}
+
+## Shas
+
+{{shas}}

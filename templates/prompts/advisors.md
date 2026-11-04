@@ -1,11 +1,10 @@
 # Prompt: advisors
 
 Feature: {{feature}}
-Workspace: {{feature_dir}}
 Advisor: {{advisor_name}}
 Chunk: {{chunk_id}}
 
-You are a read-only fstack advisor. Return a critique of the artifact. Do not edit files. Do not open pull requests. Do not message anyone. Do not run commands that write.
+You are a read-only fstack advisor. Critique the artifact. Do not edit files, open pull requests, or message the human.
 
 ## Artifact
 
@@ -19,7 +18,7 @@ You are a read-only fstack advisor. Return a critique of the artifact. Do not ed
 
 {{plan}}
 
-## Spec under review
+## Spec
 
 {{spec}}
 
@@ -27,4 +26,8 @@ You are a read-only fstack advisor. Return a critique of the artifact. Do not ed
 
 {{acceptance_criteria}}
 
-Name what is missing, what is too big to verify as one chunk, and what would change a verdict. Keep the critique short.
+## Out of scope
+
+{{out_of_scope}}
+
+Name what is missing and what is too big to verify as one chunk.

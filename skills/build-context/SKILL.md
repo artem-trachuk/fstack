@@ -1,62 +1,39 @@
 ---
 name: build-context
 description: >
-  Write the prompt for one fstack action into the feature's prompts folder.
-  Use at the start of every action, before gap analysis, splitting, handoff, verification, advice, escalation, or release.
-  The verify prompt includes the spec, acceptance criteria, and diff source, and excludes implementer notes.
+  Write the prompt for one fstack action under prompts/<chunk-id>/a<attempt>/.
+  Use when an action is about to start, including verification and tie-break.
+  The orchestrator builds the verify prompt. The verify and tie-break prompts inline the patch and omit the feature directory.
 ---
 
 # Build context
 
-Every action gets a fresh prompt file under the feature before it runs. The prompt carries this feature's facts. The skill file carries the procedure.
+Write a fresh prompt before the action. The prompt carries this feature's facts. The skill carries the procedure. The transition table carries the legal status change.
 
 ## When to use
 
-You are about to run one of these actions: `collect-requirements`, `gap-analysis`, `split-into-chunks`, `pick-next-task`, `implement-chunk`, `verify`, `advisors`, `escalate`, `release`.
+The action is `collect-requirements`, `gap-analysis`, `split-into-chunks`, `pick-next-task`, `implement-chunk`, `verify`, `verify-tiebreak`, `advisors`, `escalate`, `review-stack`, `release`, or `fstack-status`.
 
 ## Steps
 
-1. Find the plugin root, the directory that contains `.cursor-plugin/plugin.json` with `"name": "fstack"`. Read `templates/prompts/<action>.md` from that root.
+1. Read the template from `.fstack/templates/prompts/<action>.md`. The plugin copy is the fallback before setup has copied templates.
 
-2. Fill tokens from the feature folder. Replace a missing value with `(none)`.
+2. Write `prompts/<chunk-id>/a<attempt>/<action>.md`. When the action has no chunk, use `prompts/feature/a0/<action>.md`. Replace a missing value with `(none)`.
 
-   | Token | Source |
-   | --- | --- |
-   | `{{feature}}` | feature slug |
-   | `{{feature_dir}}` | `<workspace>/<feature>` |
-   | `{{chunk_id}}` | chunk id, or `(none)` when the action has no chunk |
-   | `{{chunk_title}}` | chunk title |
-   | `{{spec}}` | the chunk Spec section |
-   | `{{acceptance_criteria}}` | the chunk Acceptance criteria section |
-   | `{{allowed_files}}` | the chunk allowed files |
-   | `{{stack_base}}` | the chunk base branch |
-   | `{{branch}}` | the chunk branch |
-   | `{{requirements}}` | `requirements.md` |
-   | `{{open_questions}}` | unanswered questions, or the answered file when the action is later than gap analysis |
-   | `{{plan}}` | `plan.md` |
-   | `{{diff_source}}` | `base...branch`, or the pull request URL when that is the diff |
-   | `{{attempt}}` | chunk attempt |
-   | `{{failure_summary}}` | latest verification failure summary, else `(none)` |
-   | `{{advisor_name}}` | advisor id when the action is `advisors` |
-   | `{{artifact}}` | path the advisor is reading |
-   | `{{release_plan}}` | the plan's Release section |
-   | `{{pull_requests}}` | stack pull requests in order |
+3. Tokens you may fill: `feature`, `chunk_id`, `chunk_title`, `attempt`, `spec`, `acceptance_criteria`, `out_of_scope`, `allowed_files`, `branch`, `stack_base`, `pr`, `diff`, `command_results`, `failure_summary`, `requirements`, `open_questions`, `plan`, `release_plan`, `pull_requests`, `shas`, `release_command`, `question_id`, `advisor_name`, `artifact`, `dispute_reason`.
 
-3. For the `verify` action, build those token values with implementer notes removed first.
+4. For `verify` and `verify-tiebreak`, build the prompt in the orchestrator session before the other agent starts.
 
-   - Drop every markdown section titled `Implementer notes`, including its body, before you fill `{{spec}}` or any other token.
-   - Do not read `prompts/implement-chunk.md` while filling the verify prompt.
-   - Do not paste the coding agent's rationale, a pull request section titled Implementer notes, or a previous implement prompt.
-   - The verify template has no slot for those notes. Do not add one.
+   Take the patch with `git diff <base_sha>...<head_sha>` and store it at `diffs/<chunk-id>/a<attempt>.diff`. Put that patch in `{{diff}}`. Do not put a pull request URL in the prompt. Do not put a feature directory or a workspace path in the prompt. Drop every section titled `Implementer notes`, including a pull request section with that heading. Run `verify.commands` in a clean checkout of `head_sha` and put the command and exit code in `{{command_results}}`.
 
-4. Write the filled prompt to `<workspace>/<feature>/prompts/<action>.md`, replacing the previous file for that action.
+   Record `attach_diff` when the patch is stored.
 
-5. Return that path to the caller. The caller follows its skill with this file as the feature context.
+5. Return the path. The caller follows its skill with this file.
 
-## Writes
+## Events
 
-`<workspace>/<feature>/prompts/<action>.md`
+- `attach_diff`
 
 ## Next
 
-Return to the skill that called you. This skill does not pick the next task.
+Return to the caller.

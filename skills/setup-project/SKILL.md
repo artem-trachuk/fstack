@@ -1,57 +1,48 @@
 ---
 name: setup-project
 description: >
-  Initialize a project for fstack and check the configured Cursor model names.
-  Use when fstack.yaml is missing, when models.resolution is pending, or when
-  the human asks to set up fstack or recheck models. Falls back to the parent
-  Cursor model when a configured family is not available in this session.
+  Initialize a project for fstack and resolve Cursor model names into .fstack/resolved.yaml.
+  Use when fstack.yaml is missing, when .fstack/resolved.yaml is missing, or when the human asks to set up fstack or recheck models.
 ---
 
 # Setup project
 
-Prepare the current project so the other fstack skills can run. Model names in the config are Cursor models. This skill checks them against the models this session can actually use.
+Prepare the project. Do not write session model slugs into `fstack.yaml`.
 
 ## When to use
 
 - The project has no `fstack.yaml`.
-- `models.resolution` is `pending` or `unresolved`.
+- `.fstack/resolved.yaml` is missing.
 - The human asks to set up fstack or to recheck models.
 
 ## Plugin root
 
-The plugin root is the directory that contains `.cursor-plugin/plugin.json` whose `name` is `fstack`. When this skill file was loaded from the plugin, that root is two directories above this file. Otherwise search the workspace and the installed Cursor plugin directories for that manifest. Use the root you found for templates. Do not hardcode a machine path or a home directory.
+The plugin root is the directory that contains `.cursor-plugin/plugin.json` whose `name` is `fstack`. Templates and `state/transitions.yaml` are read from that root, or from `.fstack/templates/` after this skill copies them. Do not hardcode a machine path.
 
 ## Steps
 
-1. If the project root has no `fstack.yaml`, copy the plugin's `fstack.yaml` there. The project root is the repository you were asked to work in.
+1. If `fstack.yaml` is missing, copy the plugin's `fstack.yaml` into the project root. If it exists, leave it. Do not rewrite it to store resolved slugs.
 
-2. Read `fstack.yaml`. Refuse to continue when `workspace` is absolute or contains `..`. The shipped value is `features`.
+2. Read `fstack.yaml`. Stop if `version` is not `0.1` or `state_version` is not `1`, and say the project must be migrated. Stop if `workspace` is absolute or contains `..`. Stop if `human_gates` differs from merge, release, and outward_messages `require_approval`, or `collect_requirements` `manual_only`. Do not silently change those keys.
 
-3. Restore human gates when someone has weakened them. Set `merge`, `release`, and `outward_messages` back to `require_approval`, and set `collect_requirements` back to `manual_only`. Tell the human which keys you restored.
+3. Copy the plugin `templates/` tree to `.fstack/templates/` and write `.fstack/install.json` with the plugin version from `.cursor-plugin/plugin.json` and `state_version: 1`. Copy `templates/workspace-readme.md` to `<workspace>/README.md` when that file is absent.
 
-4. Create the workspace directory if it is missing. Copy `templates/workspace-readme.md` from the plugin to `<workspace>/README.md` when that file is absent.
+4. Make sure `.gitignore` ignores `.fstack/resolved.yaml`, `.fstack/approvals/`, `.fstack/local/`, and `.fstack-worktrees/`. Do not ignore `.fstack/templates/`. Gitignore is not what keeps state off chunk branches. The state branch does that.
 
-5. Detect Cursor model slugs. Use the slugs this session can pass to a Cursor subagent. If Cursor exposes a models list, prefer that list. If you cannot detect any slugs, set `models.resolution` to `unresolved`, leave `models.resolved` empty, and tell the human. Do not invent a slug.
+5. Resolve models into `.fstack/resolved.yaml` using `templates/resolved.yaml`. Detect the Cursor slugs this session can pass to a subagent. If you cannot detect any, set each model to `inherit`, set `source` to `unresolved`, and say so. Do not invent a slug.
 
-6. Resolve each short name in `models` (`opus`, `argon`) and each `roles.*.model` that uses a short name or a slug.
+   For `opus` and `argon`, walk `models.<name>.match`, then walk `effort` in list order. A slug matches a prefix when it equals the prefix or starts with the prefix plus a hyphen. The first detected slug whose effort token matches the next effort in the list wins. If the family exists but no effort matches, use the first family slug and record that under `fallbacks`. If the family is missing, use `inherit` and record why.
 
-   A family prefix has no effort token. The effort tokens are `max`, `xhigh`, `high`, `medium`, and `low`. A trailing `-fast` is not part of the family. `claude-opus-5-5` is a prefix. `claude-opus-5-5-xhigh` is a full slug.
+6. Role models stay `inherit` unless `fstack.yaml` names `opus` or `argon` for that role. Resolve that short name the same way. The launcher of a subagent reads this file. Agents do not switch their own model.
 
-   - Exact slug: use it when it is in the detected set.
-   - Prefix: take detected slugs in that family. For `opus`, prefer effort `xhigh`, then the nearest available on the ladder `max`, `xhigh`, `high`, `medium`, `low`. For `argon`, prefer `high`, then the highest effort at or below `high`, then any remaining argon slug.
-   - Family missing: set the resolved value to `inherit` and record a one-line reason under `models.fallbacks`.
+7. Set `runtime` to `cloud` when this session can start a Cursor cloud agent that opens a pull request against a non-default base. Otherwise set `local_worktree` and tell the human, through the `tldr` skill, that implementers will use a separate worktree. Record the reason in `runtime_note`.
 
-   `inherit` is always valid. It means the role or advisor runs on the Cursor model of the parent chat, with no model override.
+8. Branch protection is not checked. Say that the check was not run. See `stubs/enforcement.md`.
 
-7. Write the results back into `fstack.yaml`. Keep the `advisors` block's `model` values as the short names `opus` and `argon`. Write slugs only under `models.resolved`. Set `models.resolution` to `resolved` when every short name got a slug or an explicit `inherit` fallback. Set it to `unresolved` when no slug list was available.
+## Events
 
-8. Tell the human which models resolved, and any fallback to `inherit`.
-
-## Writes
-
-- `fstack.yaml`
-- `<workspace>/README.md` when it was absent
+This skill does not record a feature event.
 
 ## Next
 
-When the human invoked `/setup-project` directly, stop. Tell them the next step is `/collect-requirements` when they want to start a feature. When `collect-requirements` or the orchestrator sent you here, return to that skill. This skill never starts requirements collection on its own.
+Stop when the human invoked `/setup-project` directly, and tell them the next step is `/collect-requirements`. When another skill sent you here, return to it. Do not start requirements collection.

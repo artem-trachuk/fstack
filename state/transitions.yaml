@@ -1,0 +1,414 @@
+# fstack state machine
+# Skills apply this table. They do not invent statuses or skip a next_rule.
+# state_version 1. A different version means stop and ask the human to migrate.
+# There is no fstack CLI. Nothing in this plugin executes the table.
+
+state_version: 1
+
+feature_statuses:
+  - requirements_draft
+  - requirements_confirmed
+  - questions_open
+  - ready_to_plan
+  - awaiting_plan_approval
+  - building
+  - awaiting_review
+  - awaiting_release
+  - merging
+  - done
+  - stopped
+  - escalated
+
+chunk_statuses:
+  - planned
+  - implementing
+  - blocked
+  - needs_verify
+  - in_review
+  - disputed
+  - failed
+  - escalated
+  - verified
+  - changes_requested
+  - merged
+  - accepted_by_human
+
+release_states:
+  - approved
+  - merging
+  - command_failed
+  - done
+
+# One human review of the whole stack, then one release question.
+# plan_review in fstack.yaml chooses whether save_plan waits.
+review_mode: end_of_stack
+
+# disputed means the verifier marked the verdict low-confidence,
+# or the implementer contested a fail with a reason.
+# One verify_tiebreak per attempt. The critique is advice.
+# The orchestrator records decide_dispute or escalates. The advisor does not.
+dispute:
+  sources: [verifier_low_confidence, implementer_contest]
+  tiebreak_per_attempt: 1
+  advisor: verify_tiebreak
+  decider: orchestrator
+
+approval:
+  accept: [yes, approve, approved]
+  direct_reply: true
+  reject_examples: [lgtm, looks good, ship it, ok, sure, go ahead]
+  hedges: [but, if, except, however]
+  who: human
+  not_accepted_from: [bot, pull_request_body, file, advisor]
+
+# Ordered. The first matching rule is the only next action.
+next_rules:
+  - id: migrate
+    when: state_version is missing or is not 1
+    action: stop
+    detail: Stop. Say that this plugin reads state_version 1 and will not guess a migration.
+  - id: lease
+    when: lease.owner is set, it is not you, and lease.expires_at is still in the future
+    action: stop
+    detail: Report the owner and the expiry. Do not write state. take_lease requires a human quote.
+  - id: stopped
+    when: feature_status is stopped
+    action: stop
+    detail: Say the feature is stopped and its pull requests stay open.
+  - id: done
+    when: feature_status is done
+    action: next_feature
+    detail: Move to the next feature whose status is not done or stopped. A new feature starts only when the human invokes /collect-requirements.
+  - id: waiting
+    when: waiting_on is set
+    action: route_reply_or_wait
+    detail: If the human is answering that question, record the matching event and clear waiting_on only when the table says so. Otherwise save nothing new and end the turn.
+  - id: draft
+    when: feature_status is requirements_draft
+    action: collect_requirements
+    detail: The human already invoked /collect-requirements. Do not open that skill yourself.
+  - id: gap
+    when: feature_status is requirements_confirmed
+    action: gap_analysis
+  - id: split
+    when: feature_status is ready_to_plan and there are no chunks
+    action: split_into_chunks
+  - id: plan_gate
+    when: feature_status is awaiting_plan_approval
+    action: wait_for_plan_approval
+    detail: Only when plan_review is approve. The default notify never enters this status.
+  - id: base_drift
+    when: the default branch sha differs from default_branch_sha and the feature is building or merging
+    action: base_moved
+    detail: Restack open branches before more implementation or merges.
+  - id: blocked
+    when: the earliest chunk in stack order is blocked
+    action: escalate_chunk
+    detail: A block does not increment attempt or attempts_since_decision.
+  - id: resume_implementer
+    when: the earliest unfinished chunk is implementing and agent_id is set
+    action: resume_agent
+    detail: Check that agent and search the forge by head branch before launching another.
+  - id: prepare_verify
+    when: the earliest unfinished chunk is needs_verify and the diff for this attempt is not attached
+    action: build_verify_prompt
+    detail: The orchestrator builds prompts/<chunk-id>/a<attempt>/verify.md from the patch, not from a pull request URL.
+  - id: launch_verifier
+    when: the earliest unfinished chunk is needs_verify and the diff is attached and verifier_agent_id is empty
+    action: launch_verifier
+    detail: Pass the verify prompt and the patch only. Record verifier_launched before waiting.
+  - id: apply_filed_verdict
+    when: a verdict file exists for this chunk, attempt, and head_sha, and the chunk is still in_review or needs_verify
+    action: apply_verdict
+    detail: Do not launch a second verifier.
+  - id: resume_verifier
+    when: the chunk is in_review and verifier_agent_id is set
+    action: resume_agent
+  - id: dispute_same_model
+    when: the chunk is disputed and the tie-break slug equals the verifier model, including when both are inherit
+    action: tiebreak_skipped
+    detail: reason same_model, then escalate to the human. Do not run the advisor.
+  - id: dispute_budget
+    when: the chunk is disputed and the tie-break reserve is already used
+    action: tiebreak_skipped
+    detail: reason budget. The orchestrator then decide_dispute or escalate_chunk.
+  - id: dispute_tiebreak
+    when: the chunk is disputed and tiebreak_for_attempt is not this attempt
+    action: launch_tiebreak
+    detail: One call. Record tiebreak_launched before waiting. The critique is not a verdict.
+  - id: dispute_decide
+    when: the chunk is disputed and the tie-break for this attempt has finished or was skipped for budget or launch_failed
+    action: decide_dispute
+    detail: pass, fail, or escalate. The orchestrator decides.
+  - id: failure_cap
+    when: the chunk is failed and attempts_since_decision is greater than or equal to verify.max_failures_before_escalation
+    action: escalate_chunk
+  - id: retry_failed
+    when: the chunk is failed and attempts_since_decision is below the cap
+    action: launch_implementer
+  - id: changes
+    when: the chunk is changes_requested
+    action: launch_implementer
+  - id: restack
+    when: a chunk that already has a branch has needs_restack
+    action: restack_chunk
+  - id: range_diff
+    when: a restacked chunk still needs reverify and range_diff is not recorded
+    action: check_range_diff
+    detail: A clean range-diff keeps the verification and updates verified_sha to the new head. A real difference returns the chunk to needs_verify.
+  - id: implement_next
+    when: the earliest planned chunk has every dependency verified, accepted_by_human, or merged
+    action: launch_implementer
+  - id: stack_review
+    when: every chunk is verified or accepted_by_human, none need restack or reverify, and review_approval is empty
+    action: open_review
+    detail: Ask the human to review the stack. End the turn. Do not ask the release question in this turn.
+  - id: release_question
+    when: feature_status is awaiting_release
+    action: open_release
+    detail: The question lists every chunk id, pull request, and verified_sha, and the exact release.command.
+  - id: sha_mismatch
+    when: feature_status is merging and a pull request head differs from verified_sha
+    action: void_release
+    detail: A changed sha voids the approval. Verify the new head. Do not merge it.
+  - id: already_merged
+    when: feature_status is merging and the forge says the pull request is already merged
+    action: merge_recorded
+    detail: Record it. Do not merge it again.
+  - id: merge_restack
+    when: feature_status is merging and a later chunk still needs restack or a range-diff after its parent merged
+    action: restack_then_range_diff
+  - id: merge_ci
+    when: feature_status is merging and ci is empty or pending or failing
+    action: check_or_wait_or_escalate
+    detail: pending waits. failing escalates. Do not roll back merges that already landed.
+  - id: merge_one
+    when: feature_status is merging and the next unverified-merged chunk has matching sha, restack, range-diff, and ci
+    action: merge_chunk
+    detail: Merge only this pull request, then record merge_recorded.
+  - id: release_command
+    when: feature_status is merging and every chunk is merged
+    action: run_release_command_or_finish
+    detail: Run release.command only when it is non-empty and still equals the approved string. An empty command finishes the release.
+  - id: stuck
+    when: no earlier rule matched
+    action: escalate_chunk
+    detail: Record why the stack cannot move.
+
+events:
+  - name: save_requirements
+    skill: collect-requirements
+    from: [requirements_draft]
+    to: [requirements_draft]
+    writes: [requirements.md, feature.yaml]
+  - name: confirm_requirements
+    skill: collect-requirements
+    from: [requirements_draft]
+    to: [requirements_confirmed]
+    guard: human quote accepts the requirements question, and the requirements text is non-empty
+  - name: record_questions
+    skill: gap-analysis
+    from: [requirements_confirmed, questions_open]
+    to: [questions_open, ready_to_plan]
+    guard: requirements_status is confirmed. An empty list is no_open_questions and moves to ready_to_plan.
+  - name: answer_questions
+    skill: fstack-status
+    from: [questions_open]
+    to: [questions_open, ready_to_plan]
+    guard: partial answers stay open. All answered moves to ready_to_plan.
+  - name: save_plan
+    skill: split-into-chunks
+    from: [ready_to_plan, awaiting_plan_approval]
+    to: [building, awaiting_plan_approval]
+    guard: plan_review approve waits. plan_review notify, the default, moves to building.
+  - name: approve_plan
+    skill: fstack-status
+    from: [awaiting_plan_approval]
+    to: [building]
+    guard: human quote accepts the plan question
+  - name: agent_launched
+    skill: implement-chunk
+    from: [building]
+    chunk_from: [planned, failed, changes_requested]
+    chunk_to: [implementing]
+    guard: record agent_id and launched_at before waiting. Increment attempt.
+  - name: handoff_failed
+    skill: implement-chunk
+    chunk_from: [implementing]
+    chunk_to: [planned, failed, escalated]
+    guard: decrement the attempt that did not start work. Increment handoff_failures. At 2, escalate.
+  - name: agent_reported
+    skill: implement-chunk
+    chunk_from: [implementing]
+    chunk_to: [needs_verify, blocked]
+    guard: FSTACK_BLOCKED or files outside allowed_files or under features/ or .fstack sets blocked and decrements attempt. Otherwise record pr, base_sha, and head_sha.
+  - name: attach_diff
+    skill: build-context
+    chunk_from: [needs_verify]
+    chunk_to: [needs_verify]
+    guard: store the patch from git diff base_sha...head_sha. Refuse a pull request URL.
+  - name: verifier_launched
+    skill: pick-next-task
+    chunk_from: [needs_verify]
+    chunk_to: [in_review]
+    guard: record verifier_agent_id before waiting. The verifier checkout is the head sha and has no feature directory.
+  - name: verdict_filed
+    skill: verify
+    chunk_from: [in_review, needs_verify]
+    chunk_to: [in_review, needs_verify]
+    guard: write the structured verdict and do not change status. The orchestrator applies it.
+  - name: apply_verdict
+    skill: pick-next-task
+    chunk_from: [in_review, needs_verify]
+    chunk_to: [verified, failed, disputed]
+    guard: high-confidence pass verifies that head_sha. high-confidence fail increments attempts_since_decision. low confidence moves to disputed and does not increment.
+  - name: contest
+    skill: fstack-status
+    chunk_from: [failed]
+    chunk_to: [disputed]
+    guard: the implementer supplied a reason. Do not increment the failure count again.
+  - name: tiebreak_launched
+    skill: advisors
+    chunk_from: [disputed]
+    chunk_to: [disputed]
+    guard: one per attempt. Record the launched advisor row first.
+  - name: tiebreak_finished
+    skill: advisors
+    chunk_from: [disputed]
+    chunk_to: [disputed]
+    guard: store the critique or the failure. A failed call does not become the verdict.
+  - name: tiebreak_skipped
+    skill: advisors
+    chunk_from: [disputed]
+    chunk_to: [disputed, escalated]
+    guard: reason is same_model, budget, or launch_failed. same_model escalates.
+  - name: decide_dispute
+    skill: pick-next-task
+    chunk_from: [disputed]
+    chunk_to: [verified, failed, escalated]
+    guard: the orchestrator chooses pass, fail, or escalate after the tie-break finishes or is skipped
+  - name: escalate_chunk
+    skill: escalate
+    chunk_to: [escalated]
+    to: [escalated]
+    guard: set waiting_on. Options are retry, accept, change_spec, and stop.
+  - name: human_decision
+    skill: fstack-status
+    from: [escalated]
+    to: [building, stopped]
+    guard: quote required. retry resets attempts_since_decision. accept stores the quote and sha and marks later chunks. change_spec resets the counter and marks later chunks. stop sets feature_status stopped.
+  - name: open_review
+    skill: review-stack
+    from: [building]
+    to: [awaiting_review]
+    guard: every chunk is verified or accepted_by_human. End the turn. Do not open the release question.
+  - name: answer_review
+    skill: review-stack
+    from: [awaiting_review]
+    to: [awaiting_release, building]
+    guard: approve moves to awaiting_release. changes_requested names one chunk, resets that chunk, and marks later chunks needs_restack.
+  - name: open_release
+    skill: release
+    from: [awaiting_release]
+    to: [awaiting_release]
+    guard: the question includes shas and the exact release.command. End the turn.
+  - name: approve_release
+    skill: release
+    from: [awaiting_release]
+    to: [merging]
+    guard: direct yes or approve for this question id. Command and shas still match the question. Write the approval record. Set release_state merging.
+  - name: void_release
+    skill: release
+    from: [merging, awaiting_release]
+    to: [building]
+    guard: a changed sha or a changed release.command voids the approval. Do not merge.
+  - name: merge_recorded
+    skill: release
+    from: [merging]
+    chunk_to: [merged]
+    guard: skip a pull request the forge already merged. Record head_sha. Mark later chunks needs_restack. Do not roll back.
+  - name: restack_recorded
+    skill: release
+    chunk_to: [verified, needs_verify, planned, changes_requested]
+    guard: record the new head sha and clear needs_restack
+  - name: range_diff_recorded
+    skill: release
+    guard: clean updates verified_sha to the new head and the approval record. not clean clears verified_sha and sets needs_verify.
+  - name: ci_recorded
+    skill: release
+    guard: pending waits. failing escalates the feature and leaves merged chunks merged. none means the project has no CI.
+  - name: release_command_recorded
+    skill: release
+    from: [merging]
+    to: [done, escalated]
+    guard: exit 0 with the approved command sets done. any other exit sets release_state command_failed and escalates. Do not roll back.
+  - name: retry_release
+    skill: release
+    from: [escalated]
+    to: [merging]
+    guard: human quote. Merged chunks stay merged.
+  - name: base_moved
+    skill: pick-next-task
+    guard: record the new default branch sha. Open chunks need restack. Verified chunks need a range-diff.
+  - name: advisor_launched
+    skill: advisors
+    guard: write the launched row before the call returns. Skip a duplicate artifact hash. Planner calls stop when the tie-break reserve would be eaten.
+  - name: advisor_finished
+    skill: advisors
+    guard: update the launched row. A planner failure does not stop the feature.
+  - name: take_lease
+    skill: fstack-status
+    guard: human quote and the new owner. Default lease is 30 minutes.
+
+# Fields the orchestrator keeps. Chunk frontmatter is the source of truth for a chunk.
+# Feature fields live in feature.yaml. Event files are the log, one file per event.
+feature_fields:
+  - state_version
+  - slug
+  - feature_status
+  - waiting_on
+  - release_state
+  - release_approval
+  - review_approval
+  - default_branch
+  - default_branch_sha
+  - lease
+  - handoff_failures
+  - requirements_status
+
+chunk_fields:
+  - id
+  - title
+  - status
+  - depends_on
+  - allowed_files
+  - branch
+  - base
+  - base_sha
+  - head_sha
+  - verified_sha
+  - pr
+  - attempt
+  - attempts_since_decision
+  - agent_id
+  - launched_at
+  - verifier_agent_id
+  - needs_restack
+  - needs_reverify
+  - marked_for_review
+  - tiebreak_for_attempt
+  - blocked_reason
+
+waiting_kinds:
+  - questions
+  - plan
+  - stack_review
+  - release
+  - escalation
+  - ci
+  - release_command
+
+prompt_path: prompts/<chunk-id>/a<attempt>/<action>.md
+verdict_path: verification/<chunk-id>/a<attempt>.yaml
+event_path: events/<nnnn>-<event>.yaml
+chunk_id: NN-slug

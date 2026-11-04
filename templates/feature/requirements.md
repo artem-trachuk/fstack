@@ -1,25 +1,21 @@
 # Requirements: {{feature}}
 
-## Problem
+Status: draft
 
-What is wrong or missing today?
+## Problem
 
 ## People
 
-Who hits this, and what are they trying to do?
-
 ## Outcome
-
-What is true when this feature is done?
 
 ## Constraints
 
-Limits the solution has to respect.
-
 ## Out of scope
-
-Work this feature will not do.
 
 ## Feature acceptance
 
-Checks for the whole feature. Each chunk has its own acceptance criteria.
+## Confirmation
+
+The human confirms this file, not a shortened summary.
+
+Quote:

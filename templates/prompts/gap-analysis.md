@@ -1,9 +1,8 @@
 # Prompt: gap-analysis
 
 Feature: {{feature}}
-Workspace: {{feature_dir}}
 
-Follow the fstack skill `gap-analysis`. List questions the requirements do not settle. Wait for the human.
+Follow the fstack skill `gap-analysis`. Requirements are confirmed. List only questions a wrong guess would change. An empty list is a finished result.
 
 ## Requirements
 

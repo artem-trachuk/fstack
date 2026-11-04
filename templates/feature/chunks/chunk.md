@@ -3,33 +3,31 @@ id: {{chunk_id}}
 title: {{chunk_title}}
 status: planned
 depends_on: []
-branch: ""
-base: ""
-pr: ""
-attempt: 0
 allowed_files: []
+branch:
+base:
+base_sha:
+head_sha:
+verified_sha:
+pr:
+attempt: 0
+attempts_since_decision: 0
+agent_id:
+launched_at:
+verifier_agent_id:
+needs_restack: false
+needs_reverify: false
+marked_for_review: false
+tiebreak_for_attempt: 0
+blocked_reason:
 ---
 
 # {{chunk_id}} {{chunk_title}}
 
-## Spec
+The frontmatter is the source of truth for status, shas, branch, and allowed files. Do not repeat them in this body.
 
-What this chunk changes, in enough detail for a reviewer who was not in the implementation session.
+## Spec
 
 ## Acceptance criteria
 
-- [ ] A check a verifier can settle from the diff or from a command output.
-
 ## Out of scope
-
-## Allowed files
-
-## Implementer notes
-
-The orchestrator may file working notes here. The coding agent leaves them in the pull request instead, under a heading named Implementer notes. The verify prompt omits this section and that pull request heading.
-
-## Stack
-
-- Base branch:
-- This branch:
-- Pull request:
