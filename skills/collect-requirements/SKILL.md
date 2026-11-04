@@ -19,9 +19,9 @@ The human typed `/collect-requirements` and wants a feature started.
 
 1. Read `fstack.yaml`. If it is missing, or the resolved file from `setup-project` is missing, follow `setup-project`, then continue.
 
-2. Agree a feature slug: lowercase letters, digits, and hyphens. Create the feature folder under the state root from `setup-project`: `/cursor/stores/self/fstack/features/<slug>/` when that store is mounted, otherwise `.fstack/features/<slug>/`. Copy templates from the plugin, or from the templates directory setup copied. Replace `{{feature}}`, `{{max_calls}}`, and `{{reserve}}`. Do not copy a blank question into `questions.md`.
+2. Agree a feature slug: lowercase letters, digits, and hyphens. Create `~/.fstack/<project>/features/<slug>/` from `state.path`, using the same `<project>` rule as `setup-project`. Copy templates from `~/.fstack/<project>/templates` or the plugin. Replace `{{feature}}`, `{{max_calls}}`, and `{{reserve}}`. Do not copy a blank question into `questions.md`.
 
-   Do not create a branch for this folder. Do not commit it and do not push it. Tell the human that this state stays in the Cursor agent store, or on this machine when the store is not mounted.
+   Do not create a branch for this folder. Do not commit it and do not push it. This state stays on the Orchestrator's machine.
 
    If the folder already has a confirmed requirements file, ask whether to continue that feature or pick another slug.
 

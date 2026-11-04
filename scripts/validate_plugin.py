@@ -171,8 +171,9 @@ def main() -> int:
 
     table = yaml.safe_load((ROOT / "state" / "transitions.yaml").read_text(encoding="utf-8"))
     check(table.get("state_version") == 1, "transition table state_version must be 1")
-    check(table.get("storage", {}).get("backend") == "cursor-store", "transition table must use the cursor-store backend")
-    check(table.get("storage", {}).get("fallback") == ".fstack/features", "transition table fallback must be the local folder")
+    check(table.get("storage", {}).get("backend") == "orchestrator-local", "transition table must use the orchestrator-local backend")
+    check(table.get("storage", {}).get("path") == "~/.fstack/<project>/features/<name>", "transition table path drifted")
+    check(table.get("storage", {}).get("writer") == "orchestrator", "only the orchestrator writes state")
     check(REQUIRED_FEATURE_STATUSES <= set(table.get("feature_statuses") or []), "feature statuses drifted")
     check(REQUIRED_CHUNK_STATUSES <= set(table.get("chunk_statuses") or []), "chunk statuses drifted")
     check(table.get("review_mode") == "end_of_stack", "review mode must be one gate for the stack")
@@ -328,13 +329,13 @@ def validate_config(data: dict) -> list[str]:
     if workspace is not None:
         errors.append("workspace does not belong in fstack.yaml; state lives outside the repo")
     state = data.get("state") or {}
-    if state.get("backend") != "cursor-store":
-        errors.append("state.backend must be cursor-store")
-    fallback = state.get("fallback")
-    if fallback != ".fstack/features":
-        errors.append("state.fallback must be .fstack/features")
-    if isinstance(fallback, str) and (".." in fallback.split("/") or fallback.startswith(("/", "\\"))):
-        errors.append("state.fallback must be a relative path")
+    if state.get("backend") != "orchestrator-local":
+        errors.append("state.backend must be orchestrator-local")
+    path = state.get("path")
+    if path != "~/.fstack/<project>/features/<name>":
+        errors.append("state.path must be ~/.fstack/<project>/features/<name>")
+    if isinstance(path, str) and (path.startswith(("/", "\\")) or ".." in path.split("/")):
+        errors.append("state.path must be relative or start with ~")
     if data.get("plan_review") != "notify":
         errors.append("shipped plan_review must be notify")
     if data.get("review", {}).get("mode") != "end_of_stack":

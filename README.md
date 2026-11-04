@@ -20,7 +20,7 @@ From a team marketplace, install **fstack** from Customize after an admin import
 
 In the product repository, with the plugin installed:
 
-1. Invoke `/setup-project`. This writes `fstack.yaml` when it is missing, ignores `.fstack/`, and puts feature files in the Cursor agent store when `/cursor/stores/self` is mounted. Otherwise it uses `.fstack/features/`.
+1. Invoke `/setup-project`. This writes `fstack.yaml` when it is missing, ignores `.fstack/` as a guard, and creates `~/.fstack/<project>/` on the Orchestrator's machine. `<project>` is the repository directory name.
 2. Invoke `/collect-requirements` and describe the feature. Confirm the requirements file when asked. This is the only way requirements collection starts.
 3. Answer the question card from gap analysis. If nothing is open, the orchestrator says so and continues.
 4. The orchestrator splits the feature into stacked chunks. Plan approval waits only when `plan_review` is `approve`. The shipped value is `notify`, so coding starts after the plan is shown.
@@ -81,8 +81,8 @@ The prompt shape the stub will someday use is unchanged: the orchestrator builds
 
 | Key | Shipped value | Meaning |
 | --- | --- | --- |
-| `state.backend` | `cursor-store` | Feature files live in the Cursor agent store |
-| `state.fallback` | `.fstack/features` | Used only when no store is mounted. Gitignored. Stays on one machine |
+| `state.backend` | `orchestrator-local` | The Orchestrator keeps feature files on its own machine |
+| `state.path` | `~/.fstack/<project>/features/<name>` | Outside the repo. `~` is that machine's home directory |
 | `plan_review` | `notify` | Show the plan and continue. `approve` waits for a yes |
 | `review.mode` | `end_of_stack` | One human review for the stack, then one release question |
 | `verify.max_failures_before_escalation` | `2` | Counted with `attempts_since_decision`, using `>=` |
@@ -124,14 +124,12 @@ Roles name an agent and a model. They do not list skills. The agent file is the 
 
 ## Where state lives
 
-`state.backend` is `cursor-store`. setup uses `/cursor/stores/self` when that path is a directory or a symlink to one. Feature files go in `fstack/features/<name>/` inside the store, not in the store's `artifacts/` directory. `artifacts/` is a separate published bucket in this environment, and fstack does not write skill outputs there.
+`state.backend` is `orchestrator-local`. The Orchestrator is the only reader and writer. Feature files go to `state.path`, shipped as `~/.fstack/<project>/features/<name>/`. `<project>` is the repository directory name. `<name>` is the feature slug. A leading `~` is the home directory of the user running the Orchestrator. The directory is outside the git repository, so a commit cannot pick it up. setup also puts `.fstack/` in `.gitignore` as a guard if a path is ever pointed inside the repo.
 
-Another agent can read that tree only when it is given the store id and `/cursor/stores/<id>` is mounted for it. fstack does not grant that access. The coding agent does not need it: the chunk spec is in the launch prompt. If the mount is missing, do not wait and do not look in GitHub.
-
-When `/cursor/stores/self` is not mounted, setup says so and uses `.fstack/features/<name>/`. setup puts `.fstack/` in `.gitignore`. That copy stays on one machine. `/fstack-status` reads the store first, then this folder.
+A relative `state.path` is allowed. setup resolves it from the Orchestrator's current directory and stops when the result is inside the repository.
 
 ```
-fstack/features/<name>/
+~/.fstack/<project>/features/<name>/
   feature.yaml
   requirements.md
   questions.md
@@ -147,9 +145,9 @@ fstack/features/<name>/
   diffs/<NN-slug>/a<attempt>.diff
 ```
 
-The only files fstack publishes are pull requests: a branch of code changes and a short description of that change.
+The coding agent receives the chunk spec in its launch prompt and does not read this tree. The Orchestrator passes the verifier its prompt and patch. The Orchestrator writes advisor inputs and saves the critique. `/fstack-status` reads this path on the Orchestrator's machine. State started on another machine is not available, because it was never published.
 
-What this environment confirmed: `/cursor/stores/self` is the current agent's store, ordinary file tools read and write it, and a store id mounts at `/cursor/stores/<id>` on first access when the agent is authorized. What is not confirmed: that every Cursor surface mounts this path, that a later cloud-agent run remounts the same id, how long files outside `artifacts/` are kept, or a public API for sharing a store. Those gaps are stubbed as "use the mount when it is there; otherwise use the local folder; do not invent a sync step."
+The only files fstack publishes are pull requests: a branch of code changes and a short description of that change.
 
 ## Workspace
 

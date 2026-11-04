@@ -14,7 +14,7 @@ verdict: not_implemented
 message: Verification is not implemented yet, so these changes cannot be verified.
 ```
 
-Do not read the patch for a verdict, do not run tests, and do not update `feature.yaml` or the chunk status. The orchestrator relays the message through `tldr` and waits for the human.
+Do not read the patch for a verdict, do not run tests, and do not update `feature.yaml` or the chunk status. Do not read `~/.fstack`. The Orchestrator passes the prompt. The orchestrator relays the message through `tldr` and waits for the human.
 
 The parent that launched you chose your model. Do not try to switch it.
 

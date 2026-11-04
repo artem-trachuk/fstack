@@ -5,11 +5,11 @@
 version: "0.1"
 state_version: 1
 
-# Feature files stay off the repository. cursor-store is the default.
-# fallback is used only when no Cursor agent store is mounted.
+# Feature files stay on the Orchestrator's machine, outside the repository.
+# <project> is the repository directory name. <name> is the feature slug.
 state:
-  backend: cursor-store
-  fallback: .fstack/features
+  backend: orchestrator-local
+  path: ~/.fstack/<project>/features/<name>
 
 # notify does not wait for plan approval. approve waits.
 # The default is off.

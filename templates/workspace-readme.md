@@ -1,8 +1,6 @@
 # Feature state
 
-fstack does not commit this tree and does not push it. The only published artifacts are pull requests that contain the code change.
-
-When `/cursor/stores/self` is mounted, the same tree lives at `fstack/features/<name>/` inside that store. This folder is the fallback used when no store is mounted. It stays on one machine.
+Only the Orchestrator reads and writes this tree. It lives on that machine at `state.path` from `fstack.yaml`, shipped as `~/.fstack/<project>/features/<name>/`. `<project>` is the repository directory name. The tree is outside the git repository. fstack does not commit it and does not push it.
 
 ```
 features/<name>/
@@ -21,4 +19,4 @@ features/<name>/
   diffs/<NN-slug>/a<attempt>.diff
 ```
 
-A coding agent receives the chunk spec in its launch prompt. It does not read this tree from git. Pull request text is a summary of the code change. It does not include implementer notes, advisor critiques, or verify prompts.
+A coding agent receives the chunk spec in its launch prompt. The verifier receives its prompt and patch from the Orchestrator. Advisor inputs are written by the Orchestrator. Pull request text is a summary of the code change. It does not include implementer notes, advisor critiques, or verify prompts.

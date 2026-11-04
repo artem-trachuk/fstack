@@ -36,7 +36,7 @@ For `runtime: claude-cli`, run from the feature workspace:
 
 Use the configured `command` and `model` alias. `--tools` leaves only Read, Grep, and Glob available. Do not allow Edit, Write, or Bash. Do not add a flag that skips permissions. A local CLI runs under the user's own subscription terms.
 
-Write the prompt to `advisors/inputs/<n>-<advisor>.md` inside the feature directory (the agent store, or `.fstack/features/<name>/` when the store is not mounted) before the command. Run the command with that directory as its working directory, and pass the prompt from that file. Save stdout to `advisors/outputs/<n>-<advisor>.md`. That file is the critique. Do not commit those files, do not push them, and do not paste them into a pull request. Do not put tokens, credential paths, or environment secrets in the prompt or on the command line.
+Write the prompt to `advisors/inputs/<n>-<advisor>.md` inside the feature directory on the Orchestrator's machine before the command. Run the command with that directory as its working directory, and pass the prompt from that file. Save stdout to `advisors/outputs/<n>-<advisor>.md`. That file is the critique. The Orchestrator writes both files. The advisor agent does not. Do not commit those files, do not push them, and do not paste them into a pull request. Do not put tokens, credential paths, or environment secrets in the prompt or on the command line.
 
 If the cap would be exceeded by this call, do not start it.
 

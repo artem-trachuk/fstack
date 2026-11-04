@@ -1,8 +1,8 @@
 ---
 name: setup-project
 description: >
-  Initialize a project for fstack and resolve Cursor model names into .fstack/resolved.yaml.
-  Use when fstack.yaml is missing, when .fstack/resolved.yaml is missing, or when the human asks to set up fstack or recheck models.
+  Initialize a project for fstack and resolve Cursor model names on the Orchestrator's machine.
+  Use when fstack.yaml is missing, when the local resolved file is missing, or when the human asks to set up fstack or recheck models.
 ---
 
 # Setup project
@@ -12,28 +12,28 @@ Prepare the project. Do not write session model slugs into `fstack.yaml`.
 ## When to use
 
 - The project has no `fstack.yaml`.
-- `.fstack/resolved.yaml` is missing.
+- `~/.fstack/<project>/resolved.yaml` is missing. `<project>` is the repository directory name.
 - The human asks to set up fstack or to recheck models.
 
 ## Plugin root
 
-The plugin root is the directory that contains `.cursor-plugin/plugin.json` whose `name` is `fstack`. Templates and `state/transitions.yaml` are read from that root, or from `.fstack/templates/` after this skill copies them. Do not hardcode a machine path.
+The plugin root is the directory that contains `.cursor-plugin/plugin.json` whose `name` is `fstack`. Templates and `state/transitions.yaml` are read from that root. Do not hardcode a machine path or a user name.
 
 ## Steps
 
 1. If `fstack.yaml` is missing, copy the plugin's `fstack.yaml` into the project root. If it exists, leave it. Do not rewrite it to store resolved slugs.
 
-2. Read `fstack.yaml`. Stop if `version` is not `0.1` or `state_version` is not `1`, and say the project must be migrated. Stop if `state.backend` is not `cursor-store`. Stop if `state.fallback` is absolute or contains `..`. Stop if `human_gates` differs from merge, release, and outward_messages `require_approval`, or `collect_requirements` `manual_only`. Do not silently change those keys.
+2. Read `fstack.yaml`. Stop if `version` is not `0.1` or `state_version` is not `1`, and say the project must be migrated. Stop if `state.backend` is not `orchestrator-local`. Stop if `state.path` is absolute and does not start with `~`, or if it contains `..`. Stop if `human_gates` differs from merge, release, and outward_messages `require_approval`, or `collect_requirements` `manual_only`. Do not silently change those keys.
 
-3. Ensure `.gitignore` contains a `.fstack/` line. Append that line when it is missing. That ignore line is the only fstack edit that belongs in the repository. Do not commit feature files.
+3. Ensure `.gitignore` contains a `.fstack/` line. Append that line when it is missing. That ignore line is a guard. It is the only fstack edit that belongs in the repository. Do not commit feature files.
 
-4. Choose the state root.
+4. Create the state directory on this machine. Only the Orchestrator does this.
 
-   When `/cursor/stores/self` is a directory or a symlink to a directory, the backend is `cursor-store`. The feature root for a slug is `/cursor/stores/self/fstack/features/<slug>/`. Write resolved models to `/cursor/stores/self/fstack/resolved.yaml`. If `self` is a symlink, record only the final path segment as `state_store_id`. Do not invent an id and do not hardcode one.
+   `<project>` is the final segment of the repository directory. `<name>` is the feature slug, filled when a feature is created. A leading `~` is the home directory of the user running the Orchestrator. Do not write the expanded path into `fstack.yaml` or any committed file.
 
-   When that mount is missing, say so and use the fallback `state.fallback` (shipped as `.fstack/features/<slug>/`). Write resolved models to `.fstack/resolved.yaml`. Record `state_backend: local`. State then stays on this machine. It is not committed.
+   The shipped path is `~/.fstack/<project>/features/<name>`. Create `~/.fstack/<project>/` and `~/.fstack/<project>/features/`. Write resolved models to `~/.fstack/<project>/resolved.yaml`. Copy plugin templates to `~/.fstack/<project>/templates`. Copy `templates/workspace-readme.md` to `~/.fstack/<project>/features/README.md` when that file is absent.
 
-   Copy the plugin `templates/` tree next to `features/` (`fstack/templates` in the store, or `.fstack/templates` in the fallback). Copy `templates/workspace-readme.md` to the `features/` directory as `README.md` when that file is absent.
+   A relative `state.path` is resolved from the Orchestrator's current directory. If that location is inside the git repository, stop and ask for a path outside the repo. State is never committed.
 
 5. Resolve models into the resolved file chosen above, using `templates/resolved.yaml`. Detect the Cursor slugs this session can pass to a subagent. If you cannot detect any, set each model to `inherit`, set `source` to `unresolved`, and say so. Do not invent a slug.
 
