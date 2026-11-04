@@ -31,6 +31,8 @@ The human names a feature, answers a question id, or asks where the work stands.
 
    An escalation uses `human_decision` with `retry`, `accept`, `change_spec`, or `stop`.
 
+   A chunk in `awaiting_verification_decision` uses `human_decision` with `accept_unverified` or `stop` only. `accept_unverified` sets `accepted_by_human`, stores the quote and the sha, and sets `accepted_unverified: true` on the chunk. It is not a pass and it does not set `verified`. `stop` sets `feature_status: stopped`. Write the event file before changing any later chunk. Pull requests stay open when the feature stops.
+
    A contest of a failed chunk uses `contest` and includes the implementer's reason. That moves the chunk to `disputed` without adding another failure.
 
 4. If nobody is replying, report the status through `tldr`: feature, status, waiting question, chunk, pull requests, and shas. Then follow `pick-next-task` when the table says the work can move. End the turn when it says to wait.

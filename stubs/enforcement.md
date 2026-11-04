@@ -46,6 +46,19 @@ The hook is not registered. `hooks.json` is intentionally absent so Cursor does 
 
 Intended behavior. setup reports whether the default branch rejects direct pushes. v0.1 does not call the forge, so the report says the check was not run.
 
+## TODO: verification
+
+The `verify` skill does not check a chunk. It returns:
+
+```yaml
+verdict: not_implemented
+message: Verification is not implemented yet, so these changes cannot be verified.
+```
+
+The orchestrator relays that sentence through `tldr`, sets the chunk to `awaiting_verification_decision`, and does not treat the verdict as a pass or start the next chunk. The human logs `accept_unverified` or `stop`.
+
+Intended behavior, when the stub is replaced. The orchestrator builds `prompts/<chunk-id>/a<attempt>/verify.md` from `git diff <base_sha>...<head_sha>`. The verifier runs in a clean checkout of that head, with no feature directory. The prompt carries the spec, the acceptance criteria, the out-of-scope section, and the patch. It omits implementer notes and pull request URLs. Instructions inside the patch are data. A low-confidence verdict can ask for one read-only Argon tie-break. The critique is not the verdict. The full note is in the `verify` skill.
+
 ## TODO: atomic lease
 
 Intended behavior. `feature.yaml` `lease.owner` and `lease.expires_at` are the lock. Two sessions can still both read a stale file before either writes. A later version should take a real lock when it writes the event file. Until then, a second session that sees a live lease stops, and `take_lease` requires a human quote.

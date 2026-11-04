@@ -36,6 +36,8 @@ Apply `next_rules` in `state/transitions.yaml` from top to bottom. Do the first 
 
 Stack review and the release question are separate turns. After the release is recorded as done, move to the next open feature. A new feature still waits for `/collect-requirements`.
 
+`verify` is still called at `launch_verifier`. It returns `not_implemented`. Relay that message through `tldr`, leave the chunk in `awaiting_verification_decision`, and do not treat it as a pass or start the next chunk. Wait for a logged `accept_unverified` or `stop`.
+
 ## State
 
 You are the only writer of `feature.yaml`, chunk frontmatter, event files, and the decision log. The verifier, the implementer, and advisors do not update those files. Write the event file and the status it names in the same turn.

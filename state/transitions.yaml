@@ -25,6 +25,7 @@ chunk_statuses:
   - blocked
   - needs_verify
   - in_review
+  - awaiting_verification_decision
   - disputed
   - failed
   - escalated
@@ -120,7 +121,11 @@ next_rules:
   - id: apply_filed_verdict
     when: a verdict file exists for this chunk, attempt, and head_sha, and the chunk is still in_review or needs_verify
     action: apply_verdict
-    detail: Do not launch a second verifier.
+    detail: Do not launch a second verifier. A verdict of not_implemented is not a pass.
+  - id: not_implemented
+    when: a chunk is awaiting_verification_decision
+    action: wait_for_verification_decision
+    detail: Relay "Verification is not implemented yet, so these changes cannot be verified." through tldr. Do not treat it as a pass. Do not start the next chunk, review, or release. Wait for accept_unverified or stop, and log that human_decision.
   - id: resume_verifier
     when: the chunk is in_review and verifier_agent_id is set
     action: resume_agent
@@ -260,8 +265,8 @@ events:
   - name: apply_verdict
     skill: pick-next-task
     chunk_from: [in_review, needs_verify]
-    chunk_to: [verified, failed, disputed]
-    guard: high-confidence pass verifies that head_sha. high-confidence fail increments attempts_since_decision. low confidence moves to disputed and does not increment.
+    chunk_to: [verified, failed, disputed, awaiting_verification_decision]
+    guard: not_implemented sets awaiting_verification_decision, does not set verified, does not increment attempts_since_decision, and does not open the next chunk. The orchestrator relays the message through tldr and sets waiting_on. A future high-confidence pass would verify that head_sha. A future fail would increment attempts_since_decision. Low confidence would move to disputed.
   - name: contest
     skill: fstack-status
     chunk_from: [failed]
@@ -294,9 +299,9 @@ events:
     guard: set waiting_on. Options are retry, accept, change_spec, and stop.
   - name: human_decision
     skill: fstack-status
-    from: [escalated]
+    from: [escalated, building]
     to: [building, stopped]
-    guard: quote required. retry resets attempts_since_decision. accept stores the quote and sha and marks later chunks. change_spec resets the counter and marks later chunks. stop sets feature_status stopped.
+    guard: quote required. For awaiting_verification_decision the choices are accept_unverified and stop. accept_unverified sets accepted_by_human, stores the quote and sha, and records that the chunk was not verified. It is not a pass. stop sets feature_status stopped. Other escalations still use retry, accept, change_spec, and stop.
   - name: open_review
     skill: review-stack
     from: [building]

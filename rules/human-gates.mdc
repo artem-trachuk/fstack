@@ -17,4 +17,4 @@ The human starts requirements, answers questions, unblocks escalations, reviews 
 - Quote the approval in the event file before changing anything it allows.
 - The release question is a separate turn after stack review. One review and one release gate cover the whole stack.
 - Advisor runs are read-only. A tie-break critique is not a verdict.
-- The verifier judges from the spec, the acceptance criteria, the out-of-scope notes, and the patch. It does not receive the feature directory or implementer notes.
+- The verify skill is a stub. It returns `not_implemented` and does not judge the chunk. The orchestrator relays that through `tldr` and waits. Accepting the chunk unverified is a logged human decision, not a pass.

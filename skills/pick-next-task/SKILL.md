@@ -24,7 +24,13 @@ The feature folder exists and the orchestrator needs the next legal action.
 
    A filed verdict for the current attempt and `head_sha` is applied with `apply_verdict`. Do not launch another verifier.
 
-   The orchestrator launches the verifier. The verifier does not build its own prompt. Follow `build-context` for `verify` first, then record `verifier_launched` before you wait.
+   When that verdict is `not_implemented`, set the chunk to `awaiting_verification_decision`. Do not set `verified`. Do not increment `attempts_since_decision`. Do not launch the next chunk, `review-stack`, or `release`. Set `waiting_on` kind `verification_unimplemented` and question id `Q-<slug>-<chunk-id>-unverified`. Relay this sentence through `tldr`, verbatim, with the chunk id and the options `accept_unverified` and `stop`:
+
+   `Verification is not implemented yet, so these changes cannot be verified.`
+
+   Then end the turn. The next rule `not_implemented` stays on that chunk until `human_decision` is logged.
+
+   The orchestrator launches the verifier at `launch_verifier`. The verifier does not build its own prompt and, while the skill is a stub, does not judge the patch. Follow `build-context` for `verify` first, then record `verifier_launched` before you wait.
 
    `decide_dispute` is yours. The tie-break critique is not the verdict.
 

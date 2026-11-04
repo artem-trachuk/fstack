@@ -24,7 +24,7 @@ In the product repository, with the plugin installed:
 2. Invoke `/collect-requirements` and describe the feature. Confirm the requirements file when asked. This is the only way requirements collection starts.
 3. Answer the question card from gap analysis. If nothing is open, the orchestrator says so and continues.
 4. The orchestrator splits the feature into stacked chunks. Plan approval waits only when `plan_review` is `approve`. The shipped value is `notify`, so coding starts after the plan is shown.
-5. Each chunk is implemented by a Cursor coding agent and checked by a separate verifier. A repeated failure, a block, or an unsettled dispute stops for you.
+5. Each chunk is implemented by a Cursor coding agent. The flow then calls `verify`. That skill is a stub: it returns `not_implemented` and does not check the patch. You choose `accept_unverified` or `stop`. The choice is logged. The stack does not continue until you do.
 6. Review the stacked pull requests when asked. That question does not approve release.
 7. Answer the later release question. The stack is merged only after you explicitly approve the effect and the shas that question names.
 8. After release, the orchestrator moves to the next open feature. A new feature still starts with `/collect-requirements`.
@@ -44,7 +44,6 @@ flowchart TD
   implement[implement-chunk]
   coding[Cursor coding agent]
   verify[verify]
-  escalate[escalate]
   review[review-stack]
   release[release]
   done([Next feature])
@@ -59,23 +58,22 @@ flowchart TD
   pick --> implement
   implement --> coding
   coding -->|stacked pull request| verify
-  verify -->|fail, under the cap| implement
-  verify -->|cap, block, or unsettled dispute| escalate
-  escalate -->|human decision| human
-  human -->|decision| pick
-  verify -->|pass| pick
-  pick -->|every chunk verified| review
+  verify -->|not_implemented| human
+  human -->|accept unverified or stop| pick
+  pick -->|every chunk accepted or verified| review
   review -->|changes on one chunk| pick
   review -->|review done, next turn| release
   release -->|Approve release?| human
   human -->|explicit approval| done
 ```
 
-`build-context` writes `prompts/<chunk-id>/a<attempt>/<action>.md` before each action. The orchestrator builds the verify prompt from `git diff <base_sha>...<head_sha>`. That prompt includes the spec, the acceptance criteria, the out-of-scope section, and the patch. It does not include the feature directory, a pull request URL, or implementer notes. The verifier runs in a clean checkout of that head.
+`build-context` still writes `prompts/<chunk-id>/a<attempt>/verify.md` before `verify` is called. The skill does not use that prompt to judge the chunk. It returns `verdict: not_implemented` and the message `Verification is not implemented yet, so these changes cannot be verified.` The orchestrator sends that sentence through `tldr` and leaves the chunk in `awaiting_verification_decision`. `accept_unverified` is logged and is not a pass. `stop` ends the feature and leaves pull requests open.
+
+The prompt shape the stub will someday use is unchanged: the orchestrator builds it from `git diff <base_sha>...<head_sha>`, with the spec, the acceptance criteria, the out-of-scope section, and the patch. It does not include the feature directory, a pull request URL, or implementer notes. The intended verifier runs in a clean checkout of that head. That design is the TODO in the `verify` skill and in [stubs/enforcement.md](stubs/enforcement.md).
 
 `tldr` rewrites messages to the human. Question ids, options, the release command, shas, and pull request URLs stay verbatim.
 
-`planner_review` critiques gap analysis and the chunk split. `verify_tiebreak` critiques one disputed attempt. Both are read-only. A feature allows six advisor calls, and two of those are reserved for the tie-break. The tie-break is advice. The orchestrator decides or escalates.
+`planner_review` critiques gap analysis and the chunk split. `verify_tiebreak` is reserved for a future disputed verdict. The stub never asks for it, because it does not judge the chunk. Both advisors are read-only. A feature allows six advisor calls, and two of those are reserved for the tie-break. The tie-break is advice. The orchestrator decides or escalates.
 
 ## Configuration
 
@@ -149,7 +147,7 @@ A chunk id is `NN-slug`. Status values and the events that change them are only 
 | `split-into-chunks` | Orchestrator | Writes the stack and follows `plan_review` |
 | `pick-next-task` | Orchestrator | Applies the next-rule list once |
 | `implement-chunk` | Orchestrator | Hands off one chunk and records the agent id first |
-| `verify` | Verifier | Returns a structured verdict and does not write state |
+| `verify` | Verifier, at the same point in the flow | Returns `not_implemented` and does not judge the chunk |
 | `build-context` | Orchestrator, before an action | Writes the per-attempt prompt |
 | `tldr` | Before a human-facing message | Short prose, verbatim decisions |
 | `advisors` | Gap analysis, split, one dispute per attempt | Read-only critique, reserved tie-break budget |
@@ -160,7 +158,7 @@ A chunk id is `NN-slug`. Status values and the events that change them are only 
 
 ## What is not enforced yet
 
-[stubs/enforcement.md](stubs/enforcement.md) describes the approval record, the merge and release steps, and a shell hook that should refuse a merge without a matching approval. None of that runs. The release skill is the procedure the orchestrator follows by hand. `hooks.json` is absent so a stub is not loaded as if it enforced the gate.
+[stubs/enforcement.md](stubs/enforcement.md) describes verification, the approval record, the merge and release steps, and a shell hook that should refuse a merge without a matching approval. None of that runs. `verify` returns `not_implemented`. The release skill is the procedure the orchestrator follows by hand. `hooks.json` is absent so a stub is not loaded as if it enforced the gate.
 
 ## Adding a bot or a skill
 

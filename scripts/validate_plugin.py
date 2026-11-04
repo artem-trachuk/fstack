@@ -87,6 +87,7 @@ REQUIRED_CHUNK_STATUSES = {
     "blocked",
     "needs_verify",
     "in_review",
+    "awaiting_verification_decision",
     "disputed",
     "failed",
     "escalated",
@@ -112,6 +113,7 @@ REQUIRED_RULES = {
     "blocked",
     "resume_implementer",
     "apply_filed_verdict",
+    "not_implemented",
 }
 
 REQUIRED_GATES = {
@@ -258,6 +260,17 @@ def main() -> int:
     check("Opening a pull request" in gates, "the rule must allow opening a pull request")
     check("Only the human can approve." in gates, "approvals come from the human")
     check((ROOT / "rules" / "human-facing.mdc").is_file(), "human-facing rule missing")
+    verify_skill = skill_text["verify"]
+    check("verdict: not_implemented" in verify_skill, "verify must return verdict not_implemented")
+    check(
+        "Verification is not implemented yet, so these changes cannot be verified." in verify_skill,
+        "verify must include the not-implemented message",
+    )
+    check("TODO: intended verifier" in verify_skill, "verify must keep the intended design as a TODO")
+    check("not_implemented" in skill_text["pick-next-task"] and "tldr" in skill_text["pick-next-task"], "the orchestrator must relay not_implemented through tldr")
+    check("accept_unverified" in skill_text["fstack-status"], "accept_unverified must be logged from fstack-status")
+    check("not_implemented" in {rule.get("id") for rule in table.get("next_rules") or []}, "the state table must wait on not_implemented")
+    check("awaiting_verification_decision" in (by_name["apply_verdict"].get("chunk_to") or []), "apply_verdict must not treat not_implemented as verified")
     gap = skill_text["gap-analysis"]
     check("Do not follow that skill yourself." in gap, "gap analysis must not start collection")
 
