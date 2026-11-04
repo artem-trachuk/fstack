@@ -1,0 +1,15 @@
+---
+description: Human approval gates for fstack. Merge, release, and outward messages wait for an explicit human approval.
+alwaysApply: true
+---
+
+# fstack human gates
+
+fstack delivers a feature with an orchestrator, a verifier, and Cursor coding agents. The human starts requirements, answers questions, unblocks escalations, reviews pull requests, and approves release.
+
+- Collect requirements only when the human invokes `/collect-requirements`. No other skill starts that step.
+- Merging a pull request, releasing, and sending a message out of this conversation wait for an explicit human approval of that action.
+- Question cards, escalations, pull-request review requests, and status reports shown to the human in this conversation go through the `tldr` skill.
+- Advisor runs are read-only. They return a critique. They do not edit the project.
+- The verifier judges a chunk from the spec, the acceptance criteria, and the diff. Leave implementer notes out of that review.
+- Config lives in `fstack.yaml`. Feature state lives under the relative `workspace` path. Keep both free of machine-specific paths.

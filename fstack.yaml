@@ -1,0 +1,75 @@
+# fstack v0.1
+# Shareable project config. Paths are relative to the directory that contains
+# this file. Models are Cursor models. setup-project checks the short names
+# and records a resolved slug, or inherit, under models.resolved.
+
+version: "0.1"
+
+# Per-feature state. Relative path. setup-project rejects absolute paths and "..".
+workspace: features
+
+roles:
+  orchestrator:
+    description: Runs the feature flow, plans the work, launches coding agents, and reports to the human.
+    agent: orchestrator
+    model: inherit
+    skills:
+      - setup-project
+      - gap-analysis
+      - split-into-chunks
+      - pick-next-task
+      - implement-chunk
+      - build-context
+      - tldr
+      - advisors
+      - escalate
+      - release
+  verifier:
+    description: Checks each chunk against the spec and acceptance criteria, without implementer notes.
+    agent: verifier
+    model: inherit
+    skills:
+      - verify
+      - build-context
+      - tldr
+      - advisors
+      - escalate
+  implementer:
+    description: Cursor coding agent. Implements one chunk on a branch and opens a stacked pull request.
+    agent: cursor-coding-agent
+    model: inherit
+    skills:
+      - implement-chunk
+
+# Family prefixes. setup-project turns each one into a detected Cursor slug.
+# opus is Claude Opus in Cursor (Claude Opus 5.5 when that slug is present).
+# argon is Gemini Argon in Cursor (Gemini 4 Argon when that slug is present).
+models:
+  opus: claude-opus-5-5
+  argon: gemini-4-argon
+  resolved: {}
+  fallbacks: {}
+  resolution: pending
+
+advisors:
+  planner_review:
+    model: opus        # e.g. Claude Opus 5.5 in Cursor
+    when: [gap-analysis, split-into-chunks]
+  verify_tiebreak:
+    model: argon       # Gemini 4 Argon in Cursor
+    when: [verifier-disputed]
+  max_calls_per_feature: 6
+
+human_gates:
+  merge: require_approval
+  release: require_approval
+  outward_messages: require_approval
+  collect_requirements: manual_only
+
+verify:
+  max_failures_before_escalation: 2
+
+release:
+  # Optional command for the production update, after an approved merge.
+  # Empty means release is the merge of the stack and nothing further.
+  command: ""
