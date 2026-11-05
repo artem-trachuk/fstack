@@ -51,7 +51,9 @@ The human names a feature, answers a question card, or asks where the work stand
 
 6. If the human asks to export the debug log, follow the pages from the product's Debug log through each Previous link so the continuation pages read as one log. Render one markdown document for the product, one feature, or one session correlation id, whichever they named. Entries stay in order. Redacted values stay redacted. Do not add file bodies or prompts that were not in the log.
 
-7. If nobody is replying, report the status through `tldr`: feature, status, waiting question, chunk, pull requests, and shas. Then follow `pick-next-task` when the table says the work can move. End the turn when it says to wait.
+7. Read the Advisor calls page. Flag any row that has no cloud agent id and no CLI run record, or whose critique cites no file. That entry is without proof. Do not treat it as an advisor critique.
+
+8. If nobody is replying, report the status through `tldr`: feature, status, waiting question, chunk, pull requests, and shas. Then follow `pick-next-task` when the table says the work can move. End the turn when it says to wait.
 
 ## Events
 

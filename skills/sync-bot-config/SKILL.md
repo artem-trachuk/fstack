@@ -20,7 +20,7 @@ A routine named in `bots/<name>.yaml` fires, or the human asks to sync. The rout
 
 ## Steps
 
-1. Read the `repository` field in `plugin.json`. That is the fstack skill repository. Read the latest commit on its default branch. A bot with a read-only repo reader uses that reader and does not ask for write access. A bot with no reader fetches the public default branch of that URL. Do not hardcode a user or a machine. Do not use a product code location for this read.
+1. Read the `repository` field in `plugin.json`. That is the fstack skill repository. Read the latest commit on its default branch through the GitHub connector. A bot with a read-only repo reader uses that reader and does not ask for write access. A bot with no reader fetches the public default branch of that URL. Do not clone. Do not hardcode a user or a machine. Do not use a product code location for this read.
 
 2. Read the last applied commit from this bot's persistent state. The record is the fstack repository URL and `applied_commit`. If it is missing, this bot has not applied a config yet. Do not read it from the product repository or from `.fstack/resolved.yaml`.
 
