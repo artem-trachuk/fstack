@@ -8,11 +8,11 @@ description: >
 
 # Build context
 
-Write a fresh prompt before the action. The prompt carries this feature's facts. The skill carries the procedure. The transition table carries the legal status change.
+Write a fresh prompt before the action. The prompt carries the graph neighborhood the step needs, plus relevant memory. It does not carry the whole product. The skill carries the procedure. The transition table carries the legal status change. Durable facts stay on graph nodes. The feature page keeps the decision log, the plan, and status.
 
 ## When to use
 
-The action is `collect-requirements`, `survey-product`, `gap-analysis`, `split-into-chunks`, `pick-next-task`, `implement-chunk`, `verify`, `verify-tiebreak`, `advisors`, `escalate`, `review-stack`, `release`, or `fstack-status`.
+The action is `collect-requirements`, `survey-product`, `gap-analysis`, `split-into-chunks`, `pick-next-task`, `implement-chunk`, `verify`, `verify-tiebreak`, `advisors`, `escalate`, `review-stack`, `release`, `update-graph`, or `fstack-status`.
 
 ## Steps
 
@@ -22,7 +22,9 @@ The action is `collect-requirements`, `survey-product`, `gap-analysis`, `split-i
 
 3. Tokens you may fill: `feature`, `chunk_id`, `chunk_title`, `attempt`, `spec`, `acceptance_criteria`, `out_of_scope`, `allowed_files`, `branch`, `stack_base`, `pr`, `diff`, `command_results`, `failure_summary`, `requirements`, `open_questions`, `plan`, `release_plan`, `pull_requests`, `shas`, `release_command`, `question_id`, `advisor_name`, `artifact`, `dispute_reason`. `shas` on a survey prompt is the pinned base commit.
 
-4. For `verify` and `verify-tiebreak`, build the prompt in the orchestrator session before the other agent starts.
+4. For `implement-chunk`, load the nodes listed on the chunk and the nodes one edge away. Add memory excerpts that match those topics. Do not attach every node in the product. The prompt is that neighborhood, the chunk spec, and the slot parameters.
+
+5. For `verify` and `verify-tiebreak`, build the prompt in the orchestrator session before the other agent starts.
 
    On Grok Bot, read the patch through the GitHub connector for `base_sha...head_sha`. Do not clone the repository and do not run `git diff` on the bot computer. On the Cursor plugin, take the patch with `git diff <base_sha>...<head_sha>` when a checkout of that head exists. Store the patch as the Notion child page `diff <chunk-id> a<attempt>`. Put that patch in `{{diff}}`. Do not put a pull request URL in the prompt. Do not put a Notion link or a workspace path in the prompt. Drop every section titled `Implementer notes`, including a pull request section with that heading. If `verify.commands` is empty, `command_results` is `(none)`. Do not clone a repository to run those commands.
 

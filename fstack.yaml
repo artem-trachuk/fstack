@@ -100,6 +100,12 @@ release_policy:
   mode: all_or_none
   order: []
 
+# Product graph. Kinds are open; a product page may add more. promote is a preference, not a fixed gate.
+graph:
+  promote: require_approval
+  node_kinds: [capability, component, entity, interface, requirement, decision, constraint]
+  edge_kinds: [depends_on, implements, part_of, touches, constrains, supersedes, conflicts_with]
+
 # Which source kinds count as authoritative. Others are inputs, not orders to build.
 authoritative_kinds: [requirements]
 
@@ -163,6 +169,12 @@ workflow:
     release:
       skill: release
       contract: release
+      params: {}
+      notes: ""
+      skippable: false
+    update_graph:
+      skill: update-graph
+      contract: update_graph
       params: {}
       notes: ""
       skippable: false

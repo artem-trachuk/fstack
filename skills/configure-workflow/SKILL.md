@@ -53,7 +53,7 @@ When the human asks what is configured, list each slot, the effective skill, the
 
 Parameters are an optional map the skill reads, such as `{env: staging}`. Notes are optional text. Neither can carry a human gate.
 
-Standing preferences may set `plan_review` or `notify` on the product page. The same precedence applies. They are not gates.
+Standing preferences may set `plan_review`, `notify`, or `graph.promote` on the product page. The same precedence applies. They are not gates. `graph.promote` decides whether `update-graph` waits for a yes. It does not change merge, release, or who writes Notion.
 
 ## Events
 

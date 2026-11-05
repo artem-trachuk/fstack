@@ -30,6 +30,7 @@ feature_statuses:
   - awaiting_review
   - awaiting_release
   - merging
+  - awaiting_graph_update
   - done
   - stopped
   - escalated
@@ -226,7 +227,11 @@ next_rules:
   - id: release_command
     when: feature_status is merging and every chunk is merged
     action: run_release_command_or_finish
-    detail: Run release.command only when it is non-empty and still equals the approved string. An empty command finishes the release.
+    detail: Run release.command only when it is non-empty and still equals the approved string. An empty command finishes the merge. Success waits for update-graph. It does not by itself mark the feature done.
+  - id: update_graph
+    when: feature_status is awaiting_graph_update
+    action: update_graph
+    detail: Promote the feature delta into the product graph only after graph.promote allows it. A stopped or abandoned feature is not promoted. Contradictions wait for the human.
   - id: stuck
     when: no earlier rule matched
     action: escalate_chunk
@@ -252,7 +257,7 @@ events:
     skill: survey-product
     from: [requirements_confirmed, surveying]
     to: [surveyed]
-    guard: write or reuse the Existing functionality page for this commit. Only the orchestrator writes Notion.
+    guard: write or refresh graph nodes for this location and commit. Do not store the product description on the feature page. Only the orchestrator writes Notion.
   - name: survey_skipped
     skill: survey-product
     from: [requirements_confirmed]
@@ -361,7 +366,7 @@ events:
     guard: set waiting_on. Options are retry, accept, change_spec, and stop.
   - name: human_decision
     skill: fstack-status
-    from: [escalated, building, awaiting_coverage_approval, ready_to_plan]
+    from: [escalated, building, awaiting_coverage_approval, ready_to_plan, awaiting_graph_update]
     to: [building, stopped]
     chunk_from: [escalated, awaiting_verification_decision, failed]
     chunk_to: [planned, failed, accepted_by_human, escalated]
@@ -410,8 +415,8 @@ events:
   - name: release_command_recorded
     skill: release
     from: [merging]
-    to: [done, escalated]
-    guard: exit 0 with the approved command sets done. any other exit sets release_state command_failed and escalates. Do not roll back.
+    to: [awaiting_graph_update, escalated]
+    guard: exit 0 with the approved command sets awaiting_graph_update. any other exit sets release_state command_failed and escalates. Do not roll back. Do not promote the graph here.
   - name: retry_release
     skill: release
     from: [escalated]
@@ -432,6 +437,16 @@ events:
   - name: workflow_loaded
     skill: configure-workflow
     guard: record the effective skill and config version for each slot on the feature. A chunk step also records bound_skill on the chunk. Do not change status. Do not read human gates from Notion.
+  - name: graph_promoted
+    skill: update-graph
+    from: [awaiting_graph_update]
+    to: [done]
+    guard: graph.promote require_approval needs a human yes. notify may promote in the same turn after showing the delta. Update evidence commits and supersedes edges. Do not copy the facts onto the feature page.
+  - name: graph_flagged
+    skill: update-graph
+    from: [awaiting_graph_update]
+    to: [awaiting_graph_update]
+    guard: a contradiction waits for the human. Do not promote the contradicted node.
   - name: workflow_changed
     skill: configure-workflow
     guard: one change log entry with who, when, old, and new. A feature-only change stays on the feature override. Do not change human gates or who writes Notion.
@@ -455,6 +470,10 @@ feature_fields:
   - requirements_status
   - config_version
   - step_bindings
+  - nodes_read
+  - nodes_added
+  - nodes_changed
+  - nodes_removed
 
 chunk_fields:
   - id
@@ -481,6 +500,7 @@ chunk_fields:
   - tiebreak_for_attempt
   - blocked_reason
   - bound_skill
+  - nodes
 
 # Notion property names for feature_fields and chunk_fields.
 # DESIGN.md must use these names. Extras are display columns, not state fields.
@@ -502,13 +522,16 @@ notion_schema:
     requirements_status: {name: Requirements status, type: select}
     config_version: {name: Config version, type: text}
     step_bindings: {name: Step bindings, type: text}
+    nodes_read: {name: Nodes read, type: text}
+    nodes_added: {name: Nodes added, type: text}
+    nodes_changed: {name: Nodes changed, type: text}
+    nodes_removed: {name: Nodes removed, type: text}
   feature_extra:
     - {name: Name, type: title}
     - {name: Summary, type: text}
     - {name: Confirmed, type: date}
     - {name: Chunks, type: relation}
     - {name: Memories, type: relation}
-    - {name: Existing functionality, type: relation}
     - {name: Product, type: relation}
   chunks:
     id: {name: Name, type: title}
@@ -535,6 +558,7 @@ notion_schema:
     tiebreak_for_attempt: {name: Tie-break attempt, type: number}
     blocked_reason: {name: Blocked reason, type: text}
     bound_skill: {name: Bound skill, type: text}
+    nodes: {name: Touched nodes, type: text}
   chunk_extra:
     - {name: Feature, type: relation}
     - {name: Accepted unverified, type: checkbox}
@@ -543,6 +567,7 @@ notion_schema:
     item: {name: Name, type: title}
     repo: {name: Code location, type: text}
     commit: {name: Commit, type: text}
+    node: {name: Node, type: text}
     presences: {name: Presences, type: text}
     classification: {name: Classification, type: select}
     next_action: {name: Next action, type: select}
@@ -564,6 +589,22 @@ notion_schema:
     when: {name: When, type: date}
     old: {name: Old, type: text}
     new: {name: New, type: text}
+  graph_nodes:
+    kind: {name: Kind, type: text}
+    status: {name: Status, type: select}
+    evidence: {name: Evidence, type: text}
+    provenance: {name: Provenance, type: text}
+    last_verified: {name: Last verified, type: text}
+  graph_node_extra:
+    - {name: Name, type: title}
+    - {name: Product, type: relation}
+  graph_edges:
+    kind: {name: Kind, type: text}
+    from_node: {name: From, type: relation}
+    to_node: {name: To, type: relation}
+  graph_edge_extra:
+    - {name: Name, type: title}
+    - {name: Product, type: relation}
   workflow_extra:
     - {name: Name, type: title}
     - {name: Feature, type: relation}
@@ -573,12 +614,25 @@ coverage_fields:
   - item
   - repo
   - commit
+  - node
   - presences
   - classification
   - next_action
   - decision
   - write_back
   - approved
+
+graph_node_fields:
+  - kind
+  - status
+  - evidence
+  - provenance
+  - last_verified
+
+graph_edge_fields:
+  - kind
+  - from_node
+  - to_node
 
 workflow_fields:
   - scope
@@ -606,6 +660,7 @@ waiting_kinds:
   - coverage_questions
   - source_write
   - coverage_approval
+  - graph_promotion
   - plan
   - stack_review
   - release

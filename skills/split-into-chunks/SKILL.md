@@ -33,7 +33,7 @@ Allowed files are concrete paths or globs. They must not include `.fstack/`. One
 
 2. Read the approved buildable rows you were given. Inside a feature, that is Coverage rows whose Approved flag is set and whose classification is `partial` or `missing`. Skip `done`, `conflict`, `needs_decision`, `undocumented`, `skip`, and `defer`. A decision row becomes buildable only after the human chose `implement` and the coverage gate approved it. If no row qualifies, tell the human there is nothing to build. Set `waiting_on` kind `plan`, question id `Q-<slug>-empty-plan`, options stop or describe a change. Do not record `save_plan` and do not set `building`. Do not launch an implementer. When this skill is called alone, split the rows you were given and return the plan. Do not look for a feature status.
 
-   Write the Plan section and one Chunks page per planned row, as in `DESIGN.md`. Set each chunk's `repo` to one location. Record `repos` and `base_shas` on the feature. A chunk with no single location is not a chunk.
+   Write the Plan section and one Chunks page per planned row, as in `DESIGN.md`. Set each chunk's `repo` to one location and `nodes` to the graph node ids that chunk touches. Record `repos`, `base_shas`, and the delta lists `nodes_read`, `nodes_added`, `nodes_changed`, and `nodes_removed` on the feature. Those lists are ids. Do not copy node bodies onto the feature page. A chunk with no single location is not a chunk.
 
 3. Record `save_plan`.
 

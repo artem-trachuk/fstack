@@ -29,6 +29,7 @@ Follow the skill whose name matches the action. The transition table says which 
 - escalate
 - review-stack
 - release
+- update-graph
 - sync-bot-config
 - fstack-status
 

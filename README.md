@@ -20,13 +20,13 @@ Chat with the Orchestrator. Do not start a feature from another bot.
 
 1. Ask it to set up a product. A product is a Notion boundary, not one code location. Name zero or more locations, each with a role and a default branch. `fstack.yaml` can live in any one of them, or only in Notion. You approve the product page and databases before any schema is created.
 2. Ask it to start a feature and describe what you want. That request is the only way requirements collection starts. Confirm the requirements page when the question card asks.
-3. When the feature lists code locations, `survey-product` runs once per location at that location's default-branch commit. The read is read-only. Each map is an Existing functionality page for that location and commit. A later call for the same pair reuses the page. With no locations, this step is skipped.
-4. Gap analysis compares the sources that are present, once per code location, and merges them into one coverage view. Every evidence row names its location. A source is a kind, such as requirements, design, or the current product, plus whatever reader the host has. You answer one card for conflicts, items that are not backed by an authoritative source, and behaviour a location has with no requirement. The choices are implement, write back to a source, skip, or defer. A write happens only after you approve it, and only if that source has a writer.
+3. When the feature lists code locations, `survey-product` reads the product graph first. It re-surveys only nodes whose evidence is stale for that location's current commit, and areas the graph does not cover. The first survey seeds the graph. The read is read-only. With no locations, this step is skipped.
+4. Gap analysis compares the sources that are present against the graph, not against a fresh read of the code. Coverage rows point at node ids. A source is a kind, such as requirements, design, or the current product, plus whatever reader the host has. You answer one card for conflicts, items that are not backed by an authoritative source, and behaviour a location has with no requirement. The choices are implement, write back to a source, skip, or defer. A write happens only after you approve it, and only if that source has a writer.
 5. You approve the coverage table. Only approved rows that are partial or missing become chunks, and each chunk targets one location. Stacks do not cross locations. Plan approval waits only when `plan_review` is `approve`. The shipped value is `notify`, so coding starts after the plan is shown. Release is per location, then the feature follows `release_policy`: `all_or_none` or `per_repo`.
 6. For each chunk it launches one Cursor cloud agent, stacked on the previous branch. When the run finishes, the Orchestrator is revived with the branch, the pull request, and the report. It messages the Verifier. Verification is a stub, so you get a card: accept the chunk unverified, or stop. That choice is saved in Notion. The stack does not continue until you answer.
 7. Review the stacked pull requests when the card asks. That card does not approve release.
 8. Answer the later release card. The stack is merged only after you approve the effect and the shas that card names.
-9. After release, the Orchestrator proposes lessons. They are written to Notion only if you approve. Then it can start the next feature, and only when you ask.
+9. After the merge, `update-graph` proposes the feature's confirmed changes as graph updates. You approve that promotion when `graph.promote` is `require_approval`. A stopped feature is not promoted. Lessons go to memory, not into the graph. Then it can start the next feature, and only when you ask.
 
 A later chat with the same Orchestrator resumes from Notion. Ask where the feature stands.
 
@@ -138,7 +138,7 @@ Roles name an agent and a model. They do not list skills. The agent file is the 
 
 ## Where state lives
 
-`state.backend` and `memory.backend` are `notion`. The schema is in [DESIGN.md](DESIGN.md): a private product page, an Agent Operating Guide at version `0.0.6`, and Features, Chunks, Memories, Coverage, and Codebase maps databases. Feature documents are pages. Chunk specs are pages. Coverage rows are the gap table. Codebase maps are one Existing functionality page per commit. Memories are one topic each.
+`state.backend` and `memory.backend` are `notion`. The schema is in [DESIGN.md](DESIGN.md): a private product page, an Agent Operating Guide at version `0.0.6`, and Features, Chunks, Memories, Coverage, Graph nodes, Graph edges, and Workflow config. The graph holds durable product facts. Memory holds preferences and lessons. A feature page holds the decision log, the plan, and status. Coverage rows point at graph nodes.
 
 The Orchestrator is the only role that calls Notion. It copies the chunk spec into the coding agent's launch prompt, passes the verifier its prompt and patch, and passes advisors their input pages' text. Asking the Orchestrator where the feature stands reads the Features database.
 
@@ -173,6 +173,7 @@ A chunk id is `NN-slug`. Status values and the events that change them are only 
 | `escalate` | Orchestrator | Stops for retry, accept, a spec change, or stop |
 | `review-stack` | Orchestrator, after every chunk is verified | Asks for review and waits |
 | `release` | Orchestrator, after review | Asks, then merges only the approved shas, then proposes memories |
+| `update-graph` | After merge, unless the feature stopped | Promotes confirmed changes into the product graph |
 | `fstack-status` | Human or a fresh session | Reads Notion and routes a reply |
 | `memory` | Orchestrator | Reads and writes Notion memories. Does not publish skills |
 

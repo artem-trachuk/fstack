@@ -31,6 +31,7 @@ CORE_SKILLS = {
     "memory",
     "sync-bot-config",
     "configure-workflow",
+    "update-graph",
 }
 
 TOKENS = {
@@ -83,6 +84,7 @@ REQUIRED_FEATURE_STATUSES = {
     "awaiting_review",
     "awaiting_release",
     "merging",
+    "awaiting_graph_update",
     "done",
     "stopped",
     "escalated",
@@ -345,7 +347,7 @@ def main() -> int:
     check("Do not write to a source unless the human approves that write." in gap, "a source write stays behind approval")
     check("## Inputs" in gap and "## Outputs" in gap, "gap analysis must be callable on its own")
     survey = skill_text["survey-product"]
-    check("read-only" in survey.lower() and "Existing functionality" in survey and "location name and the commit" in survey, "survey-product must be a read-only map keyed by location and commit")
+    check("read-only" in survey.lower() and "graph node" in survey.lower() and "stale" in survey.lower(), "survey-product must refresh stale graph nodes")
     check("does not prescribe" in survey.lower(), "survey-product must not prescribe a runtime")
     check("## Inputs" in survey and "## Outputs" in survey, "survey-product must be callable on its own")
     check("reuse" in survey.lower(), "the codebase map must be reused per commit")
@@ -361,6 +363,9 @@ def main() -> int:
     for message in stale_project_name_errors(ROOT):
         check(False, message)
     check(True, "the top-level entity is a product")
+    for message in durable_fact_errors(ROOT):
+        check(False, message)
+    check(True, "durable product facts are graph nodes")
     check("partial" in skill_text["split-into-chunks"] and "missing" in skill_text["split-into-chunks"] and "approved" in skill_text["split-into-chunks"].lower(), "split-into-chunks plans only approved partial and missing rows")
     check("survey" in rule_ids and rule_ids.index("survey") < rule_ids.index("gap"), "survey is ordered before gap analysis")
 
@@ -552,6 +557,34 @@ def single_repo_field_errors(root: Path, table: dict) -> list[str]:
     return errors
 
 
+def durable_fact_errors(root: Path) -> list[str]:
+    """Durable product facts live on graph nodes, not only on a feature page."""
+    errors = []
+    design = (root / "DESIGN.md").read_text(encoding="utf-8")
+    if "Durable product facts are graph nodes" not in design:
+        errors.append("DESIGN must put durable product facts on graph nodes")
+    if "Existing functionality" in design:
+        errors.append("DESIGN still keeps an Existing functionality page for product facts")
+    survey = (root / "skills" / "survey-product" / "SKILL.md").read_text(encoding="utf-8")
+    if "Do not write those facts on the feature page" not in survey:
+        errors.append("survey-product must not store the product description on the feature page")
+    update = (root / "skills" / "update-graph" / "SKILL.md").read_text(encoding="utf-8")
+    if "require_approval" not in update or "stopped" not in update.lower():
+        errors.append("update-graph must gate promotion and skip a stopped feature")
+    if "neighborhood" not in (root / "skills" / "build-context" / "SKILL.md").read_text(encoding="utf-8").lower() and "one edge away" not in (root / "skills" / "build-context" / "SKILL.md").read_text(encoding="utf-8"):
+        errors.append("build-context must use the graph neighborhood, not the whole product")
+    for path in (root / "skills").glob("*/SKILL.md"):
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not re.search(r"feature page", line, re.IGNORECASE):
+                continue
+            if not re.search(r"data model|capabilit", line, re.IGNORECASE):
+                continue
+            if re.search(r"\b(do not|not)\b", line, re.IGNORECASE):
+                continue
+            errors.append(f"{path.relative_to(root).as_posix()} stores a durable fact on the feature page")
+    return errors
+
+
 def stale_project_name_errors(root: Path) -> list[str]:
     """The top-level entity is a product. 'project' is not a name for it."""
     errors = []
@@ -598,7 +631,7 @@ def workflow_config_errors(root: Path) -> list[str]:
     if workflow.get("version") != 1:
         errors.append("workflow.version must be 1")
     slots = workflow.get("slots") or {}
-    required = {"survey", "gap_analysis", "split", "implement", "verify", "review", "release"}
+    required = {"survey", "gap_analysis", "split", "implement", "verify", "review", "release", "update_graph"}
     if not required <= set(slots):
         errors.append(f"workflow slots missing: {sorted(required - set(slots))}")
     if (slots.get("verify") or {}).get("skill") != "verify":
@@ -674,6 +707,8 @@ def notion_schema_errors(table: dict, design: str) -> list[str]:
         ("feature_fields", "features", "feature_extra"),
         ("chunk_fields", "chunks", "chunk_extra"),
         ("coverage_fields", "coverage", "coverage_extra"),
+        ("graph_node_fields", "graph_nodes", "graph_node_extra"),
+        ("graph_edge_fields", "graph_edges", "graph_edge_extra"),
         ("workflow_fields", "workflow", "workflow_extra"),
     )
     for field_key, schema_key, extra_key in groups:

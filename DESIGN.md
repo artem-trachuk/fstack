@@ -19,7 +19,7 @@ Version of the Agent Operating Guide: `0.0.6`, published `2026-10-30`, from [Not
 One private page named for the product. A product owns features, the workflow config, memory, sources, and zero or more repos. Each repo is a code location with a name, a role, an optional subpath, and a default branch. The product does not have one base commit or one pull request. Features, chunks, coverage rows, memories, and workflow pages point back with a Product relation.
 
 - Child page: Agent Operating Guide. It records the workspace, the database links, preferences, exclusions, and the setup version. Unconfirmed fields stay "Not set up yet".
-- Linked databases: Features, Chunks, Memories, Coverage, Codebase maps, and Workflow config.
+- Linked databases: Features, Chunks, Memories, Coverage, Graph nodes, Graph edges, and Workflow config.
 
 ### Features
 
@@ -47,13 +47,16 @@ Property names and types come from `notion_schema.features` and `notion_schema.f
 | Requirements status | select | `requirements_status` |
 | Config version | text | `config_version`. The workflow config version this feature used |
 | Step bindings | text | `step_bindings`. Slot, skill, and whether the binding came from the feature, the product, or the repo |
+| Nodes read | text | `nodes_read`. Graph node ids this feature read |
+| Nodes added | text | `nodes_added`. Ids the feature proposes to add |
+| Nodes changed | text | `nodes_changed`. Ids the feature proposes to change |
+| Nodes removed | text | `nodes_removed`. Ids the feature proposes to remove |
 | Confirmed | date | Extra. When the human confirmed the requirements page |
 | Chunks | relation | Extra |
 | Memories | relation | Extra |
-| Existing functionality | relation | Extra. The Codebase maps page for this feature's base SHA |
 | Product | relation | Extra. The product this feature belongs to |
 
-The page body has four sections: Requirements, Questions, Plan, Decisions. Child pages, not extra databases, hold prompts, diffs, verification results, advisor inputs, and advisor outputs. Title them `prompt <action> a<attempt>`, `diff <chunk-id> a<attempt>`, `verification <chunk-id> a<attempt>`, `advisor input <n>`, and `advisor output <n>`.
+The page body has four sections, and they are transient: Requirements, Questions, Plan, Decisions. Durable product facts are graph nodes, not sections of this page. The feature stores node ids only. Child pages hold prompts, diffs, verification results, advisor inputs, and advisor outputs. Title them `prompt <action> a<attempt>`, `diff <chunk-id> a<attempt>`, `verification <chunk-id> a<attempt>`, `advisor input <n>`, and `advisor output <n>`.
 
 ### Chunks
 
@@ -88,14 +91,39 @@ Property names and types come from `notion_schema.chunks` and `notion_schema.chu
 | Tie-break attempt | number | `tiebreak_for_attempt` |
 | Blocked reason | text | `blocked_reason` |
 | Bound skill | text | `bound_skill`. The skill this chunk step actually ran |
+| Touched nodes | text | `nodes`. Graph node ids this chunk touches |
 | Accepted unverified | checkbox | Extra. Human accepted a `not_implemented` verdict |
 | Product | relation | Extra. The product this chunk belongs to |
 
 The page body has Spec, Acceptance criteria, and Out of scope. The coding agent never opens this page. The Orchestrator copies those sections into the launch prompt.
 
-### Codebase maps
+### Graph nodes
 
-One page per code location and commit, shared by later calls. The title starts with `Existing functionality` and the location name. The page records the location name and the commit. The body is the survey: features and screens, routes and APIs, the data model, and flags, each with a file and a line. The read is read-only. The survey skill does not prescribe how the read runs. Only the caller that owns the page writes it.
+The product graph is the accumulating record of how the product works. One page per durable fact. Kinds are configured on the product workflow page. The shipped kinds are capability, component, entity, interface, requirement, decision, and constraint. A product may add kinds. Property names come from `notion_schema.graph_nodes`.
+
+| Property | Type | Field |
+| --- | --- | --- |
+| Name | title | Extra. One topic |
+| Kind | text | `kind` |
+| Status | select | `status`. `active`, `stale`, `superseded`, or `contradicted` |
+| Evidence | text | `evidence`. Location, path, and commit |
+| Provenance | text | `provenance`. The survey or the feature that last wrote the node |
+| Last verified | text | `last_verified`. Map of location name to commit |
+| Product | relation | Extra |
+
+### Graph edges
+
+One page per typed link. Shipped kinds are depends_on, implements, part_of, touches, constrains, supersedes, and conflicts_with. Property names come from `notion_schema.graph_edges`.
+
+| Property | Type | Field |
+| --- | --- | --- |
+| Name | title | Extra |
+| Kind | text | `kind` |
+| From | relation | `from_node` |
+| To | relation | `to_node` |
+| Product | relation | Extra |
+
+Survey creates and refreshes nodes. A feature does not copy those facts onto its own page. `update-graph` promotes a merged feature's delta after approval when `graph.promote` is `require_approval`.
 
 ### Coverage
 
@@ -107,7 +135,8 @@ One page per item, in the Coverage database. Property names come from `notion_sc
 | Feature | relation | Extra. The feature this row belongs to |
 | Product | relation | Extra. The product this row belongs to |
 | Code location | text | `repo`. The location this evidence came from. Empty only when the row is not about code |
-| Commit | text | `commit`. The pinned commit for that location, or empty when that location was not surveyed |
+| Commit | text | `commit`. The node's last-verified commit for that location |
+| Node | text | `node`. The graph node id this row is about |
 | Presences | text | `presences`. One entry per source kind that was compared: present, partial, or absent, plus evidence |
 | Classification | select | `classification`. done, partial, missing, needs_decision, conflict, undocumented |
 | Next action | select | `next_action`. plan, question, or none |
@@ -140,7 +169,7 @@ Property names come from `notion_schema.workflow` and `notion_schema.workflow_ex
 | Old | text | `old` |
 | New | text | `new` |
 
-The product page body holds code locations, sources, authoritative kinds, release policy, and standing preferences. A preference may override `plan_review` or `notify`. It must not override human gates or who writes Notion.
+The product page body holds code locations, sources, authoritative kinds, release policy, graph kind lists, `graph.promote`, and standing preferences. A preference may override `plan_review`, `notify`, or `graph.promote`. It must not override human gates or who writes Notion. Memory holds preferences and lessons. The graph holds product facts. Do not store the same fact in both.
 
 A feature override is a page with Scope `feature` and only the slots that differ. Precedence is feature override, then the product page, then `fstack.yaml`.
 

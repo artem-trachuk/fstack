@@ -27,6 +27,8 @@ The human names a feature, answers a question card, or asks where the work stand
 
    The coverage gate (`coverage_approval`) uses `approve_coverage` only for a direct yes or approve. That sets Approved on each listed `partial` or `missing` row and sets Status to `ready_to_plan`. Stop uses `human_decision` and sets Status to `stopped`. Do not plan a row the human did not approve.
 
+   Graph promotion (`graph_promotion`) uses `graph_promoted` only for a direct yes or approve. Stop uses `human_decision`, sets Status to `stopped`, and does not promote. A contradicted node stays unpromoted until the human chooses.
+
    A plan question uses `approve_plan` only for a direct yes or approve.
 
    Stack review uses `answer_review` on the `review-stack` skill.

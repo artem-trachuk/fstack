@@ -38,9 +38,9 @@ The next rule is `release_question` or a merging rule. Stack review is already r
    - Record `ci_recorded`. `pending` waits. `failing` escalates and leaves already merged chunks merged. `none` means there is no CI. Do not roll back.
    - Merge that one pull request. Record `merge_recorded` with the head sha. Mark later chunks in the same location `needs_restack`. Do not restack another location unless a cross-location dependency says so.
 
-5. When every chunk is `merged`, run `release.command` only if it is non-empty and still equals the approved string. Record `release_command_recorded`. Exit 0 sets `feature_status: done` and `release_state: done`. Any other exit sets `release_state: command_failed`, escalates, and does not roll back. An empty command finishes the same way with exit 0 and no command.
+5. When every chunk is `merged`, run `release.command` only if it is non-empty and still equals the approved string. Record `release_command_recorded`. Exit 0 sets `feature_status: awaiting_graph_update`. Any other exit sets `release_state: command_failed`, escalates, and does not roll back. An empty command finishes the same way with exit 0 and no command. Do not promote the graph in this skill.
 
-6. Tell the human the release is done, through `tldr`. Then follow `memory` and propose the durable lessons from this feature: decisions, corrections, preferences, conventions. On Grok Bot, send that proposal as a question card. Write the lessons to Notion only after the human chooses yes. If Notion is unreachable, show the unsaved lessons and stop. Do not start a new feature unless the human asks.
+6. Follow `memory` and propose lessons: decisions, corrections, preferences, conventions. These are memory, not product facts. On Grok Bot, send that proposal as a question card. Write the lessons to Notion only after the human chooses yes. If Notion is unreachable, show the unsaved lessons and stop. Then follow `update-graph`. A stopped feature is not promoted.
 
 A human can record `retry_release` with a quote after a CI or command failure. Merged chunks stay merged.
 

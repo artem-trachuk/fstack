@@ -2,7 +2,7 @@
 name: survey-product
 contract: survey
 description: >
-  Describe one code location at one pinned commit and store that description.
+  Refresh stale product-graph nodes for one code location at one pinned commit.
   Use when a code location should be surveyed, on its own or once per location before comparing sources.
   Read-only. The skill does not prescribe which mechanism performs the read.
 ---
@@ -18,9 +18,9 @@ This skill stands alone. A feature workflow can call it. Another workflow can ca
 
 ## Outputs
 
-- A stored description of current behaviour: features and screens, routes and APIs, the data model, and flags.
+- Graph nodes for what this location does. Kinds come from `graph.node_kinds`. Each node has evidence (location, path, commit), provenance `survey`, and last-verified commits.
 - Every claim has a file and a line. A claim without both is left out.
-- The store is keyed by the location name and the commit. A later call for the same pair returns the stored page and does not read that location again.
+- A node whose last-verified commit for this location equals the pinned commit is fresh. Reuse it. Do not read that path again.
 
 ## Read-only
 
@@ -30,11 +30,11 @@ The read does not modify the product and does not open a pull request. This skil
 
 1. If the effective workflow binding skips this slot, record `survey_skipped` and stop. If this call has no code location, return "no product source".
 
-2. Resolve the pinned commit for this location. Record it under `base_shas` for that name when a feature is in progress. Search the stored maps for that location and commit. If one exists, reuse it and return it. When every location on the feature has a map, link the pages, record `survey_filed` with reused set, set Status to `surveyed`, and stop. If another location still needs a map, survey that one next.
+2. Resolve the pinned commit for this location. Record it under `base_shas` for that name when a feature is in progress. Read the product graph. A node is fresh when its last-verified commit for this location equals that pin. Reuse every fresh node. Re-read only a stale node's evidence path, or an area the graph does not cover. The first survey, when the graph has no nodes for this location, seeds the graph.
 
-3. When a feature is in progress and no stored map exists for this pair, record `survey_launched` and the location and commit, set Status to `surveying`, and hand the read to the host. End the turn. Do not start a second read for the same pair.
+3. When a feature is in progress and some nodes are stale or missing, record `survey_launched` and the location and commit, set Status to `surveying`, and hand that limited read to the host. End the turn. Do not start a second read for the same pair. Do not read the whole location when the graph already covers it.
 
-4. When the read returns, write one Codebase maps page titled `Existing functionality`, the location name, and the short commit. The page records that name and commit. The body is the description. If a feature is in progress and every location is filed, link the pages and record `survey_filed`, then set Status to `surveyed`. If this call had no feature, return the page and do not change a feature status.
+4. When the read returns, create or update graph nodes. Set evidence, provenance `survey`, and last-verified commits. Do not write those facts on the feature page. If a feature is in progress and every location is filed, record `survey_filed` and set Status to `surveyed`. If this call had no feature, return the node ids and do not change a feature status.
 
 5. If the read fails, do not invent a map. Show the failure and stop.
 

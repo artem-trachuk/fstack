@@ -18,11 +18,11 @@ This skill stands alone. Give it the sources that are present. It returns a cove
 - `authoritative_kinds` from config. The shipped default is `requirements`. A kind not in that list is not authoritative.
 - Kinds are names such as `requirements`, `design`, and `current_product`. Others are allowed. The kind is not a product name, and this skill does not care which connector, link, or paste produced the text.
 
-`current_product` is the stored survey for one code location and one commit. A feature with several locations is compared once per location, then merged into one coverage view. Every evidence row names its location in `repo` and the pinned commit in `commit`. If a location has no survey, stop and tell the caller to run `survey-product` for that location. Do not describe the location from memory. If the feature has no code locations, `current_product` is absent and the comparison uses the other sources. Those rows leave `repo` empty.
+`current_product` is the product graph, which is the current product truth. Compare sources against those nodes. Do not re-read raw code when the graph already covers it. A feature with several locations uses the nodes whose evidence names each location, then one coverage view. Every row sets `node` to the graph node id, `repo` to the location, and `commit` to that node's last-verified commit. If the graph has no nodes for a location, stop and tell the caller to run `survey-product`. Do not describe the location from memory. If the feature has no code locations, `current_product` is absent and the comparison uses the other sources. Those rows leave `node` and `repo` empty.
 
 ## Outputs
 
-One coverage row per item. The same item from two sources in one location is one row. `repo` names the location. `commit` is the pinned commit for that location, or empty when it was not surveyed.
+One coverage row per item. The same item from two sources in one location is one row. `node` is the graph node id. `repo` names the location. `commit` is that node's last-verified commit, or empty when the graph has no node yet.
 
 Each row has one presence entry per source that was compared: the kind, whether the item is present, partial, or absent, and the evidence. Presence entries live in the row body. They are not fixed columns.
 
