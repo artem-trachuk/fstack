@@ -333,7 +333,9 @@ def main() -> int:
     check(True, "transition graph")
     check("notion-query-data-sources" in skill_text["memory"], "listing Notion Memory uses notion-query-data-sources")
     check("unsaved" in skill_text["memory"], "a Notion outage must show unsaved content")
-    check("notion-upload-skill" not in skill_text["memory"], "skills are not published to Notion")
+    for message in notion_skills_tool_errors(ROOT):
+        check(False, message)
+    check(True, "Notion Skills tools are only named to forbid them")
     for reader in ("collect-requirements", "gap-analysis", "split-into-chunks"):
         check("memory" in skill_text[reader], f"{reader} must read product memory first")
     check("memory" in skill_text["release"], "release must propose durable memories")
@@ -876,14 +878,44 @@ def memory_design_errors(memory_skill: str, design: str, table: dict, setup: str
             break
     if re.search(r"\| (Uncertainty|Forgotten) \|", design):
         errors.append("DESIGN must not add custom memory properties")
-    if "TODO(skills-in-notion)" not in memory_skill or "TODO(skills-in-notion)" not in setup:
-        errors.append("skills stay in git, with a TODO where Notion Skills would apply")
+    preference = "Skills are kept in GitHub only. Do not save them to Notion Skills."
+    if preference not in setup or preference not in design:
+        errors.append("the guide must say skills are kept in GitHub only")
+    if "memory and artifacts only" not in setup or "skills excluded" not in setup:
+        errors.append("the setup card excludes skills from the Shared context layer")
+    if "TODO(skills-in-notion)" in setup or "TODO(skills-in-notion)" in memory_skill or "TODO(skills-in-notion)" in design:
+        errors.append("the skills TODO is resolved")
+    if "Under Skills" not in setup or "plugin.json" not in setup:
+        errors.append("the Skills destination uses the repository field in plugin.json")
+    for tool in ("notion-upload-skill", "notion-download-skill", "notion-complete-mcp-setup"):
+        if tool not in setup:
+            errors.append(f"setup must forbid {tool}")
+    if "type skills" not in setup:
+        errors.append("setup must forbid notion-complete-mcp-setup with type skills")
     if "Notion agent setup choice" not in setup or "Never replace an existing guide" not in setup:
         errors.append("setup follows the official guide and does not replace an existing one")
     if "Daily Notion memory and setup check" not in setup or "explicit yes" not in setup:
         errors.append("the daily loop uses the official name and needs an explicit yes")
-    if "do not call `notion-complete-mcp-setup`" not in setup.lower() and "Do not call `notion-complete-mcp-setup`" not in setup:
-        errors.append("setup must not call notion-complete-mcp-setup while skills stay in git")
+    return errors
+
+
+def notion_skills_tool_errors(root: Path) -> list[str]:
+    """A skill may name a Notion Skills tool only to forbid calling it."""
+    errors = []
+    tools = (
+        "notion-upload-skill",
+        "notion-download-skill",
+        "notion-get-enabled-skills",
+        "notion-complete-mcp-setup",
+        "notion-convert-page-to-skill",
+        "notion-update-skill-settings",
+    )
+    forbid = re.compile(r"\b(do not|don't|never|must not)\b", re.IGNORECASE)
+    for path in sorted((root / "skills").glob("*/SKILL.md")):
+        for line in path.read_text(encoding="utf-8").splitlines():
+            for tool in tools:
+                if tool in line and not forbid.search(line):
+                    errors.append(f"{path.parent.name} mentions {tool} without forbidding it")
     return errors
 
 

@@ -141,9 +141,7 @@ Roles name an agent and a model. They do not list skills. The agent file is the 
 
 ## Where state lives
 
-`state.backend` and `memory.backend` are `notion`. The schema is in [DESIGN.md](DESIGN.md): a private product page, the user's Agent Operating Guide at version `0.0.6`, and Features, Chunks, Coverage, Graph nodes, Graph edges, and Workflow config. The graph holds durable product facts. Preferences and lessons use Notion Memory, fetched with id `"memory"`. fstack does not create a Memories database. A feature page holds links to Decision pages, the plan, and status, and mentions related memories. Coverage rows point at graph nodes. Skills stay in git.
-
-TODO(skills-in-notion): the official setup would store skills in Notion. That is not done yet.
+`state.backend` and `memory.backend` are `notion`. The schema is in [DESIGN.md](DESIGN.md): a private product page, the user's Agent Operating Guide at version `0.0.6`, and Features, Chunks, Coverage, Graph nodes, Graph edges, and Workflow config. The graph holds durable product facts. Preferences and lessons use Notion Memory, fetched with id `"memory"`. fstack does not create a Memories database. A feature page holds links to Decision pages, the plan, and status, and mentions related memories. Coverage rows point at graph nodes. Skills stay in the git repository named by `plugin.json`. They are not saved as Notion Skills.
 
 The Orchestrator is the only role that calls Notion. It copies the chunk spec into the coding agent's launch prompt, passes the verifier its prompt and patch, and passes advisors their input pages' text. Asking the Orchestrator where the feature stands reads the Features database.
 

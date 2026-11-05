@@ -12,9 +12,7 @@ Follow the debug-log contract.
 
 Notion holds three different things. The product graph holds durable product facts. Notion Memory holds preferences and lessons. A feature page holds only what is transient: links to Decision pages, the plan, and status. Do not copy a graph fact into a memory, and do not copy a memory into a graph node.
 
-The git repository at `artem-trachuk/fstack` is the only source of skill files. Do not upload, download, or sync skills through Notion Skills.
-
-TODO(skills-in-notion): the official Shared context layer would store skills as Notion Skills, then call `notion-get-enabled-skills` and `notion-complete-mcp-setup` with type skills. That is not in force. Do not call those tools for skills. Leave this rule until the owner decides.
+The git repository named by the `repository` field in `plugin.json` is the only source of skill files. Bots copy them from that repo. Do not save skills as Notion Skills, even when the human picks the Shared context layer. Never call `notion-upload-skill`, `notion-download-skill`, or `notion-complete-mcp-setup` with type skills, and do not call `notion-get-enabled-skills`.
 
 ## When to use
 

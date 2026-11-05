@@ -2,9 +2,7 @@
 
 Grok Bot is the primary host. The human chats with the Orchestrator. It asks with question cards, keeps state in Notion, launches Cursor cloud agents for code, and messages the Verifier and Advisor. The Cursor plugin is a secondary host for the same skills.
 
-Skills live only in the git repository `artem-trachuk/fstack`. Bots copy them from that repo. They are not published to Notion Skills.
-
-TODO(skills-in-notion): Notion's Shared context layer would keep the main skill copy in Notion and load it with `notion-get-enabled-skills` and `notion-complete-mcp-setup`. That change is waiting on the owner. Do not apply it.
+This is the one deviation from Notion's official agent setup. The git repository named by the `repository` field in `plugin.json` is the single source of skill files, and bots copy them from that repo. Skills are not saved as Notion Skills, even when the human picks the Shared context layer, which covers memory and artifacts only. The Agent Operating Guide lists that repository, with its link, under Skills, and adds this line under User preferences and exclusions: Skills are kept in GitHub only. Do not save them to Notion Skills.
 
 Feature state and cross-feature memory live in the user's Notion workspace. The Orchestrator is the only role that reads or writes Notion. Coding agents, the verifier, and advisors receive excerpts in the prompts the Orchestrator writes. If Notion is unreachable, the Orchestrator stops, shows the unsaved content, and does not store it anywhere else.
 
@@ -20,7 +18,7 @@ Version of the Agent Operating Guide: `0.0.6`, published `2026-10-30`, from [Not
 
 One private page named for the product. A product owns features, the workflow config, sources, and zero or more repos. Preferences and lessons live in Notion Memory, not in a database this product creates. Each repo is a code location with a name, a role, an optional subpath, and a default branch. The product does not have one base commit or one pull request. Features, chunks, coverage rows, and workflow pages point back with a Product relation.
 
-- The Agent Operating Guide is the user's private page in a Documents database. Setup keeps an existing guide and suggests additions. A new guide uses version `0.0.6`, published `2026-10-30`, and the official sections. fstack records its product home and databases under destinations only after the human approves those additions. Unconfirmed fields stay "Not set up yet".
+- The Agent Operating Guide is the user's private page in a Documents database. Setup keeps an existing guide and suggests additions. A new guide uses version `0.0.6`, published `2026-10-30`, and the official sections. fstack records its product home and databases under destinations only after the human approves those additions. Skills records the repository from `plugin.json`. Other unconfirmed fields stay "Not set up yet".
 - Linked databases: Features, Chunks, Coverage, Graph nodes, Graph edges, Workflow config, Survey, Decision, Verification, and Debug log. Do not create a Memories database.
 
 ### Features
@@ -260,8 +258,6 @@ These names were checked against the live Notion MCP. Docs and skills use them w
 - `notion-create-database` to create a database from SQL `CREATE TABLE` or a typed database definition.
 - `notion-get-setup-guide` during setup.
 - `instructions_version` (`0.0.6`) is a parameter on every Notion tool fstack calls.
-
-TODO(skills-in-notion): `notion-complete-mcp-setup` and `notion-get-enabled-skills` are how Notion's Shared context layer would publish skills. fstack does not call them. Skill files stay in git.
 
 If a Notion call fails, stop and show the unsaved content. Do not guess a different tool name.
 
