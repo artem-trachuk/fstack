@@ -1,5 +1,6 @@
 ---
 name: advisors
+contract: advise
 description: >
   Run a short read-only advisor and record the call before it returns.
   Use when the action is planner_review during gap-analysis or split-into-chunks, or one verify_tiebreak on a disputed attempt.
@@ -10,11 +11,22 @@ description: >
 
 Follow the debug-log contract.
 
+Follow the decision-policy contract.
+
 A second opinion. The caller decides what to do with it.
+
+## Inputs
+
+- The options, the artifact, and which configured advisor is being asked.
+- `advisors.decision` lists the advisors used for a non-trivial choice. The names are roles, not models.
+
+## Outputs
+
+- A critique and a ranking. This skill does not pick the option and does not escalate a disagreement.
 
 ## When to use
 
-`planner_review` during `gap-analysis` and `split-into-chunks`. `verify_tiebreak` when a chunk is `disputed`. Skip the advisor when the action is not in its `when` list.
+`planner_review` during `gap-analysis` and `split-into-chunks`. `verify_tiebreak` when a chunk is `disputed`. A non-trivial decision asks each advisor named in `advisors.decision` to critique and rank the options. The fallback below is unchanged. Skip an advisor when the `advise` slot is skipped, or when the action is outside that advisor's `when` list and it is not a decision round.
 
 ## Budget
 

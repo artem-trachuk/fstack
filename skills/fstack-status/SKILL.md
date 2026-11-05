@@ -9,6 +9,8 @@ description: >
 
 Follow the debug-log contract.
 
+Follow the decision-policy contract.
+
 A new chat does not remember the last turn. Notion does. Feature pages are not in the git repository.
 
 ## When to use
@@ -27,9 +29,9 @@ The human names a feature, answers a question card, or asks where the work stand
 
    A source-write question (`source_write`) uses `source_write_applied` only after a direct yes, and only through the writer configured on that source. No, or a source with no writer, leaves the text on the row and writes nothing. Then set Status to `awaiting_coverage_approval` and send the coverage gate.
 
-   The coverage gate (`coverage_approval`) uses `approve_coverage` only for a direct yes or approve. That sets Approved on each listed `partial` or `missing` row and sets Status to `ready_to_plan`. Stop uses `human_decision` and sets Status to `stopped`. Do not plan a row the human did not approve.
+   The coverage gate (`coverage_approval`) uses `approve_coverage` for a direct yes or approve, and also when `autonomy` is `auto` and the rows are `partial` or `missing` and satisfy the authoritative requirement. That sets Approved and sets Status to `ready_to_plan`. Stop uses `human_decision` and sets Status to `stopped`. Do not plan a row that is not approved. Do not ask the human to choose an implementation.
 
-   Graph promotion (`graph_promotion`) uses `graph_promoted` only for a direct yes or approve. Stop uses `human_decision`, sets Status to `stopped`, and does not promote. A contradicted node stays unpromoted until the human chooses.
+   Graph promotion (`graph_promotion`) uses `graph_promoted` for a direct yes or approve, and also when `autonomy` is `auto`. Stop uses `human_decision`, sets Status to `stopped`, and does not promote. An authoritative conflict stays unpromoted until the human chooses. Any other contradiction is decided and logged.
 
    A plan question uses `approve_plan` only for a direct yes or approve.
 
@@ -43,11 +45,13 @@ The human names a feature, answers a question card, or asks where the work stand
 
    A contest of a failed chunk uses `contest` and includes the implementer's reason. That moves the chunk to `disputed` without adding another failure.
 
-4. If the human asks for orphans, unlinked pages, or whether the graph is connected, walk the relations in `required_relations` starting at the product page. Report two lists through `tldr`. An unlinked page is one whose required relation is empty. Relations listed in `optional_relations` may be empty: the first chunk's Depends on, a feature with nothing removed, a coverage row with no graph node yet, a survey with no feature, and a product-scoped workflow page. Notion Memory pages are not in `required_relations`. A feature page mentions them in its body. Do not report a memory as unlinked. Do not report those as unlinked. An orphan is a page no path from the product page reaches. Name the page and the missing link. Do not delete or rewrite those pages in this turn.
+4. If the human asks for orphans, unlinked pages, or whether the graph is connected, walk the relations in `required_relations` starting at the product page. Report two lists through `tldr`. An unlinked page is one whose required relation is empty. Relations listed in `optional_relations` may be empty: the first chunk's Depends on, a feature with nothing removed, a coverage row with no graph node yet, a survey with no feature, a product-scoped workflow page, and a fix with no nodes, chunks, or verification yet. Notion Memory pages are not in `required_relations`. A feature page mentions them in its body. Do not report a memory as unlinked. Do not report those as unlinked. An orphan is a page no path from the product page reaches. Name the page and the missing link. Do not delete or rewrite those pages in this turn.
 
-5. If the human asks to export the debug log, follow the pages from the product's Debug log through each Previous link so the continuation pages read as one log. Render one markdown document for the product, one feature, or one session correlation id, whichever they named. Entries stay in order. Redacted values stay redacted. Do not add file bodies or prompts that were not in the log.
+5. If a feature page from an earlier run is really a bug, offer to convert it into a Fix entry under the feature the human names. The offer is a question card. Do not move or delete anything without approval. On approval, create the Fix page with Product and Feature relations and copy the behaviour from the old page. Leave the old page where it is. Archiving or deleting it takes a separate approval.
 
-6. If nobody is replying, report the status through `tldr`: feature, status, waiting question, chunk, pull requests, and shas. Then follow `pick-next-task` when the table says the work can move. End the turn when it says to wait.
+6. If the human asks to export the debug log, follow the pages from the product's Debug log through each Previous link so the continuation pages read as one log. Render one markdown document for the product, one feature, or one session correlation id, whichever they named. Entries stay in order. Redacted values stay redacted. Do not add file bodies or prompts that were not in the log.
+
+7. If nobody is replying, report the status through `tldr`: feature, status, waiting question, chunk, pull requests, and shas. Then follow `pick-next-task` when the table says the work can move. End the turn when it says to wait.
 
 ## Events
 

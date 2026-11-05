@@ -433,9 +433,17 @@ def main() -> int:
     check("unsaved Notion payload" in facing, "human-facing must exempt unsaved payloads")
     check(yaml.safe_load((ROOT / "fstack.yaml").read_text(encoding="utf-8")).get("debug") is False, "debug must ship off")
     for skill_path in (ROOT / "skills").glob("*/SKILL.md"):
-        check("Follow the debug-log contract." in skill_path.read_text(encoding="utf-8"), f"{skill_path.parent.name} must follow the debug-log contract")
+        skill_body = skill_path.read_text(encoding="utf-8")
+        check("Follow the debug-log contract." in skill_body, f"{skill_path.parent.name} must follow the debug-log contract")
+        check("Follow the decision-policy contract." in skill_body, f"{skill_path.parent.name} must follow the decision-policy contract")
     check("debug_toggled" in skill_text["configure-workflow"], "turning debug on or off is a change-log event")
     check("export the debug log" in skill_text["fstack-status"], "fstack-status must export a debug trace")
+    for message in fix_intake_errors(table, skill_text):
+        check(False, message)
+    check(True, "a fix stays on the existing feature")
+    for message in decision_policy_errors(table, skill_text):
+        check(False, message)
+    check(True, "the orchestrator decides, and one chunk is a valid plan")
 
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     for heading in ("## Install", "## Quick start", "## Flow", "## Configuration", "## Workspace", "## Adding a bot or a skill"):
@@ -502,6 +510,11 @@ def validate_config(data: dict) -> list[str]:
         errors.append("memory.published must be 2026-10-30")
     if data.get("plan_review") != "notify":
         errors.append("shipped plan_review must be notify")
+    if data.get("autonomy") != "auto":
+        errors.append("autonomy must ship as auto")
+    decision_advisors = (data.get("advisors") or {}).get("decision")
+    if decision_advisors != ["planner_review", "verify_tiebreak"]:
+        errors.append("advisors.decision must name the configured advisor roles")
     if data.get("review", {}).get("mode") != "end_of_stack":
         errors.append("review.mode must be end_of_stack")
     gates = data.get("human_gates") or {}
@@ -639,6 +652,7 @@ def relation_declaration_errors(table: dict, design: str) -> list[str]:
         "coverage",
         "decision",
         "verification",
+        "fix",
         "workflow",
         "debug_log",
     }
@@ -656,6 +670,7 @@ def relation_declaration_errors(table: dict, design: str) -> list[str]:
         "coverage": ("coverage", "coverage_extra"),
         "decision": ("decision", "decision_extra"),
         "verification": ("verification", "verification_extra"),
+        "fix": ("fix", "fix_extra"),
         "workflow": ("workflow", "workflow_extra"),
         "debug_log": ("debug_log", "debug_log_extra"),
     }
@@ -803,7 +818,7 @@ def workflow_config_errors(root: Path) -> list[str]:
     if workflow.get("version") != 1:
         errors.append("workflow.version must be 1")
     slots = workflow.get("slots") or {}
-    required = {"survey", "gap_analysis", "split", "implement", "verify", "review", "release", "update_graph"}
+    required = {"survey", "gap_analysis", "split", "implement", "verify", "review", "release", "update_graph", "fix", "advise"}
     if not required <= set(slots):
         errors.append(f"workflow slots missing: {sorted(required - set(slots))}")
     if (slots.get("verify") or {}).get("skill") != "verify":
@@ -814,7 +829,7 @@ def workflow_config_errors(root: Path) -> list[str]:
         if not isinstance(slot, dict):
             errors.append(f"workflow.slots.{name} must be a mapping")
             continue
-        if name != "survey" and slot.get("skippable") is True:
+        if name not in {"survey", "advise"} and slot.get("skippable") is True:
             errors.append(f"workflow.slots.{name} must not be skippable in the repo default")
         skill = str(slot.get("skill") or "")
         contract = str(slot.get("contract") or "")
@@ -899,6 +914,84 @@ def memory_design_errors(memory_skill: str, design: str, table: dict, setup: str
     return errors
 
 
+def decision_policy_errors(table: dict, skill_text: dict) -> list[str]:
+    """The orchestrator decides. One chunk is a valid plan for any work item."""
+    errors = []
+    policy = skill_text.get("decision-policy") or ""
+    if "Follow the decision-policy contract." not in policy:
+        errors.append("decision-policy skill is missing")
+    for phrase in (
+        "authoritative requirement",
+        "smallest change",
+        "blast radius",
+        "reversible",
+        "existing patterns",
+        "disagreement",
+        "genuinely tied",
+        "ask_more",
+        "advisors.decision",
+        "new_feature",
+        "staged rollout",
+    ):
+        if phrase not in policy:
+            errors.append(f"decision-policy must mention {phrase}")
+    for banned in ("opus", "argon", "claude", "gemini"):
+        if banned in policy.lower():
+            errors.append(f"decision-policy must not name the model {banned}")
+    ask = re.compile(r"ask the human", re.IGNORECASE)
+    choice = re.compile(r"fix approach|implementation", re.IGNORECASE)
+    forbid = re.compile(r"\b(do not|don't|never|must not)\b", re.IGNORECASE)
+    for name, text in skill_text.items():
+        for line in text.splitlines():
+            if ask.search(line) and choice.search(line) and not forbid.search(line):
+                errors.append(f"{name} asks the human to choose an implementation or a fix approach")
+    split = skill_text.get("split-into-chunks") or ""
+    transitions = (ROOT / "state" / "transitions.yaml").read_text(encoding="utf-8")
+    for label, text in (("split-into-chunks", split), ("transitions", transitions)):
+        if "small fix" in text:
+            errors.append(f"{label} limits the single chunk to a small fix")
+        if "new_feature" not in text or "fix" not in text:
+            errors.append(f"{label} must cover new_feature and fix")
+    if "single_chunk_filed" not in split or "One chunk is a valid plan" not in split:
+        errors.append("a one-chunk plan must be valid")
+    if "staged rollout" not in split:
+        errors.append("split only when size, risk, repos, or a staged rollout clearly helps")
+    event = next((item for item in table.get("events") or [] if item.get("name") == "single_chunk_filed"), None)
+    if not event or event.get("to") != ["building"] or event.get("skill") != "split-into-chunks":
+        errors.append("single_chunk_filed must move any work item straight to building")
+    if "more than one chunk" not in split:
+        errors.append("plan approval is only for a plan with more than one chunk")
+    return errors
+
+
+def fix_intake_errors(table: dict, skill_text: dict) -> list[str]:
+    """A bug is a Fix page on an existing feature. It does not create a feature page."""
+    errors = []
+    collect = skill_text.get("collect-requirements") or ""
+    filed = skill_text.get("file-fix") or ""
+    if "new_feature" not in collect or "`fix`" not in collect:
+        errors.append("fix intake must classify new_feature or fix")
+    if "Never create a Features page for a fix" not in collect or "Never create a Features page for a fix" not in filed:
+        errors.append("fix intake must refuse a new feature page")
+    required = (table.get("required_relations") or {}).get("fix") or []
+    if "fix" not in (table.get("required_relations") or {}) or "Product" not in required or "Feature" not in required:
+        errors.append("Fix kind must be in required_relations")
+    status = skill_text.get("fstack-status") or ""
+    if "Fix entry" not in status or "without approval" not in status:
+        errors.append("converting a mistaken feature page waits for approval")
+    if "not a fix" not in (skill_text.get("gap-analysis") or ""):
+        errors.append("an ambiguous requirement is a question, not a fix")
+    if "Do not add a feature node" not in (skill_text.get("update-graph") or ""):
+        errors.append("a fix updates existing graph nodes")
+    create_feature = re.compile(r"create a features? page", re.IGNORECASE)
+    forbid = re.compile(r"\b(never|do not|must not)\b", re.IGNORECASE)
+    for name, text in skill_text.items():
+        for line in text.splitlines():
+            if create_feature.search(line) and re.search(r"\bfix\b", line, re.IGNORECASE) and not forbid.search(line):
+                errors.append(f"{name} creates a feature page for a fix")
+    return errors
+
+
 def notion_skills_tool_errors(root: Path) -> list[str]:
     """A skill may name a Notion Skills tool only to forbid calling it."""
     errors = []
@@ -932,6 +1025,7 @@ def notion_schema_errors(table: dict, design: str) -> list[str]:
         ("survey_fields", "survey", "survey_extra"),
         ("decision_fields", "decision", "decision_extra"),
         ("verification_fields", "verification", "verification_extra"),
+        ("fix_fields", "fix", "fix_extra"),
         ("debug_log_fields", "debug_log", "debug_log_extra"),
         ("workflow_fields", "workflow", "workflow_extra"),
     )

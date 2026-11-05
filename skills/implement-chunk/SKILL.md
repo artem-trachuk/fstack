@@ -11,6 +11,8 @@ description: >
 
 Follow the debug-log contract.
 
+Follow the decision-policy contract.
+
 ## Contract
 
 Inputs: one chunk spec, the base branch, and any slot parameters.

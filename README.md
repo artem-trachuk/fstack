@@ -19,10 +19,10 @@ Create three bots from the configs in [`bots/`](bots/) and connect Notion and Gi
 Chat with the Orchestrator. Do not start a feature from another bot.
 
 1. Ask it to set up a product. A product is a Notion boundary, not one code location. Name zero or more locations, each with a role and a default branch. `fstack.yaml` can live in any one of them, or only in Notion. You approve the product page and databases before any schema is created.
-2. Ask it to start a feature and describe what you want. That request is the only way requirements collection starts. Confirm the requirements page when the question card asks.
+2. Ask it to start a feature and describe what you want. That request is the only way requirements collection starts. A bug is a fix on an existing feature, not a new feature page. Confirm the requirements page when the question card asks.
 3. When the feature lists code locations, `survey-product` reads the product graph first. It re-surveys only nodes whose evidence is stale for that location's current commit, and areas the graph does not cover. The first survey seeds the graph. The read is read-only. With no locations, this step is skipped.
 4. Gap analysis compares the sources that are present against the graph, not against a fresh read of the code. Coverage rows point at node ids. A source is a kind, such as requirements, design, or the current product, plus whatever reader the host has. You answer one card for conflicts, items that are not backed by an authoritative source, and behaviour a location has with no requirement. The choices are implement, write back to a source, skip, or defer. A write happens only after you approve it, and only if that source has a writer.
-5. You approve the coverage table. Only approved rows that are partial or missing become chunks, and each chunk targets one location. Stacks do not cross locations. Plan approval waits only when `plan_review` is `approve`. The shipped value is `notify`, so coding starts after the plan is shown. Release is per location, then the feature follows `release_policy`: `all_or_none` or `per_repo`.
+5. Clear partial and missing rows become chunks, one per location. A simple feature, update, or fix is one chunk per repo and goes straight to implementation. A split happens only when size, independent risk, multiple repos, or a staged rollout clearly helps. Stacks do not cross locations. A plan question is only for that multi-chunk case when `autonomy` is `ask_more`. Release is per location, then the feature follows `release_policy`: `all_or_none` or `per_repo`.
 6. For each chunk it launches one Cursor cloud agent, stacked on the previous branch. When the run finishes, the Orchestrator is revived with the branch, the pull request, and the report. It messages the Verifier. Verification is a stub, so you get a card: accept the chunk unverified, or stop. That choice is saved in Notion. The stack does not continue until you answer.
 7. Review the stacked pull requests when the card asks. That card does not approve release.
 8. Answer the later release card. The stack is merged only after you approve the effect and the shas that card names.
@@ -94,13 +94,16 @@ The prompt shape the stub will someday use is unchanged: the orchestrator builds
 | `state.backend` | `notion` | Feature records live in the user's Notion workspace |
 | `memory.backend` | `notion` | Notion Memory. Lessons are Type Work. Working style is Type Preference |
 | `memory.instructions_version` | `0.0.6` | Sent on every Notion MCP call |
-| `plan_review` | `notify` | Show the plan and continue. `approve` waits for a yes |
+| `plan_review` | `notify` | Show a multi-chunk plan and continue. `approve` waits only when `autonomy` is `ask_more` |
+| `autonomy` | `auto` | Decide and continue. `ask_more` adds check-ins. Human gates stay on |
+| `workflow.slots.advise` | `advisors` | On for a non-trivial choice. The configured advisors rank the options |
 | `review.mode` | `end_of_stack` | One human review for the stack, then one release question |
 | `verify.max_failures_before_escalation` | `2` | Counted with `attempts_since_decision`, using `>=` |
 | `release.command` | empty | An approved release merges the stack and stops |
 | `authoritative_kinds` | `requirements` | Source kinds that can make an item buildable |
 | `sources` | kind, ref, reader | Inputs. `ref` and `reader` are how this host reads that kind. `writer` is optional |
 | `workflow.slots` | skill per slot | Repo default. A Notion product page overrides it, and a feature page overrides the product |
+| `workflow.slots.fix` | `file-fix` | A bug stays on the existing feature. Same override order as the other slots |
 | `debug` | `false` | Trace in the product Debug log. A product page or a feature override may turn it on |
 
 `setup-product` creates a Workflow config database and seeds it from those repo defaults. At session start the Orchestrator reads the feature override, then the product page, then `fstack.yaml`, and records the binding and config version it used. You can say "use skill X for verification" or "for this feature only, skip survey". It checks that the skill is in the library and that its contract matches the slot, confirms in one line, and writes a change log entry. Human gates stay in the repo. The verify slot ships bound to `verify`.
@@ -163,7 +166,8 @@ A chunk id is `NN-slug`. Status values and the events that change them are only 
 | --- | --- | --- |
 | `setup-product` | Human, or the orchestrator when config is missing | Copies templates, resolves models, creates Workflow config |
 | `configure-workflow` | Session start, or the human in chat | Shows the effective bindings and writes an approved change |
-| `collect-requirements` | Human, only after an explicit chat request | Writes the requirements page, then hands off to the orchestrator |
+| `collect-requirements` | Human, only after an explicit chat request | Classifies `new_feature` or `fix`. A fix does not create a feature page |
+| `file-fix` | The `fix` slot, after that classification | Files a Fix page under the existing feature |
 | `survey-product` | On its own, or once per code location | Read-only description of that location at a pinned commit |
 | `gap-analysis` | On its own, or after the survey | Compares the sources that are present and classifies each item |
 | `split-into-chunks` | On its own with approved rows, or after the coverage gate | Plans only approved partial and missing rows |

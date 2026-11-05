@@ -10,15 +10,17 @@ description: >
 
 Follow the debug-log contract.
 
+Follow the decision-policy contract.
+
 Apply `next_rules` in `state/transitions.yaml` from top to bottom. The first rule whose `when` matches is the only action. Do not skip ahead to release while review is still open.
 
 ## When to use
 
-The Notion feature page exists and the orchestrator needs the next legal action.
+The Notion feature page exists and the orchestrator needs the next legal action. If the human is asking to fix a bug or a regression, classify it as `fix` first and follow the skill bound to the `fix` slot. Do not create a Features page.
 
 ## Steps
 
-1. Read the Notion feature page, every chunk page in id order, and any verification page whose applied flag is false. When a verifier reply arrives and that page does not exist yet, create it before you read it. Title it `verification <chunk-id> a<attempt>`. Set Product, Feature, and Chunk relations. Store the verdict, the message, `base_sha`, and `head_sha` from the reply. Set applied to false. The verifier does not create this page. Take the lease when it is free or already yours. A lease held by someone else until it expires means you stop.
+1. Read the Notion feature page, every chunk page in id order, every Fix page related to the feature, and any verification page whose applied flag is false. When a verifier reply arrives and that page does not exist yet, create it before you read it. Title it `verification <chunk-id> a<attempt>`. Set Product, Feature, and Chunk relations. When the chunk is linked from a Fix page, set that Fix page's Verification relation too. Store the verdict, the message, `base_sha`, and `head_sha` from the reply. Set applied to false. The verifier does not create this page. Take the lease when it is free or already yours. A lease held by someone else until it expires means you stop.
 
 2. Do that one action.
 

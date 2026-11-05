@@ -10,6 +10,8 @@ description: >
 
 Follow the debug-log contract.
 
+Follow the decision-policy contract.
+
 The chunk stops. The human chooses. Record `waiting_on` before you end the turn.
 
 ## When to use

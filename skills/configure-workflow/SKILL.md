@@ -10,11 +10,13 @@ description: >
 
 Follow the debug-log contract.
 
+Follow the decision-policy contract.
+
 Slots choose skills. They do not choose policy.
 
 ## Inputs
 
-- The repo defaults in `fstack.yaml` wherever that file lives, or the Notion copy when the product has no file: `workflow.slots`, `code_locations`, `release_policy`, `sources`, `authoritative_kinds`, and `debug`.
+- The repo defaults in `fstack.yaml` wherever that file lives, or the Notion copy when the product has no file: `workflow.slots`, `code_locations`, `release_policy`, `sources`, `authoritative_kinds`, `debug`, and `autonomy`.
 - The product Workflow config page in Notion.
 - The feature override page, when a feature is in progress.
 - The human's request, when they are changing a binding.
@@ -47,7 +49,7 @@ When the human asks what is configured, list each slot, the effective skill, the
 
 3. Read that skill's `contract`. The slot's `contract` is in `fstack.yaml`. If the skill does not declare a contract, or the two differ, refuse the binding and say what the slot requires. Do not write.
 
-4. A skip is allowed only when that slot's `skippable` is true. The shipped skippable slot is `survey`. Refuse any other skip.
+4. A skip is allowed only when that slot's `skippable` is true. The shipped skippable slots are `survey` and `advise`. Refuse any other skip. The `advise` slot defaults to on and may be skipped. It binds the configured advisors, not a model name. The `fix` slot uses the same precedence as the other slots. Its repo default is `file-fix`. A product page or a feature override may bind another skill with contract `fix`. That binding does not change human gates or who writes Notion.
 
 5. Confirm in one line, naming the slot, the skill, the parameters, and whether the change is for this feature or the product. Then write.
 
@@ -55,7 +57,7 @@ When the human asks what is configured, list each slot, the effective skill, the
 
 Parameters are an optional map the skill reads, such as `{env: staging}`. Notes are optional text. Neither can carry a human gate.
 
-Standing preferences may set `plan_review`, `notify`, `graph.promote`, or `debug` on the product page, or on a feature override. The same precedence applies. They are not gates. `graph.promote` decides whether `update-graph` waits for a yes. It does not change merge, release, or who writes Notion.
+Standing preferences may set `plan_review`, `notify`, `graph.promote`, `debug`, or `autonomy` on the product page, or on a feature override. The same precedence applies. They are not gates. `autonomy` is `auto` or `ask_more`. `auto` decides and continues. `ask_more` adds check-ins. Neither value can disable a human gate. `graph.promote` decides whether `update-graph` waits for a yes when `autonomy` is `ask_more`. It does not change merge, release, or who writes Notion.
 
 `debug` ships false. "Turn debug on" or "turn debug off" sets that flag for the product, or for this feature only when the human says so. Record `debug_toggled` in the workflow change log with the old value and the new value. Then follow `debug-log`. Turning debug on writes that toggle as the first entry. Turning it off writes that one entry and then stops.
 

@@ -127,14 +127,18 @@ next_rules:
   - id: coverage_gate
     when: feature_status is awaiting_coverage_approval
     action: wait_for_coverage_approval
-    detail: The human approves which rows may become chunks. Only approved partial and missing rows are planned. needs_decision, conflict, and undocumented rows are not planned unless the human chose implement and this gate approves that row.
+    detail: Under autonomy auto, approve partial and missing rows that satisfy the authoritative requirement and continue. Under ask_more, the human approves those rows. needs_decision, conflict, and undocumented rows are not planned unless they are resolved and then approved.
+  - id: single_chunk
+    when: feature_status is ready_to_plan and there are no chunks and the work is one chunk per repo
+    action: split_into_chunks
+    detail: File one chunk per touched repo and set building. Do not open a plan question and do not run a separate planning pass. This is the default for any work item, new_feature or fix. Split only when that clearly helps. Gap analysis may leave the feature ready for this rule directly.
   - id: split
     when: feature_status is ready_to_plan and there are no chunks
     action: split_into_chunks
   - id: plan_gate
     when: feature_status is awaiting_plan_approval
     action: wait_for_plan_approval
-    detail: Only when plan_review is approve. The default notify never enters this status.
+    detail: Only when autonomy is ask_more, plan_review is approve, and the plan has more than one chunk in a repo. A single chunk never enters this status. The default notify never enters it either.
   - id: base_drift
     when: a code location's default-branch commit differs from base_shas for that location and the feature is building or merging
     action: base_moved
@@ -251,7 +255,12 @@ events:
     skill: collect-requirements
     from: [requirements_draft]
     to: [requirements_confirmed]
-    guard: human quote accepts the requirements question, and the requirements text is non-empty
+    guard: an unambiguous request confirms the page when autonomy is auto. ask_more, or an ambiguous requirement, needs a human quote. The requirements text is non-empty.
+  - name: fix_filed
+    skill: file-fix
+    from: [done, stopped, requirements_confirmed, surveyed, building]
+    to: [requirements_confirmed, surveyed, building]
+    guard: create a Fix page under the existing feature. Do not create a Features page. A done feature returns to requirements_confirmed. An in-progress feature keeps its status. A stopped feature stays stopped until the human approves a reopen.
   - name: survey_launched
     skill: survey-product
     from: [requirements_confirmed]
@@ -270,8 +279,8 @@ events:
   - name: record_coverage
     skill: gap-analysis
     from: [surveyed]
-    to: [questions_open, awaiting_coverage_approval]
-    guard: one Coverage row per item, with a presence entry per source. needs_decision, conflict, and undocumented open one question card. Otherwise open the coverage gate. Do not plan chunks here.
+    to: [questions_open, awaiting_coverage_approval, ready_to_plan]
+    guard: one Coverage row per item, with a presence entry per source. Human-only rows open one batched question card. Under autonomy auto, clear partial and missing rows move to ready_to_plan without a card. Under ask_more, open the coverage gate. Do not plan chunks here.
   - name: answer_coverage_questions
     skill: fstack-status
     from: [questions_open]
@@ -291,7 +300,12 @@ events:
     skill: fstack-status
     from: [awaiting_coverage_approval]
     to: [ready_to_plan, stopped]
-    guard: a direct yes sets Approved on the listed partial and missing rows and moves to ready_to_plan. stop sets stopped. Unapproved rows are not planned.
+    guard: a direct yes, or an agent decision under autonomy auto, sets Approved on the listed partial and missing rows and moves to ready_to_plan. stop sets stopped. Unapproved rows are not planned.
+  - name: single_chunk_filed
+    skill: split-into-chunks
+    from: [surveyed, awaiting_coverage_approval, ready_to_plan]
+    to: [building]
+    guard: one chunk for each repo the change touches. No separate planning pass and no plan question. This is the default for any work item, new_feature or fix. The feature can arrive here straight from gap analysis.
   - name: save_plan
     skill: split-into-chunks
     from: [ready_to_plan, awaiting_plan_approval]
@@ -457,12 +471,12 @@ events:
     skill: update-graph
     from: [awaiting_graph_update]
     to: [done]
-    guard: graph.promote require_approval needs a human yes. notify may promote in the same turn after showing the delta. Update evidence commits and supersedes edges. Do not copy the facts onto the feature page.
+    guard: graph.promote require_approval waits for a human yes when autonomy is ask_more. auto and notify may promote in the same turn after the decision is logged. Update evidence commits and supersedes edges. Do not copy the facts onto the feature page.
   - name: graph_flagged
     skill: update-graph
     from: [awaiting_graph_update]
     to: [awaiting_graph_update]
-    guard: a contradiction waits for the human. Do not promote the contradicted node.
+    guard: an authoritative conflict waits for the human. Any other contradiction is decided and logged. Do not promote a contradicted node until that decision is recorded.
   - name: workflow_changed
     skill: configure-workflow
     guard: one change log entry with who, when, old, and new. A feature-only change stays on the feature override. Do not change human gates or who writes Notion.
@@ -635,6 +649,18 @@ notion_schema:
     - {name: Feature, type: relation}
   verification:
     verdict: {name: Verdict, type: text}
+  fix:
+    expected: {name: Expected, type: text}
+    actual: {name: Actual, type: text}
+    reproduce: {name: Reproduce, type: text}
+    severity: {name: Severity, type: text}
+  fix_extra:
+    - {name: Name, type: title}
+    - {name: Product, type: relation}
+    - {name: Feature, type: relation}
+    - {name: Nodes, type: relation}
+    - {name: Chunks, type: relation}
+    - {name: Verification, type: relation}
   verification_extra:
     - {name: Name, type: title}
     - {name: Product, type: relation}
@@ -684,6 +710,12 @@ decision_fields:
 verification_fields:
   - verdict
 
+fix_fields:
+  - expected
+  - actual
+  - reproduce
+  - severity
+
 debug_log_fields:
   - opened
 
@@ -700,6 +732,7 @@ required_relations:
   coverage: [Product, Feature]
   decision: [Product, Feature]
   verification: [Product, Chunk]
+  fix: [Product, Feature]
   workflow: [Product]
   debug_log: [Product]
 
@@ -709,6 +742,7 @@ optional_relations:
   chunk: [Depends on]
   coverage: [Node]
   survey: [Feature]
+  fix: [Nodes, Chunks, Verification]
   workflow: [Feature]
   debug_log: [Previous]
 
