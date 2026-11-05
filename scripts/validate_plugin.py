@@ -13,7 +13,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 
 CORE_SKILLS = {
-    "setup-project",
+    "setup-product",
     "collect-requirements",
     "survey-product",
     "gap-analysis",
@@ -273,7 +273,7 @@ def main() -> int:
     check((ROOT / "templates" / "feature" / "feature.yaml").is_file(), "feature state template missing")
 
     orchestrator = (ROOT / "agents" / "orchestrator.md").read_text(encoding="utf-8")
-    for skill in ("setup-project", "configure-workflow", "survey-product", "gap-analysis", "split-into-chunks", "pick-next-task", "implement-chunk", "review-stack", "release", "fstack-status", "escalate"):
+    for skill in ("setup-product", "configure-workflow", "survey-product", "gap-analysis", "split-into-chunks", "pick-next-task", "implement-chunk", "review-stack", "release", "fstack-status", "escalate"):
         check(skill in orchestrator, f"orchestrator must name {skill}")
     check("You never start it." in orchestrator, "orchestrator must not start requirements collection")
     check("Do not try to switch" in orchestrator, "the launcher selects the orchestrator model")
@@ -296,14 +296,14 @@ def main() -> int:
     check("TODO: intended verifier" in verify_skill, "verify must keep the intended design as a TODO")
     check("not_implemented" in skill_text["pick-next-task"] and "tldr" in skill_text["pick-next-task"], "the orchestrator must relay not_implemented through tldr")
     check("accept_unverified" in skill_text["fstack-status"], "accept_unverified must be logged from fstack-status")
-    check("instructions_version" in skill_text["setup-project"], "setup must pass Notion instructions_version")
+    check("instructions_version" in skill_text["setup-product"], "setup must pass Notion instructions_version")
     check("notion-create-pages" in skill_text["memory"] and "notion://docs/notion-flavored-markdown-spec" in skill_text["memory"], "memory writes must follow the Notion markdown spec")
     for message in notion_doc_errors(ROOT):
         check(False, message)
     check(True, "notion markdown spec URI")
     for message in memory_design_errors(skill_text["memory"], (ROOT / "DESIGN.md").read_text(encoding="utf-8")):
         check(False, message)
-    check(True, "project memory is not Notion's built-in memory")
+    check(True, "product memory is not Notion's built-in memory")
     check(table.get("approval", {}).get("accept") == ["yes", "approve", "approved"], "approval words must be the strings yes, approve, and approved")
     check("accepted_sha" in (table.get("chunk_fields") or []) and "accepted_sha" in skill_text["release"] and "accepted_sha" in skill_text["fstack-status"], "accept_unverified must have an accepted_sha release path")
     for message in notion_schema_errors(table, (ROOT / "DESIGN.md").read_text(encoding="utf-8")):
@@ -314,25 +314,25 @@ def main() -> int:
     check(True, "sync state stays in bot persistent state")
     check(table.get("storage", {}).get("bot_state") == "persistent", "sync state must be named as bot persistent state")
     check("verification_unimplemented" in (table.get("waiting_kinds") or []), "unimplemented verification must be a waiting kind")
-    check("notion-create-database" in skill_text["setup-project"] and "notion-get-setup-guide" in skill_text["setup-project"], "setup must use the live Notion tool names")
+    check("notion-create-database" in skill_text["setup-product"] and "notion-get-setup-guide" in skill_text["setup-product"], "setup must use the live Notion tool names")
     for message in bot_config_errors(ROOT, skill_names, set((config := yaml.safe_load((ROOT / "fstack.yaml").read_text(encoding="utf-8"))).get("roles") or {})):
         check(False, message)
     check(True, "bot configs")
     for message in transition_graph_errors(table):
         check(False, message)
     check(True, "transition graph")
-    check("notion-query-data-sources" in skill_text["memory"], "memory skill must query the project Memories database")
+    check("notion-query-data-sources" in skill_text["memory"], "memory skill must query the product Memories database")
     check("unsaved" in skill_text["memory"], "a Notion outage must show unsaved content")
     check("notion-upload-skill" not in skill_text["memory"], "skills are not published to Notion")
     for reader in ("collect-requirements", "gap-analysis", "split-into-chunks"):
-        check("memory" in skill_text[reader], f"{reader} must read project memory first")
+        check("memory" in skill_text[reader], f"{reader} must read product memory first")
     check("memory" in skill_text["release"], "release must propose durable memories")
     advisors_skill = skill_text["advisors"]
     check("Buy credits or switch to a Grok model" in advisors_skill, "advisors must recognize a credit failure")
     check("Read,Grep,Glob" in advisors_skill and "Bash" in advisors_skill, "the Claude CLI fallback must be read-only")
     check("max_calls_per_feature" in advisors_skill and "tldr" in advisors_skill, "a CLI advisor call counts, and a total miss is told to the human")
     check("subscription terms" in advisors_skill, "local CLI usage must name the user's subscription terms")
-    setup_skill = skill_text["setup-project"]
+    setup_skill = skill_text["setup-product"]
     check("auth status" in setup_skill and "Do not print or store" in setup_skill, "setup detects the CLI without recording tokens")
     check("subscription" in (ROOT / "README.md").read_text(encoding="utf-8"), "README must mention local CLI subscription terms")
     check("not_implemented" in {rule.get("id") for rule in table.get("next_rules") or []}, "the state table must wait on not_implemented")
@@ -358,6 +358,9 @@ def main() -> int:
     for message in single_repo_field_errors(ROOT, table):
         check(False, message)
     check(True, "no single-repo field names")
+    for message in stale_project_name_errors(ROOT):
+        check(False, message)
+    check(True, "the top-level entity is a product")
     check("partial" in skill_text["split-into-chunks"] and "missing" in skill_text["split-into-chunks"] and "approved" in skill_text["split-into-chunks"].lower(), "split-into-chunks plans only approved partial and missing rows")
     check("survey" in rule_ids and rule_ids.index("survey") < rule_ids.index("gap"), "survey is ordered before gap analysis")
 
@@ -519,7 +522,7 @@ def split_frontmatter(text: str) -> tuple[dict, str]:
 
 
 def single_repo_field_errors(root: Path, table: dict) -> list[str]:
-    """A project is not one code location, and it does not have one base commit."""
+    """A product is not one code location, and it does not have one base commit."""
     errors = []
     feature = set(table.get("feature_fields") or [])
     coverage = set(table.get("coverage_fields") or [])
@@ -546,6 +549,24 @@ def single_repo_field_errors(root: Path, table: dict) -> list[str]:
             continue
         if forbidden.search(path.read_text(encoding="utf-8")):
             errors.append(f"{path.relative_to(root).as_posix()} still uses a single-repo branch field")
+    return errors
+
+
+def stale_project_name_errors(root: Path) -> list[str]:
+    """The top-level entity is a product. 'project' is not a name for it."""
+    errors = []
+    paths = [root / "fstack.yaml", root / "DESIGN.md", root / "README.md", root / "state" / "transitions.yaml"]
+    paths += list((root / "skills").glob("*/SKILL.md"))
+    paths += list((root / "bots").glob("*.yaml"))
+    paths += list((root / "agents").glob("*.md"))
+    paths += list((root / "rules").glob("*.mdc"))
+    paths += list((root / "templates").rglob("*"))
+    pattern = re.compile(r"\bproject\b", re.IGNORECASE)
+    for path in paths:
+        if not path.is_file() or path.suffix.lower() not in {".md", ".yaml", ".yml", ".mdc"}:
+            continue
+        if pattern.search(path.read_text(encoding="utf-8")):
+            errors.append(f"{path.relative_to(root).as_posix()} still calls the product a project")
     return errors
 
 
@@ -626,12 +647,12 @@ def notion_doc_errors(root: Path) -> list[str]:
 
 
 def memory_design_errors(memory_skill: str, design: str) -> list[str]:
-    """Project memories are a project database. Built-in memory search is a different store."""
+    """Product memories are a product database. Built-in memory search is a different store."""
     errors = []
     if "notion-query-data-sources" not in memory_skill or "notion-query-data-sources" not in design:
-        errors.append("project memories must be queried with notion-query-data-sources")
+        errors.append("product memories must be queried with notion-query-data-sources")
     if "Decision, Correction, Preference, Convention, and Lesson" not in design:
-        errors.append("DESIGN must keep the project memory types")
+        errors.append("DESIGN must keep the product memory types")
     if "Profile, Preference, Work, People, and Notes" not in design:
         errors.append("DESIGN must say why built-in memory types do not fit")
     for label, text in (("memory skill", memory_skill), ("DESIGN.md", design)):

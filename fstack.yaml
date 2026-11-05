@@ -1,5 +1,5 @@
 # fstack v0.1
-# Shareable project config. Notion ids and resolved model slugs are not stored here.
+# Shareable product config. Notion ids and resolved model slugs are not stored here.
 
 version: "0.1"
 state_version: 1
@@ -8,7 +8,7 @@ state_version: 1
 # Machine-specific ids and model slugs stay out of this file.
 # The host keeps them in its persistent state, or in gitignored .fstack/resolved.yaml when a checkout exists.
 # The sync commit is never stored in a product code location.
-# This file may live in any one code location, or only in the Notion project when there are several.
+# This file may live in any one code location, or only in the Notion product when there are several.
 state:
   backend: notion
 
@@ -46,7 +46,7 @@ roles:
     model: inherit
     runtime: cloud
   advisor:
-    description: Read-only critique. Does not edit the project or decide a verdict.
+    description: Read-only critique. Does not edit the product or decide a verdict.
     agent: advisor
     model: opus
 
@@ -81,7 +81,7 @@ advisors:
       model: opus
       enabled: true
 
-# Fixed policy. setup-project stops if a value differs. The validator checks the same.
+# Fixed policy. setup-product stops if a value differs. The validator checks the same.
 human_gates:
   merge: require_approval
   release: require_approval
@@ -95,7 +95,7 @@ human_gates:
 code_locations: []
 
 # Feature release across locations. all_or_none merges one location fully before the next.
-# per_repo lets locations finish independently. order is location names; empty uses the project list.
+# per_repo lets locations finish independently. order is location names; empty uses the product list.
 release_policy:
   mode: all_or_none
   order: []
@@ -119,8 +119,8 @@ sources:
     reader: survey-product
     writer: ""
 
-# Repo default for the Notion workflow config. A project page overrides this.
-# A feature page overrides the project page. Human gates are not in this block.
+# Repo default for the Notion workflow config. A product page overrides this.
+# A feature page overrides the product page. Human gates are not in this block.
 workflow:
   version: 1
   slots:

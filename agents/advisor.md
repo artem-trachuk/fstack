@@ -1,6 +1,6 @@
 ---
 name: advisor
-description: Read-only critique of an fstack plan or a disputed verdict. Use when the orchestrator launches planner_review or verify_tiebreak. Returns a critique and does not edit the project, open pull requests, or decide the verdict.
+description: Read-only critique of an fstack plan or a disputed verdict. Use when the orchestrator launches planner_review or verify_tiebreak. Returns a critique and does not edit the product, open pull requests, or decide the verdict.
 permissionMode: readonly
 ---
 

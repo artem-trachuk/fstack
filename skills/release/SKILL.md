@@ -28,7 +28,7 @@ The next rule is `release_question` or a merging rule. Stack review is already r
 
 3. Record `approve_release`. Set the feature Status to `merging` and Release state to `merging` on the Notion feature page. Record the approval there, as described in `stubs/enforcement.md`. Do not commit it.
 
-4. Release one code location at a time. The order is `release_order`, or the project list when that is empty. Inside a location, take chunks in stack order. `all_or_none` does not start the next location until this one is merged. `per_repo` may finish locations independently. A failure stops `all_or_none` before the next location and does not roll back a location already merged. The feature is done only when every location in the feature is merged, or the human stops.
+4. Release one code location at a time. The order is `release_order`, or the product list when that is empty. Inside a location, take chunks in stack order. `all_or_none` does not start the next location until this one is merged. `per_repo` may finish locations independently. A failure stops `all_or_none` before the next location and does not roll back a location already merged. The feature is done only when every location in the feature is merged, or the human stops.
 
    For each chunk in that location, by hand:
 

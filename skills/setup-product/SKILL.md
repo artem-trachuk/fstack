@@ -1,17 +1,17 @@
 ---
-name: setup-project
+name: setup-product
 description: >
-  Initialize a project for fstack and resolve Cursor model names on the Orchestrator's machine.
+  Initialize a product for fstack and resolve Cursor model names on the Orchestrator's machine.
   Use when fstack.yaml is missing, when the local resolved file is missing, or when the human asks to set up fstack or recheck models.
 ---
 
-# Setup project
+# Setup product
 
-Prepare the project. Do not write session model slugs into `fstack.yaml`.
+Prepare the product. Do not write session model slugs into `fstack.yaml`.
 
 ## When to use
 
-- The project has no `fstack.yaml`.
+- The product has no `fstack.yaml`.
 - Notion database ids are missing from the bot's persistent state, or from `.fstack/resolved.yaml` on a Cursor checkout.
 - The human asks to set up fstack or to recheck models.
 
@@ -21,9 +21,9 @@ The fstack repository is the `repository` field in `plugin.json`. On Grok Bot, r
 
 ## Steps
 
-1. A project is not one code location. Ask for zero or more locations. Each has a name, a role, an optional subpath, and a default branch. Record that list on the Notion project. If `fstack.yaml` is missing, copy the plugin defaults. Put the file in a location only when the human names one location to hold it. With several locations, or with none, the copy of record is the Notion project. Do not invent a home location. If a file already exists, leave it. Do not rewrite it to store resolved slugs.
+1. A product is not one code location. Ask for zero or more locations. Each has a name, a role, an optional subpath, and a default branch. Record that list on the Notion product. If `fstack.yaml` is missing, copy the plugin defaults. Put the file in a location only when the human names one location to hold it. With several locations, or with none, the copy of record is the Notion product. Do not invent a home location. If a file already exists, leave it. Do not rewrite it to store resolved slugs.
 
-2. Read `fstack.yaml`. Stop if `version` is not `0.1` or `state_version` is not `1`, and say the project must be migrated. Stop if `state.backend` or `memory.backend` is not `notion`. Stop if `human_gates` differs from merge, release, outward_messages, coverage, and source_write `require_approval`, or `collect_requirements` `manual_only`. Do not silently change those keys. `sources` entries have `kind`, `ref`, and `reader`. Do not put a product name in `kind`.
+2. Read `fstack.yaml`. Stop if `version` is not `0.1` or `state_version` is not `1`, and say the product must be migrated. Stop if `state.backend` or `memory.backend` is not `notion`. Stop if `human_gates` differs from merge, release, outward_messages, coverage, and source_write `require_approval`, or `collect_requirements` `manual_only`. Do not silently change those keys. `sources` entries have `kind`, `ref`, and `reader`. Do not put a product name in `kind`.
 
 3. On the Cursor plugin, ensure `.gitignore` contains a `.fstack/` line. Append that line when it is missing. That line is a guard for machine-specific config. It is the only fstack edit that belongs in the repository. Do not commit feature files. Feature state is not written under `.fstack/`. On Grok Bot, do not clone the product repository to edit that file. The same guard still belongs in the product repository when a human has a checkout.
 
@@ -49,9 +49,9 @@ The fstack repository is the `repository` field in `plugin.json`. On Grok Bot, r
 
    Ask the human to authenticate the Notion MCP. Confirm the connection by telling them their name and workspace name. Read the current setup notes with `notion-get-setup-guide`. Pass `instructions_version` from `memory.instructions_version` (`0.0.6`) on every Notion MCP call.
 
-   Follow `memory` and `DESIGN.md`. Call `notion-fetch` on `notion://docs/memory` so the project database is not confused with the user's personal memory, and on `notion://docs/notion-flavored-markdown-spec` before writing any page body. Pass `instructions_version` on every Notion call. Search with `notion-search` for an existing project page and for Features, Chunks, Memories, Coverage, Codebase maps, and Workflow config databases. Show the human one yes-or-no question before creating any schema. On Grok Bot that question is a question card. Private is the default. Do not create pages until they approve. Ask again before anything is written to a shared or team space. Do not create fstack pages with parent `memory`.
+   Follow `memory` and `DESIGN.md`. Call `notion-fetch` on `notion://docs/memory` so the product database is not confused with the user's personal memory, and on `notion://docs/notion-flavored-markdown-spec` before writing any page body. Pass `instructions_version` on every Notion call. Search with `notion-search` for an existing product page and for Features, Chunks, Memories, Coverage, Codebase maps, and Workflow config databases. Show the human one yes-or-no question before creating any schema. On Grok Bot that question is a question card. Private is the default. Do not create pages until they approve. Ask again before anything is written to a shared or team space. Do not create fstack pages with parent `memory`.
 
-   After approval, create or reuse a private project page with `notion-create-pages`, the six databases with `notion-create-database`, and a private Agent Operating Guide page. Use the property names in `notion_schema` in `state/transitions.yaml`. Seed Workflow config from `workflow`, `code_locations`, `release_policy`, `sources`, and `authoritative_kinds`. Do not copy human gates or the writer rule onto that page. Setup accepts any number of code locations, including zero. Set the guide version to `0.0.6` and the published date to `2026-10-30`. Fill the guide's destinations with the real links. Leave anything you did not create as "Not set up yet". Record the page and database ids in the same place as the resolved models: the bot's persistent state on Grok Bot, or `.fstack/resolved.yaml` on the Cursor plugin. Update later text with `notion-update-page`.
+   After approval, create or reuse a private product page with `notion-create-pages`, the six databases with `notion-create-database`, and a private Agent Operating Guide page. Use the property names in `notion_schema` in `state/transitions.yaml`. Seed Workflow config from `workflow`, `code_locations`, `release_policy`, `sources`, and `authoritative_kinds`. Do not copy human gates or the writer rule onto that page. Setup accepts any number of code locations, including zero. Set the guide version to `0.0.6` and the published date to `2026-10-30`. Fill the guide's destinations with the real links. Leave anything you did not create as "Not set up yet". Record the page and database ids in the same place as the resolved models: the bot's persistent state on Grok Bot, or `.fstack/resolved.yaml` on the Cursor plugin. Update later text with `notion-update-page`.
 
    Do not upload skills to Notion. Do not call `notion-complete-mcp-setup`. Do not create the daily loop unless the human asks for it in a separate yes.
 

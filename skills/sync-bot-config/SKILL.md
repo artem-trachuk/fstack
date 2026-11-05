@@ -28,7 +28,7 @@ A routine named in `bots/<name>.yaml` fires, or the human asks to sync. The rout
 
 6. Compare `routines` by name. Add a routine that is new, update its prompt and its schedule or GitHub events when they changed, and remove a routine that is no longer in the file. Do not leave a copy of a removed routine running. The event key in the yaml is quoted `"on"` because an unquoted `on` is a YAML boolean.
 
-7. Compare `connectors`. If a connector was added, or a purpose would widen what the bot can reach, stop and ask the human before changing it. On Grok Bot, that ask is a question card. Do not add the connector in that same turn. Removing a connector does not need approval. Report the request through `tldr`. A source reader is not a connector id in this file. The host fills `sources` in the project config.
+7. Compare `connectors`. If a connector was added, or a purpose would widen what the bot can reach, stop and ask the human before changing it. On Grok Bot, that ask is a question card. Do not add the connector in that same turn. Removing a connector does not need approval. Report the request through `tldr`. A source reader is not a connector id in this file. The host fills `sources` in the product config.
 
    A routine may be a five-field cron, which runs in the timezone under Grok Bot settings, Bot. Or it may be a GitHub pull-request event: opened, pushed, merged, or commented. Map those four words onto the host's GitHub trigger and narrow it to branches named `fstack/`. Do not invent extra event types.
 

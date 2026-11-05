@@ -11,14 +11,14 @@ Create three bots from the configs in [`bots/`](bots/) and connect Notion and Gi
 1. In Grok Bot, choose New Bot. Name it **Fstack Orchestrator**. In the first message, paste the persona and instructions from [`bots/orchestrator.yaml`](bots/orchestrator.yaml) and ask it to remember them.
 2. Tell that bot: "Follow the sync-bot-config skill. The config file is bots/orchestrator.yaml." It copies the skills from this repository, sets its profile, and saves its routines. The first run is the bootstrap. The weekly routine keeps it current.
 3. Repeat for [`bots/verifier.yaml`](bots/verifier.yaml) and [`bots/advisor.yaml`](bots/advisor.yaml). Use the profile `name` in each file. Do not invent a platform id.
-4. Connect Notion and GitHub when the Orchestrator shows a connect card. Other inputs are sources in the project config: a kind plus a reader. The Verifier and Advisor do not need connectors. Their inputs arrive as messages.
+4. Connect Notion and GitHub when the Orchestrator shows a connect card. Other inputs are sources in the product config: a kind plus a reader. The Verifier and Advisor do not need connectors. Their inputs arrive as messages.
 5. Schedules use the timezone in Grok Bot settings under Bot. The five cron fields do not name a zone.
 
 ## Quick start
 
 Chat with the Orchestrator. Do not start a feature from another bot.
 
-1. Ask it to set up a project. A project is a Notion boundary, not one code location. Name zero or more locations, each with a role and a default branch. `fstack.yaml` can live in any one of them, or only in Notion. You approve the project page and databases before any schema is created.
+1. Ask it to set up a product. A product is a Notion boundary, not one code location. Name zero or more locations, each with a role and a default branch. `fstack.yaml` can live in any one of them, or only in Notion. You approve the product page and databases before any schema is created.
 2. Ask it to start a feature and describe what you want. That request is the only way requirements collection starts. Confirm the requirements page when the question card asks.
 3. When the feature lists code locations, `survey-product` runs once per location at that location's default-branch commit. The read is read-only. Each map is an Existing functionality page for that location and commit. A later call for the same pair reuses the page. With no locations, this step is skipped.
 4. Gap analysis compares the sources that are present, once per code location, and merges them into one coverage view. Every evidence row names its location. A source is a kind, such as requirements, design, or the current product, plus whatever reader the host has. You answer one card for conflicts, items that are not backed by an authoritative source, and behaviour a location has with no requirement. The choices are implement, write back to a source, skip, or defer. A write happens only after you approve it, and only if that source has a writer.
@@ -85,7 +85,7 @@ The prompt shape the stub will someday use is unchanged: the orchestrator builds
 
 ## Configuration
 
-`fstack.yaml` is the repo default for one project. It may sit in any one code location, or the project may keep that default only in Notion. Paths inside it are relative to the location that holds the file. Resolved model slugs are written to `.fstack/resolved.yaml` in a checkout that has the file, and that folder is gitignored.
+`fstack.yaml` is the repo default for one product. It may sit in any one code location, or the product may keep that default only in Notion. Paths inside it are relative to the location that holds the file. Resolved model slugs are written to `.fstack/resolved.yaml` in a checkout that has the file, and that folder is gitignored.
 
 | Key | Shipped value | Meaning |
 | --- | --- | --- |
@@ -98,9 +98,9 @@ The prompt shape the stub will someday use is unchanged: the orchestrator builds
 | `release.command` | empty | An approved release merges the stack and stops |
 | `authoritative_kinds` | `requirements` | Source kinds that can make an item buildable |
 | `sources` | kind, ref, reader | Inputs. `ref` and `reader` are how this host reads that kind. `writer` is optional |
-| `workflow.slots` | skill per slot | Repo default. A Notion project page overrides it, and a feature page overrides the project |
+| `workflow.slots` | skill per slot | Repo default. A Notion product page overrides it, and a feature page overrides the product |
 
-`setup-project` creates a Workflow config database and seeds it from those repo defaults. At session start the Orchestrator reads the feature override, then the project page, then `fstack.yaml`, and records the binding and config version it used. You can say "use skill X for verification" or "for this feature only, skip survey". It checks that the skill is in the library and that its contract matches the slot, confirms in one line, and writes a change log entry. Human gates stay in the repo. The verify slot ships bound to `verify`.
+`setup-product` creates a Workflow config database and seeds it from those repo defaults. At session start the Orchestrator reads the feature override, then the product page, then `fstack.yaml`, and records the binding and config version it used. You can say "use skill X for verification" or "for this feature only, skip survey". It checks that the skill is in the library and that its contract matches the slot, confirms in one line, and writes a change log entry. Human gates stay in the repo. The verify slot ships bound to `verify`.
 
 `models.opus` and `models.argon` are match prefixes and an effort list, in preference order. setup walks that list against the slugs this Cursor session can use. A missing family becomes `inherit`, the parent Cursor model.
 
@@ -138,7 +138,7 @@ Roles name an agent and a model. They do not list skills. The agent file is the 
 
 ## Where state lives
 
-`state.backend` and `memory.backend` are `notion`. The schema is in [DESIGN.md](DESIGN.md): a private project page, an Agent Operating Guide at version `0.0.6`, and Features, Chunks, Memories, Coverage, and Codebase maps databases. Feature documents are pages. Chunk specs are pages. Coverage rows are the gap table. Codebase maps are one Existing functionality page per commit. Memories are one topic each.
+`state.backend` and `memory.backend` are `notion`. The schema is in [DESIGN.md](DESIGN.md): a private product page, an Agent Operating Guide at version `0.0.6`, and Features, Chunks, Memories, Coverage, and Codebase maps databases. Feature documents are pages. Chunk specs are pages. Coverage rows are the gap table. Codebase maps are one Existing functionality page per commit. Memories are one topic each.
 
 The Orchestrator is the only role that calls Notion. It copies the chunk spec into the coding agent's launch prompt, passes the verifier its prompt and patch, and passes advisors their input pages' text. Asking the Orchestrator where the feature stands reads the Features database.
 
@@ -158,7 +158,7 @@ A chunk id is `NN-slug`. Status values and the events that change them are only 
 
 | Skill | Who invokes it | What it does |
 | --- | --- | --- |
-| `setup-project` | Human, or the orchestrator when config is missing | Copies templates, resolves models, creates Workflow config |
+| `setup-product` | Human, or the orchestrator when config is missing | Copies templates, resolves models, creates Workflow config |
 | `configure-workflow` | Session start, or the human in chat | Shows the effective bindings and writes an approved change |
 | `collect-requirements` | Human, only after an explicit chat request | Writes the requirements page, then hands off to the orchestrator |
 | `survey-product` | On its own, or once per code location | Read-only description of that location at a pinned commit |
@@ -194,7 +194,7 @@ Run `python3 scripts/validate_plugin.py` after the edit. It checks the manifest,
 
 Grok Bot is the primary host. Configs in `bots/` are version `0.1`. Each file has a profile (`name`, `title`, `description`, `persona`, `instructions`), skills copied from this repo, a `model_role` from `fstack.yaml`, connectors, teammates, a handoff message, and routines. A routine has a name, a prompt, and either a five-field cron schedule or a GitHub pull-request event. Cron uses the timezone in Grok Bot settings under Bot. The files name no host, user, or bot id. Address a teammate by the `name` in its config, which is the profile name you give it at creation.
 
-The Orchestrator connects to Notion and GitHub. It reads other inputs through the `sources` list in the project config. It messages the Verifier and the Advisor. The message starts with `fstack-handoff` and includes the role, feature, chunk, ask (`verdict` or `critique`), and the prompt. The reply starts with `fstack-reply`. The Verifier and Advisor have no connectors. An Advisor can instead be the `claude` command on the bot computer when that teammate is unavailable. See `advisors.fallback` in `fstack.yaml`.
+The Orchestrator connects to Notion and GitHub. It reads other inputs through the `sources` list in the product config. It messages the Verifier and the Advisor. The message starts with `fstack-handoff` and includes the role, feature, chunk, ask (`verdict` or `critique`), and the prompt. The reply starts with `fstack-reply`. The Verifier and Advisor have no connectors. An Advisor can instead be the `claude` command on the bot computer when that teammate is unavailable. See `advisors.fallback` in `fstack.yaml`.
 
 The Orchestrator also has a routine for pull requests on chunk branches: opened, pushed, merged, and commented. Public docs confirm that a routine can start from a GitHub event. They do not publish the exact event-field names, so the bot maps those four words onto the host's GitHub trigger and narrows it to branches named `fstack/`.
 
@@ -205,7 +205,7 @@ The Orchestrator also has a routine for pull requests on chunk branches: opened,
 3. Send: "Follow the sync-bot-config skill. The config file is bots/orchestrator.yaml."
 4. Approve the Notion and GitHub connect cards when they appear. Do not approve any other connector in that turn.
 5. Repeat steps 1–3 for [`bots/verifier.yaml`](bots/verifier.yaml) (`fstack-verifier`) and [`bots/advisor.yaml`](bots/advisor.yaml) (`fstack-advisor`). They do not get Notion or GitHub.
-6. Tell the Orchestrator the project's code locations. Ask it to set up fstack. That is the first real task.
+6. Tell the Orchestrator the product's code locations. Ask it to set up fstack. That is the first real task.
 
 The sync records the repository URL and the applied commit in the bot's persistent state, not in the product repository. The weekly routine in each config runs the same skill later. Adding a connector still waits for you.
 

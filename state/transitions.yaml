@@ -406,7 +406,7 @@ events:
     guard: clean updates the release sha (verified_sha or accepted_sha) and the approval record. not clean clears that sha. verified sets needs_verify. accepted_by_human sets awaiting_verification_decision.
   - name: ci_recorded
     skill: release
-    guard: pending waits. failing escalates the feature and leaves merged chunks merged. none means the project has no CI.
+    guard: pending waits. failing escalates the feature and leaves merged chunks merged. none means the product has no CI.
   - name: release_command_recorded
     skill: release
     from: [merging]
@@ -509,6 +509,7 @@ notion_schema:
     - {name: Chunks, type: relation}
     - {name: Memories, type: relation}
     - {name: Existing functionality, type: relation}
+    - {name: Product, type: relation}
   chunks:
     id: {name: Name, type: title}
     title: {name: Title, type: text}
@@ -537,6 +538,7 @@ notion_schema:
   chunk_extra:
     - {name: Feature, type: relation}
     - {name: Accepted unverified, type: checkbox}
+    - {name: Product, type: relation}
   coverage:
     item: {name: Name, type: title}
     repo: {name: Code location, type: text}
@@ -549,6 +551,7 @@ notion_schema:
     approved: {name: Approved, type: checkbox}
   coverage_extra:
     - {name: Feature, type: relation}
+    - {name: Product, type: relation}
   workflow:
     scope: {name: Scope, type: select}
     config_version: {name: Config version, type: text}
@@ -564,6 +567,7 @@ notion_schema:
   workflow_extra:
     - {name: Name, type: title}
     - {name: Feature, type: relation}
+    - {name: Product, type: relation}
 
 coverage_fields:
   - item

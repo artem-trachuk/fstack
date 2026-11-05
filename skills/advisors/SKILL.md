@@ -3,7 +3,7 @@ name: advisors
 description: >
   Run a short read-only advisor and record the call before it returns.
   Use when the action is planner_review during gap-analysis or split-into-chunks, or one verify_tiebreak on a disputed attempt.
-  Falls back to a configured local CLI when Cursor cannot start the model. The advisor never edits the project and never owns the verdict.
+  Falls back to a configured local CLI when Cursor cannot start the model. The advisor never edits the product and never owns the verdict.
 ---
 
 # Advisors
