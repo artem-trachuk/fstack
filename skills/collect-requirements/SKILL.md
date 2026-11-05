@@ -25,7 +25,7 @@ The human asked in chat to start a feature.
 
    Do not commit the feature record. If the slug already has a confirmed requirements page, ask whether to continue it or pick another slug.
 
-4. Fill the Requirements section of the Notion feature page from the human: problem, people, outcome, constraints, out of scope, and feature acceptance. Leave Status `requirements_draft`. Record `save_requirements` as a decision entry on that page.
+4. Fill the Requirements section of the Notion feature page from the human: problem, people, outcome, constraints, out of scope, and feature acceptance. Leave Status `requirements_draft`. Record `save_requirements` as its own decision page. Set that page's Product and Feature relations. Do not leave the decision only as a heading with no page.
 
 5. Ask the human to confirm the Notion page. The message names the page link and uses the question card `Q-<slug>-requirements`. A 120-word summary is not the thing they confirm. Follow the `tldr` skill, and keep the link and the question id verbatim. End the turn if you are waiting.
 

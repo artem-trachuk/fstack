@@ -34,7 +34,7 @@ Status is `awaiting_graph_update`. If the feature is `stopped`, or it never merg
 
    When it is `notify`, show the delta, then promote in the same turn.
 
-5. On approval, or when `notify` applies, write the nodes and edges. Record `graph_promoted`. Set Status to `done`. Do not copy the node bodies onto the feature page. The feature keeps the node ids only.
+5. On approval, or when `notify` applies, write the nodes and edges. Set each node's Product relation. Set each edge's Product, From, and To relations. Point the feature's node relations at the promoted nodes. Record `graph_promoted`. Set Status to `done`. Do not copy the node bodies onto the feature page.
 
 Stop does not promote. Set Status to `stopped` with `human_decision`.
 

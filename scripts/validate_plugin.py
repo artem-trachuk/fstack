@@ -366,6 +366,9 @@ def main() -> int:
     for message in durable_fact_errors(ROOT):
         check(False, message)
     check(True, "durable product facts are graph nodes")
+    for message in relation_declaration_errors(table, (ROOT / "DESIGN.md").read_text(encoding="utf-8")):
+        check(False, message)
+    check(True, "every page type declares its relations")
     check("partial" in skill_text["split-into-chunks"] and "missing" in skill_text["split-into-chunks"] and "approved" in skill_text["split-into-chunks"].lower(), "split-into-chunks plans only approved partial and missing rows")
     check("survey" in rule_ids and rule_ids.index("survey") < rule_ids.index("gap"), "survey is ordered before gap analysis")
 
@@ -557,6 +560,63 @@ def single_repo_field_errors(root: Path, table: dict) -> list[str]:
     return errors
 
 
+def relation_declaration_errors(table: dict, design: str) -> list[str]:
+    """Every page type names the relations that connect it. The product page is the root."""
+    errors = []
+    required = table.get("required_relations") or {}
+    expected = {
+        "product",
+        "feature",
+        "chunk",
+        "graph_node",
+        "graph_edge",
+        "survey",
+        "coverage",
+        "decision",
+        "verification",
+        "memory",
+    }
+    if set(required) != expected:
+        errors.append(f"required_relations must name {sorted(expected)}")
+    if required.get("product") != []:
+        errors.append("product is the root and declares no required relation")
+    schema = table.get("notion_schema") or {}
+    groups = {
+        "feature": ("features", "feature_extra"),
+        "chunk": ("chunks", "chunk_extra"),
+        "graph_node": ("graph_nodes", "graph_node_extra"),
+        "graph_edge": ("graph_edges", "graph_edge_extra"),
+        "survey": ("survey", "survey_extra"),
+        "coverage": ("coverage", "coverage_extra"),
+        "decision": ("decision", "decision_extra"),
+        "verification": ("verification", "verification_extra"),
+        "memory": ("memory", "memory_extra"),
+    }
+    for entity, names in required.items():
+        if entity == "product":
+            continue
+        if not names:
+            errors.append(f"{entity} must declare at least one required relation")
+            continue
+        fields_key, extra_key = groups[entity]
+        props = {}
+        for spec in (schema.get(fields_key) or {}).values():
+            if isinstance(spec, dict):
+                props[spec.get("name")] = spec.get("type")
+        for spec in schema.get(extra_key) or []:
+            if isinstance(spec, dict):
+                props[spec.get("name")] = spec.get("type")
+        for name in names:
+            if props.get(name) != "relation":
+                errors.append(f"{entity} relation {name} is not declared as a relation")
+            if name not in design:
+                errors.append(f"DESIGN.md is missing relation {name} for {entity}")
+    status = (Path(__file__).resolve().parents[1] / "skills" / "fstack-status" / "SKILL.md").read_text(encoding="utf-8")
+    if "orphan" not in status.lower() or "unlinked" not in status.lower():
+        errors.append("fstack-status must report orphaned and unlinked pages")
+    return errors
+
+
 def durable_fact_errors(root: Path) -> list[str]:
     """Durable product facts live on graph nodes, not only on a feature page."""
     errors = []
@@ -709,6 +769,10 @@ def notion_schema_errors(table: dict, design: str) -> list[str]:
         ("coverage_fields", "coverage", "coverage_extra"),
         ("graph_node_fields", "graph_nodes", "graph_node_extra"),
         ("graph_edge_fields", "graph_edges", "graph_edge_extra"),
+        ("survey_fields", "survey", "survey_extra"),
+        ("decision_fields", "decision", "decision_extra"),
+        ("verification_fields", "verification", "verification_extra"),
+        ("memory_fields", "memory", "memory_extra"),
         ("workflow_fields", "workflow", "workflow_extra"),
     )
     for field_key, schema_key, extra_key in groups:

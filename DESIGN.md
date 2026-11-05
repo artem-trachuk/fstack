@@ -47,10 +47,10 @@ Property names and types come from `notion_schema.features` and `notion_schema.f
 | Requirements status | select | `requirements_status` |
 | Config version | text | `config_version`. The workflow config version this feature used |
 | Step bindings | text | `step_bindings`. Slot, skill, and whether the binding came from the feature, the product, or the repo |
-| Nodes read | text | `nodes_read`. Graph node ids this feature read |
-| Nodes added | text | `nodes_added`. Ids the feature proposes to add |
-| Nodes changed | text | `nodes_changed`. Ids the feature proposes to change |
-| Nodes removed | text | `nodes_removed`. Ids the feature proposes to remove |
+| Nodes read | relation | `nodes_read`. Graph nodes this feature read |
+| Nodes added | relation | `nodes_added`. Graph nodes this feature proposes to add |
+| Nodes changed | relation | `nodes_changed`. Graph nodes this feature proposes to change |
+| Nodes removed | relation | `nodes_removed`. Graph nodes this feature proposes to remove |
 | Confirmed | date | Extra. When the human confirmed the requirements page |
 | Chunks | relation | Extra |
 | Memories | relation | Extra |
@@ -91,7 +91,7 @@ Property names and types come from `notion_schema.chunks` and `notion_schema.chu
 | Tie-break attempt | number | `tiebreak_for_attempt` |
 | Blocked reason | text | `blocked_reason` |
 | Bound skill | text | `bound_skill`. The skill this chunk step actually ran |
-| Touched nodes | text | `nodes`. Graph node ids this chunk touches |
+| Touched nodes | relation | `nodes`. Graph nodes this chunk touches |
 | Accepted unverified | checkbox | Extra. Human accepted a `not_implemented` verdict |
 | Product | relation | Extra. The product this chunk belongs to |
 
@@ -125,6 +125,41 @@ One page per typed link. Shipped kinds are depends_on, implements, part_of, touc
 
 Survey creates and refreshes nodes. A feature does not copy those facts onto its own page. `update-graph` promotes a merged feature's delta after approval when `graph.promote` is `require_approval`.
 
+### Survey
+
+One page per survey of one code location. It is the record of the read, not a copy of the facts. Facts stay on the graph nodes.
+
+| Property | Type | Field |
+| --- | --- | --- |
+| Name | title | Extra |
+| Commit | text | `commit` |
+| Product | relation | Extra. Required |
+| Feature | relation | Extra. Set when a feature asked for the survey |
+| Nodes | relation | Extra. Required. Nodes this survey created or refreshed |
+
+### Decision
+
+One page per decision. The feature page links to it. The page is not only a heading in the feature body.
+
+| Property | Type | Field |
+| --- | --- | --- |
+| Name | title | Extra |
+| Summary | text | `summary` |
+| Product | relation | Extra. Required |
+| Feature | relation | Extra. Required |
+
+### Verification
+
+One page per verification result.
+
+| Property | Type | Field |
+| --- | --- | --- |
+| Name | title | Extra |
+| Verdict | text | `verdict` |
+| Product | relation | Extra. Required |
+| Feature | relation | Extra |
+| Chunk | relation | Extra. Required |
+
 ### Coverage
 
 One page per item, in the Coverage database. Property names come from `notion_schema.coverage` and `notion_schema.coverage_extra`.
@@ -136,7 +171,7 @@ One page per item, in the Coverage database. Property names come from `notion_sc
 | Product | relation | Extra. The product this row belongs to |
 | Code location | text | `repo`. The location this evidence came from. Empty only when the row is not about code |
 | Commit | text | `commit`. The node's last-verified commit for that location |
-| Node | text | `node`. The graph node id this row is about |
+| Node | relation | `node`. The graph node this row is about |
 | Presences | text | `presences`. One entry per source kind that was compared: present, partial, or absent, plus evidence |
 | Classification | select | `classification`. done, partial, missing, needs_decision, conflict, undocumented |
 | Next action | select | `next_action`. plan, question, or none |
@@ -197,6 +232,10 @@ Fetch the product database, read its `collection://` URL, and query it with `not
 | Forgotten | checkbox | A forget request |
 
 The body is a few sentences. It is not a transcript, a secret, copied code, or a restatement of the repository.
+
+## Links
+
+Pages are separate. They stay connected. `required_relations` in `state/transitions.yaml` names the relation each page type must set. The product page is the root. Every other page is reachable from it by those relations. A feature page relates to its chunks and to the graph nodes it read, added, changed, or removed. A chunk relates to that feature and to the nodes it touches. A survey page relates to the product and to the nodes it refreshed. Coverage relates to its feature and its node. A decision relates to its feature. A verification relates to its chunk. A memory relates to its product. An empty required relation is an unlinked page. A page that no path from the product page reaches is an orphan. `fstack-status` reports both when asked. It does not delete them.
 
 ## Notion MCP
 

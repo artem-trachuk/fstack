@@ -174,7 +174,7 @@ A chunk id is `NN-slug`. Status values and the events that change them are only 
 | `review-stack` | Orchestrator, after every chunk is verified | Asks for review and waits |
 | `release` | Orchestrator, after review | Asks, then merges only the approved shas, then proposes memories |
 | `update-graph` | After merge, unless the feature stopped | Promotes confirmed changes into the product graph |
-| `fstack-status` | Human or a fresh session | Reads Notion and routes a reply |
+| `fstack-status` | Human or a fresh session | Reads Notion, routes a reply, and reports orphaned or unlinked pages when asked |
 | `memory` | Orchestrator | Reads and writes Notion memories. Does not publish skills |
 
 ## What is not enforced yet

@@ -34,7 +34,7 @@ The read does not modify the product and does not open a pull request. This skil
 
 3. When a feature is in progress and some nodes are stale or missing, record `survey_launched` and the location and commit, set Status to `surveying`, and hand that limited read to the host. End the turn. Do not start a second read for the same pair. Do not read the whole location when the graph already covers it.
 
-4. When the read returns, create or update graph nodes. Set evidence, provenance `survey`, and last-verified commits. Do not write those facts on the feature page. If a feature is in progress and every location is filed, record `survey_filed` and set Status to `surveyed`. If this call had no feature, return the node ids and do not change a feature status.
+4. When the read returns, create or update graph nodes. Set evidence, provenance `survey`, last-verified commits, and the Product relation. Create one survey page for this location and commit. Set its Product relation and its Nodes relation to the nodes this read created or refreshed. When a feature is in progress, also set the survey page's Feature relation. Do not write those facts on the feature page. If every location is filed, record `survey_filed` and set Status to `surveyed`. If this call had no feature, return the survey page and do not change a feature status.
 
 5. If the read fails, do not invent a map. Show the failure and stop.
 
