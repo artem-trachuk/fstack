@@ -18,11 +18,11 @@ Create three bots from the configs in [`bots/`](bots/) and connect Notion and Gi
 
 Chat with the Orchestrator. Do not start a feature from another bot.
 
-1. Ask it to set up fstack for the product repository. It writes `fstack.yaml` if needed, ignores `.fstack/` for machine config, and connects Notion. You approve the project page and databases before any schema is created.
+1. Ask it to set up a project. A project is a Notion boundary, not one code location. Name zero or more locations, each with a role and a default branch. `fstack.yaml` can live in any one of them, or only in Notion. You approve the project page and databases before any schema is created.
 2. Ask it to start a feature and describe what you want. That request is the only way requirements collection starts. Confirm the requirements page when the question card asks.
-3. When the product has a repository, `survey-product` describes it at the current default-branch commit. The read is read-only. The map is an Existing functionality page stamped with that commit. A later call for the same commit reuses the page. With no repository, this step is skipped.
-4. Gap analysis compares the sources that are present. A source is a kind, such as requirements, design, or the current product, plus whatever reader the host has. You answer one card for conflicts, items that are not backed by an authoritative source, and behaviour the product has with no requirement. The choices are implement, write back to a source, skip, or defer. A write happens only after you approve it, and only if that source has a writer.
-5. You approve the coverage table. Only approved rows that are partial or missing become chunks. Then it splits those rows. Plan approval waits only when `plan_review` is `approve`. The shipped value is `notify`, so coding starts after the plan is shown.
+3. When the feature lists code locations, `survey-product` runs once per location at that location's default-branch commit. The read is read-only. Each map is an Existing functionality page for that location and commit. A later call for the same pair reuses the page. With no locations, this step is skipped.
+4. Gap analysis compares the sources that are present, once per code location, and merges them into one coverage view. Every evidence row names its location. A source is a kind, such as requirements, design, or the current product, plus whatever reader the host has. You answer one card for conflicts, items that are not backed by an authoritative source, and behaviour a location has with no requirement. The choices are implement, write back to a source, skip, or defer. A write happens only after you approve it, and only if that source has a writer.
+5. You approve the coverage table. Only approved rows that are partial or missing become chunks, and each chunk targets one location. Stacks do not cross locations. Plan approval waits only when `plan_review` is `approve`. The shipped value is `notify`, so coding starts after the plan is shown. Release is per location, then the feature follows `release_policy`: `all_or_none` or `per_repo`.
 6. For each chunk it launches one Cursor cloud agent, stacked on the previous branch. When the run finishes, the Orchestrator is revived with the branch, the pull request, and the report. It messages the Verifier. Verification is a stub, so you get a card: accept the chunk unverified, or stop. That choice is saved in Notion. The stack does not continue until you answer.
 7. Review the stacked pull requests when the card asks. That card does not approve release.
 8. Answer the later release card. The stack is merged only after you approve the effect and the shas that card names.
@@ -85,7 +85,7 @@ The prompt shape the stub will someday use is unchanged: the orchestrator builds
 
 ## Configuration
 
-`fstack.yaml` sits at the product repository root. Paths inside it are relative. Resolved Cursor slugs are written to `.fstack/resolved.yaml`, which is gitignored, so two people do not overwrite the shared file.
+`fstack.yaml` is the repo default for one project. It may sit in any one code location, or the project may keep that default only in Notion. Paths inside it are relative to the location that holds the file. Resolved model slugs are written to `.fstack/resolved.yaml` in a checkout that has the file, and that folder is gitignored.
 
 | Key | Shipped value | Meaning |
 | --- | --- | --- |
@@ -161,7 +161,7 @@ A chunk id is `NN-slug`. Status values and the events that change them are only 
 | `setup-project` | Human, or the orchestrator when config is missing | Copies templates, resolves models, creates Workflow config |
 | `configure-workflow` | Session start, or the human in chat | Shows the effective bindings and writes an approved change |
 | `collect-requirements` | Human, only after an explicit chat request | Writes the requirements page, then hands off to the orchestrator |
-| `survey-product` | On its own, or after requirements when a repo exists | Read-only description of the product at a pinned commit |
+| `survey-product` | On its own, or once per code location | Read-only description of that location at a pinned commit |
 | `gap-analysis` | On its own, or after the survey | Compares the sources that are present and classifies each item |
 | `split-into-chunks` | On its own with approved rows, or after the coverage gate | Plans only approved partial and missing rows |
 | `pick-next-task` | Orchestrator | Applies the next-rule list once |
@@ -205,7 +205,7 @@ The Orchestrator also has a routine for pull requests on chunk branches: opened,
 3. Send: "Follow the sync-bot-config skill. The config file is bots/orchestrator.yaml."
 4. Approve the Notion and GitHub connect cards when they appear. Do not approve any other connector in that turn.
 5. Repeat steps 1–3 for [`bots/verifier.yaml`](bots/verifier.yaml) (`fstack-verifier`) and [`bots/advisor.yaml`](bots/advisor.yaml) (`fstack-advisor`). They do not get Notion or GitHub.
-6. Tell the Orchestrator the product repository. Ask it to set up fstack. That is the first real task.
+6. Tell the Orchestrator the project's code locations. Ask it to set up fstack. That is the first real task.
 
 The sync records the repository URL and the applied commit in the bot's persistent state, not in the product repository. The weekly routine in each config runs the same skill later. Adding a connector still waits for you.
 

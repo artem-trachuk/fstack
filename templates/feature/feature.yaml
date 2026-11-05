@@ -8,8 +8,10 @@ waiting_on:
 release_state:
 release_approval:
 review_approval:
-default_branch:
-default_branch_sha:
+repos: []
+base_shas: {}
+release_mode: all_or_none
+release_order: []
 handoff_failures: 0
 lease:
   owner:

@@ -16,7 +16,7 @@ Version of the Agent Operating Guide: `0.0.6`, published `2026-10-30`, from [Not
 
 ### Project page
 
-One private page named for the repository.
+One private page named for the project. A project is the boundary that owns features, workflow config, memory, and sources. It lists zero or more code locations. Each location has a name, a role, an optional subpath, and a default branch. A location may be a repo or a subpath inside a monorepo. The project does not have one base commit or one pull request.
 
 - Child page: Agent Operating Guide. It records the workspace, the database links, preferences, exclusions, and the setup version. Unconfirmed fields stay "Not set up yet".
 - Linked databases: Features, Chunks, Memories, Coverage, Codebase maps, and Workflow config.
@@ -33,8 +33,10 @@ Property names and types come from `notion_schema.features` and `notion_schema.f
 | Slug | text | `slug` |
 | Status | select | `feature_status` |
 | Summary | text | Extra |
-| Default branch | text | `default_branch` |
-| Default branch SHA | text | `default_branch_sha` |
+| Code locations | text | `repos`. Names of the locations this feature spans |
+| Base SHAs | text | `base_shas`. Map of location name to pinned commit |
+| Release mode | select | `release_mode`. `all_or_none` or `per_repo` |
+| Release order | text | `release_order`. Location names. Empty uses the project list |
 | Waiting on | text | `waiting_on` |
 | Release state | select | `release_state` |
 | Release approval | text | `release_approval` |
@@ -62,6 +64,7 @@ Property names and types come from `notion_schema.chunks` and `notion_schema.chu
 | --- | --- | --- |
 | Name | title | `id`, the chunk id `NN-slug` |
 | Title | text | `title` |
+| Code location | text | `repo`. Exactly one. The chunk's branch and pull request are in this location |
 | Feature | relation | Extra. Parent feature |
 | Depends on | relation | `depends_on` |
 | Status | select | `status` |
@@ -90,7 +93,7 @@ The page body has Spec, Acceptance criteria, and Out of scope. The coding agent 
 
 ### Codebase maps
 
-One page per pinned commit, shared by later calls. The title starts with `Existing functionality`. Base SHA is the commit. The body is the survey: features and screens, routes and APIs, the data model, and flags, each with a file and a line. The read is read-only. The survey skill does not prescribe how the read runs. Only the caller that owns the page writes it.
+One page per code location and commit, shared by later calls. The title starts with `Existing functionality` and the location name. The page records the location name and the commit. The body is the survey: features and screens, routes and APIs, the data model, and flags, each with a file and a line. The read is read-only. The survey skill does not prescribe how the read runs. Only the caller that owns the page writes it.
 
 ### Coverage
 
@@ -100,7 +103,8 @@ One page per item, in the Coverage database. Property names come from `notion_sc
 | --- | --- | --- |
 | Name | title | `item` |
 | Feature | relation | Extra. The feature this row belongs to |
-| Base SHA | text | `base_sha`. The survey commit, or empty when there was no survey |
+| Code location | text | `repo`. The location this evidence came from. Empty only when the row is not about code |
+| Commit | text | `commit`. The pinned commit for that location, or empty when that location was not surveyed |
 | Presences | text | `presences`. One entry per source kind that was compared: present, partial, or absent, plus evidence |
 | Classification | select | `classification`. done, partial, missing, needs_decision, conflict, undocumented |
 | Next action | select | `next_action`. plan, question, or none |
@@ -132,7 +136,7 @@ Property names come from `notion_schema.workflow` and `notion_schema.workflow_ex
 | Old | text | `old` |
 | New | text | `new` |
 
-The project page body holds sources, authoritative kinds, and standing preferences. A preference may override `plan_review` or `notify`. It must not override human gates or who writes Notion.
+The project page body holds code locations, sources, authoritative kinds, release policy, and standing preferences. A preference may override `plan_review` or `notify`. It must not override human gates or who writes Notion.
 
 A feature override is a page with Scope `feature` and only the slots that differ. Precedence is feature override, then the project page, then `fstack.yaml`.
 

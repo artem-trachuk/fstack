@@ -2,7 +2,7 @@
 
 Repository: {{feature}}
 
-Read the product at one pinned commit. Do not modify it. Do not open a pull request.
+Read this one code location at one pinned commit. Do not modify it. Do not open a pull request.
 
 Describe current behaviour:
 

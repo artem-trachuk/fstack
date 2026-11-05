@@ -1,6 +1,7 @@
 ---
 id: {{chunk_id}}
 title: {{chunk_title}}
+repo:
 status: planned
 depends_on: []
 allowed_files: []

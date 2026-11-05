@@ -345,7 +345,7 @@ def main() -> int:
     check("Do not write to a source unless the human approves that write." in gap, "a source write stays behind approval")
     check("## Inputs" in gap and "## Outputs" in gap, "gap analysis must be callable on its own")
     survey = skill_text["survey-product"]
-    check("read-only" in survey.lower() and "Existing functionality" in survey and "Base SHA" in survey, "survey-product must be a read-only map stamped with the base sha")
+    check("read-only" in survey.lower() and "Existing functionality" in survey and "location name and the commit" in survey, "survey-product must be a read-only map keyed by location and commit")
     check("does not prescribe" in survey.lower(), "survey-product must not prescribe a runtime")
     check("## Inputs" in survey and "## Outputs" in survey, "survey-product must be callable on its own")
     check("reuse" in survey.lower(), "the codebase map must be reused per commit")
@@ -355,6 +355,9 @@ def main() -> int:
     for message in workflow_config_errors(ROOT):
         check(False, message)
     check(True, "workflow slots match skill contracts")
+    for message in single_repo_field_errors(ROOT, table):
+        check(False, message)
+    check(True, "no single-repo field names")
     check("partial" in skill_text["split-into-chunks"] and "missing" in skill_text["split-into-chunks"] and "approved" in skill_text["split-into-chunks"].lower(), "split-into-chunks plans only approved partial and missing rows")
     check("survey" in rule_ids and rule_ids.index("survey") < rule_ids.index("gap"), "survey is ordered before gap analysis")
 
@@ -513,6 +516,37 @@ def split_frontmatter(text: str) -> tuple[dict, str]:
     if not isinstance(loaded, dict):
         return {}, text[end + 5 :]
     return loaded, text[end + 5 :]
+
+
+def single_repo_field_errors(root: Path, table: dict) -> list[str]:
+    """A project is not one code location, and it does not have one base commit."""
+    errors = []
+    feature = set(table.get("feature_fields") or [])
+    coverage = set(table.get("coverage_fields") or [])
+    chunks = set(table.get("chunk_fields") or [])
+    for name in ("default_branch", "default_branch_sha", "base_sha"):
+        if name in feature or name in coverage:
+            errors.append(f"{name} is a single-repo field and cannot be on the feature or coverage")
+    for name in ("repos", "base_shas", "release_mode", "release_order"):
+        if name not in feature:
+            errors.append(f"feature schema needs {name}")
+    if "repo" not in coverage or "commit" not in coverage:
+        errors.append("coverage rows must name a code location and a commit")
+    if "repo" not in chunks:
+        errors.append("a chunk must name exactly one code location")
+    if "all_or_none" not in (root / "skills" / "release" / "SKILL.md").read_text(encoding="utf-8"):
+        errors.append("release must coordinate code locations with all_or_none or per_repo")
+    forbidden = re.compile(r"\bdefault_branch(_sha)?\b")
+    paths = [root / "fstack.yaml", root / "DESIGN.md", root / "README.md", root / "state" / "transitions.yaml"]
+    paths += list((root / "skills").glob("*/SKILL.md"))
+    paths += list((root / "bots").glob("*.yaml"))
+    paths += list((root / "templates").rglob("*"))
+    for path in paths:
+        if not path.is_file() or path.suffix.lower() not in {".md", ".yaml", ".yml"}:
+            continue
+        if forbidden.search(path.read_text(encoding="utf-8")):
+            errors.append(f"{path.relative_to(root).as_posix()} still uses a single-repo branch field")
+    return errors
 
 
 def vendor_name_errors(root: Path) -> list[str]:

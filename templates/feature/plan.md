@@ -4,7 +4,7 @@
 
 ## Stack
 
-The first chunk is based on the repository default branch. Each later chunk is based on the previous chunk's branch. The stack is implemented one chunk at a time.
+Chunks in one code location stack on each other. The first chunk in a location is based on that location's default branch. Each later chunk in that location is based on the previous chunk's branch there. A dependency in another location does not change the git base. One chunk is implemented at a time.
 
 Chunk id, status, branch, and allowed files live in the chunk page properties.
 

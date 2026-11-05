@@ -6,8 +6,9 @@ state_version: 1
 
 # Feature state and memory live in the user's Notion workspace.
 # Machine-specific ids and model slugs stay out of this file.
-# Grok Bot keeps them in its persistent state. The Cursor plugin uses gitignored .fstack/resolved.yaml.
-# The sync commit is never stored in the product repository.
+# The host keeps them in its persistent state, or in gitignored .fstack/resolved.yaml when a checkout exists.
+# The sync commit is never stored in a product code location.
+# This file may live in any one code location, or only in the Notion project when there are several.
 state:
   backend: notion
 
@@ -88,6 +89,16 @@ human_gates:
   collect_requirements: manual_only
   coverage: require_approval
   source_write: require_approval
+
+# Zero or more code locations. A name, a role, an optional monorepo subpath, and a default branch.
+# Empty is valid. Nothing here is "the" repo.
+code_locations: []
+
+# Feature release across locations. all_or_none merges one location fully before the next.
+# per_repo lets locations finish independently. order is location names; empty uses the project list.
+release_policy:
+  mode: all_or_none
+  order: []
 
 # Which source kinds count as authoritative. Others are inputs, not orders to build.
 authoritative_kinds: [requirements]

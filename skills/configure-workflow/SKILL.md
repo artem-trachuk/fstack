@@ -12,7 +12,7 @@ Slots choose skills. They do not choose policy.
 
 ## Inputs
 
-- The repo defaults in `fstack.yaml`: `workflow.slots`, `sources`, and `authoritative_kinds`.
+- The repo defaults in `fstack.yaml` wherever that file lives, or the Notion copy when the project has no file: `workflow.slots`, `code_locations`, `release_policy`, `sources`, and `authoritative_kinds`.
 - The project Workflow config page in Notion.
 - The feature override page, when a feature is in progress.
 - The human's request, when they are changing a binding.

@@ -28,13 +28,15 @@ The next rule is `release_question` or a merging rule. Stack review is already r
 
 3. Record `approve_release`. Set the feature Status to `merging` and Release state to `merging` on the Notion feature page. Record the approval there, as described in `stubs/enforcement.md`. Do not commit it.
 
-4. For each chunk in order, by hand:
+4. Release one code location at a time. The order is `release_order`, or the project list when that is empty. Inside a location, take chunks in stack order. `all_or_none` does not start the next location until this one is merged. `per_repo` may finish locations independently. A failure stops `all_or_none` before the next location and does not roll back a location already merged. The feature is done only when every location in the feature is merged, or the human stops.
+
+   For each chunk in that location, by hand:
 
    - If the forge already merged it, record `merge_recorded` and continue.
    - If the pull request head differs from the release sha, record `void_release` and stop. Do not merge that sha.
    - If its parent merged, rebase and retarget, record `restack_recorded`, then record `range_diff_recorded`. A clean diff updates the release sha and the approval sha. A real difference on a verified chunk sets `needs_verify`. A real difference on an `accepted_by_human` chunk clears `accepted_sha` and sets `awaiting_verification_decision`. Leave this skill.
    - Record `ci_recorded`. `pending` waits. `failing` escalates and leaves already merged chunks merged. `none` means there is no CI. Do not roll back.
-   - Merge that one pull request. Record `merge_recorded` with the head sha. Mark later chunks `needs_restack`.
+   - Merge that one pull request. Record `merge_recorded` with the head sha. Mark later chunks in the same location `needs_restack`. Do not restack another location unless a cross-location dependency says so.
 
 5. When every chunk is `merged`, run `release.command` only if it is non-empty and still equals the approved string. Record `release_command_recorded`. Exit 0 sets `feature_status: done` and `release_state: done`. Any other exit sets `release_state: command_failed`, escalates, and does not roll back. An empty command finishes the same way with exit 0 and no command.
 

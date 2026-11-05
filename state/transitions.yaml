@@ -104,11 +104,11 @@ next_rules:
     action: collect_requirements
     detail: The human already asked in chat to start this feature. Do not open that skill yourself.
   - id: survey
-    when: feature_status is requirements_confirmed and a product repository exists
+    when: feature_status is requirements_confirmed and the feature lists at least one code location
     action: survey_product
-    detail: Pin the commit. Reuse the stored map for that commit when one exists. Otherwise perform one read-only survey. Do not prescribe the mechanism. If the effective workflow binding skips survey, record survey_skipped instead.
+    detail: For each code location, pin that location's default-branch commit in base_shas. Reuse a stored map for that location and commit. Otherwise one read-only survey per location. Do not prescribe the mechanism. If the binding skips survey, record survey_skipped instead.
   - id: survey_skip
-    when: feature_status is requirements_confirmed and no product repository exists
+    when: feature_status is requirements_confirmed and the feature lists no code locations
     action: skip_survey
     detail: Leave current_product absent. Gap analysis compares the other sources.
   - id: survey_wait
@@ -118,7 +118,7 @@ next_rules:
   - id: gap
     when: feature_status is surveyed
     action: gap_analysis
-    detail: Compare the sources that are present. Classifications come from authoritative_kinds, not from source names. current_product is the stored survey when a repository exists.
+    detail: Compare sources per code location, then one coverage view. Every evidence row names its location. Classifications come from authoritative_kinds, not from source names.
   - id: coverage_gate
     when: feature_status is awaiting_coverage_approval
     action: wait_for_coverage_approval
@@ -131,9 +131,9 @@ next_rules:
     action: wait_for_plan_approval
     detail: Only when plan_review is approve. The default notify never enters this status.
   - id: base_drift
-    when: the default branch sha differs from default_branch_sha and the feature is building or merging
+    when: a code location's default-branch commit differs from base_shas for that location and the feature is building or merging
     action: base_moved
-    detail: Restack open branches before more implementation or merges.
+    detail: Restack open branches in that location before more implementation or merges. Other locations stay as they are.
   - id: blocked
     when: the earliest chunk in stack order is blocked
     action: escalate_chunk
@@ -203,7 +203,7 @@ next_rules:
   - id: release_question
     when: feature_status is awaiting_release
     action: open_release
-    detail: The question lists every chunk id, pull request, and release sha, and the exact release.command. The release sha is verified_sha, or accepted_sha when the chunk is accepted_by_human.
+    detail: The question lists every chunk id, its code location, its pull request, and its release sha, plus release_mode, release_order, and release.command. The release sha is verified_sha, or accepted_sha when the chunk is accepted_by_human. Stacks are per location. The feature release follows release_mode.
   - id: sha_mismatch
     when: feature_status is merging and a pull request head differs from that chunk's release sha
     action: void_release
@@ -419,7 +419,7 @@ events:
     guard: human quote. Merged chunks stay merged.
   - name: base_moved
     skill: pick-next-task
-    guard: record the new default branch sha. Open chunks need restack. Verified chunks need a range-diff.
+    guard: record the new commit under base_shas for that code location. Open chunks in that location need restack. Verified chunks there need a range-diff.
   - name: advisor_launched
     skill: advisors
     guard: write the launched row before the call returns. A Cursor credit or unavailable-model failure can continue to a local CLI fallback, and that CLI call counts too. Skip a duplicate artifact hash. Planner calls stop when the tie-break reserve would be eaten. If no runtime starts, log the skip and tell the human through tldr.
@@ -446,8 +446,10 @@ feature_fields:
   - release_state
   - release_approval
   - review_approval
-  - default_branch
-  - default_branch_sha
+  - repos
+  - base_shas
+  - release_mode
+  - release_order
   - lease
   - handoff_failures
   - requirements_status
@@ -457,6 +459,7 @@ feature_fields:
 chunk_fields:
   - id
   - title
+  - repo
   - status
   - depends_on
   - allowed_files
@@ -490,8 +493,10 @@ notion_schema:
     release_state: {name: Release state, type: select}
     release_approval: {name: Release approval, type: text}
     review_approval: {name: Review approval, type: text}
-    default_branch: {name: Default branch, type: text}
-    default_branch_sha: {name: Default branch SHA, type: text}
+    repos: {name: Code locations, type: text}
+    base_shas: {name: Base SHAs, type: text}
+    release_mode: {name: Release mode, type: select}
+    release_order: {name: Release order, type: text}
     lease: {name: Lease, type: text}
     handoff_failures: {name: Handoff failures, type: number}
     requirements_status: {name: Requirements status, type: select}
@@ -507,6 +512,7 @@ notion_schema:
   chunks:
     id: {name: Name, type: title}
     title: {name: Title, type: text}
+    repo: {name: Code location, type: text}
     status: {name: Status, type: select}
     depends_on: {name: Depends on, type: relation}
     allowed_files: {name: Allowed files, type: text}
@@ -533,7 +539,8 @@ notion_schema:
     - {name: Accepted unverified, type: checkbox}
   coverage:
     item: {name: Name, type: title}
-    base_sha: {name: Base SHA, type: text}
+    repo: {name: Code location, type: text}
+    commit: {name: Commit, type: text}
     presences: {name: Presences, type: text}
     classification: {name: Classification, type: select}
     next_action: {name: Next action, type: select}
@@ -560,7 +567,8 @@ notion_schema:
 
 coverage_fields:
   - item
-  - base_sha
+  - repo
+  - commit
   - presences
   - classification
   - next_action

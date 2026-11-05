@@ -15,7 +15,7 @@ description: >
 Inputs: approved buildable coverage rows, the base commit, and any slot parameters.
 Outputs: ordered chunk pages, or a report that nothing is buildable.
 
-Write the stack. Chunk ids look like `01-slug`, in order. The first chunk's base is the default branch. Each later chunk's base is the previous chunk's branch `fstack/<feature>/<chunk-id>`.
+Write the stack. Chunk ids look like `01-slug`, in order. Each chunk names exactly one code location. Within one location, the first chunk's base is that location's default branch. Each later chunk in that location uses the previous chunk's branch `fstack/<feature>/<chunk-id>`. A dependency in another location is `depends_on` only. It does not change the git base. Stacking, restack, and review are per location.
 
 ## When to use
 
@@ -33,7 +33,7 @@ Allowed files are concrete paths or globs. They must not include `.fstack/`. One
 
 2. Read the approved buildable rows you were given. Inside a feature, that is Coverage rows whose Approved flag is set and whose classification is `partial` or `missing`. Skip `done`, `conflict`, `needs_decision`, `undocumented`, `skip`, and `defer`. A decision row becomes buildable only after the human chose `implement` and the coverage gate approved it. If no row qualifies, tell the human there is nothing to build. Set `waiting_on` kind `plan`, question id `Q-<slug>-empty-plan`, options stop or describe a change. Do not record `save_plan` and do not set `building`. Do not launch an implementer. When this skill is called alone, split the rows you were given and return the plan. Do not look for a feature status.
 
-   Write the Plan section and one Chunks page per planned row, as in `DESIGN.md`. Record `default_branch` and `default_branch_sha` on the feature. The base SHA is the survey commit.
+   Write the Plan section and one Chunks page per planned row, as in `DESIGN.md`. Set each chunk's `repo` to one location. Record `repos` and `base_shas` on the feature. A chunk with no single location is not a chunk.
 
 3. Record `save_plan`.
 

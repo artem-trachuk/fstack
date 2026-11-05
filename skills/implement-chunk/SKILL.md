@@ -26,7 +26,7 @@ The next rule is `launch_implementer`, or an implementer was launched and this s
 
 2. Launch one coding agent for this chunk. It works on the chunk branch, stacked on the base, and opens one pull request. Do not merge. Do not start a second agent for the same chunk.
 
-   On Grok Bot, that agent is a Cursor cloud agent on the product repository. Do not write product code on the bot computer and do not clone the repository. Read files, diffs, pull requests, and checks through the GitHub connector. When the run finishes you are revived with the branch, the pull request, and the final report. To change a running agent, send a follow-up.
+   On Grok Bot, that agent is a Cursor cloud agent on the chunk's code location. Do not write product code on the bot computer and do not clone that location. Read files, diffs, pull requests, and checks through the GitHub connector. When the run finishes you are revived with the branch, the pull request, and the final report. To change a running agent, send a follow-up.
 
    On the Cursor plugin, start a cloud agent with the same prompt when the session can. `local_worktree` in the resolved models means it cannot, so the implementer still works on the chunk branch and still receives the spec in the prompt. Do not create a fstack worktree. Tell the human when setup downgraded the runtime. The model is `roles.implementer` in the resolved models. You pass that model when you launch. The agent does not switch itself.
 
