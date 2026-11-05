@@ -20,13 +20,13 @@ The human says "update fstack", "upgrade fstack", or "sync fstack".
 
 ## Steps
 
-1. Read the `repository` field in `plugin.json` and the `version` there. Read the current commit on that repository's main branch. Read `fstack_version` and `fstack_commit` from this bot's persistent state, and the latest fstack line in the Agent Operating Guide's Version history. If both the version and the commit already match, say so and stop. A second run with the same commit changes nothing.
+1. Read the `repository` field in `plugin.json` and the `version` there. Read the current commit on that repository's main branch through the GitHub connector. Do not clone. Read `fstack_version` and `fstack_commit` from this bot's persistent state, and the latest fstack line in the Agent Operating Guide's Version history. If both the version and the commit already match, say so and stop. A second run with the same commit changes nothing.
 
 2. Summarise what changed between the installed commit and main. Use `CHANGELOG.md` and the diff. Cover skills added, changed, or removed, bot config, workflow-config defaults, and the Notion model or `required_relations`. Do not paste full files.
 
 3. Follow `sync-bot-config` for the Orchestrator. That records `applied_commit` on every successful apply.
 
-4. Follow `provision-team` so teammates match the new config. Message each one to follow `sync-bot-config` for its own yaml at this commit. Collect each reply. A missing reply is reported, not invented.
+4. Follow `provision-team` so teammates match the new config. An existing fstack-advisor bot is retired there: a human-gated rename whose description includes retired, never a delete. Message each remaining teammate to follow `sync-bot-config` for its own yaml at this commit. Collect each reply. A missing reply is reported, not invented.
 
 5. For every product Workflow config, add a default that the new version introduces and that the page does not already set. Keep a value the human set. Record each added or kept difference with `workflow_changed`. Flag a setting the new version removed or renamed, and do not delete the human's value in this step.
 

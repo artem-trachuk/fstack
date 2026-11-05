@@ -22,11 +22,14 @@ A second opinion. The caller decides what to do with it.
 
 ## Outputs
 
-- A critique and a ranking. This skill does not pick the option and does not escalate a disagreement.
+- A critique and a ranking that cite files and lines, plus a confidence. This skill does not pick the option and does not escalate a disagreement.
+- Proof: the cloud agent id (`bc-...`), its `cursor.com` URL, the model id actually used, and the raw critique.
 
 ## When to use
 
-`planner_review` during `gap-analysis` and `split-into-chunks`. `verify_tiebreak` when a chunk is `disputed`. A non-trivial decision asks each advisor named in `advisors.decision` to critique and rank the options. The fallback below is unchanged. Skip an advisor when the `advise` slot is skipped, or when the action is outside that advisor's `when` list and it is not a decision round.
+`planner_review` during `gap-analysis` and `split-into-chunks`. `verify_tiebreak` when a chunk is `disputed`. A non-trivial decision launches the first role in `advisors.decision` first. That role maps to the Opus model id. Launch the next role, which maps to the Argon model id, only when the first critique is low confidence, says the options are close, or conflicts with the score. The fallback below is unchanged. Skip an advisor when the `advise` slot is skipped.
+
+Never write an advisor critique or ranking from your own reasoning, and never label your own reasoning as an advisor's. A critique without an agent id or a CLI run record, or without a file citation, is invalid.
 
 ## Budget
 
@@ -40,7 +43,7 @@ If the resolved tie-break slug equals the verifier model, including when both ar
 
 ## When Cursor cannot start
 
-Use a local CLI only when the Cursor advisor cannot start because the account has no credits for that model, or the model is unavailable. A message such as "Buy credits or switch to a Grok model" is this case. A critique that started and then failed is a failed call, not a reason to start the CLI.
+Use a local CLI only when the Cursor cloud agent cannot start because the account has no credits for that model, or the model is unavailable. A message such as "Buy credits or switch to a Grok model" is this case. A critique that started and then failed is a failed call, not a reason to start the CLI. The CLI path is Opus only. There is no Argon CLI. If Argon cannot start, record `skipped: no_runtime`. The teammate bot is never a fallback.
 
 Walk `advisors.fallback` in order. Use an entry only when `enabled` is true and the resolved `advisor_cli` says it is available and signed in. On Grok Bot that record is in the bot's persistent state. On the Cursor plugin it is in `.fstack/resolved.yaml`. The `command` is a name on `PATH`. Do not build a filesystem path, a user name, or a machine name.
 
@@ -64,9 +67,15 @@ If Cursor cannot start and every fallback is disabled, unavailable, or not signe
 
 2. Follow `build-context`. A tie-break uses `verify-tiebreak`, with the same patch as verify and no fstack notes.
 
-3. Record `advisor_launched` or `tiebreak_launched`, then start the advisor. On Grok Bot, send the handoff in `bots/orchestrator.yaml` to the teammate whose profile name is `fstack-advisor` and end the turn. The reply starts with `fstack-reply` and the critique is the `critique` field. If that teammate is unavailable, or a Cursor advisor model cannot start because of credits or an unavailable model, use the local CLI above. On the Cursor plugin, launch the advisor agent. On a credit or unavailable-model failure, mark that row `failed` and try the local CLI list above. Record a new launched row before the CLI runs. Same-model tie-break still skips and does not use the CLI or the teammate.
+3. Record `advisor_launched` or `tiebreak_launched` before the session starts. Launch a separate read-only Cursor cloud agent on the product repo at the pinned commit. On Grok Bot use the host's cloud-agent launch. On the Cursor plugin launch the advisor agent. Pass the model id explicitly. The Opus default is `claude-opus-5-5` with effort `xhigh` or `high`. The Argon default is `gemini-4-argon` with reasoning effort `high`. Resolve those ids from `models` in `fstack.yaml`. Do not leave the model as inherit and do not use the Orchestrator's own model.
 
-4. Record `advisor_finished` or `tiebreak_finished` on the Advisor calls page, and store the critique on the Notion page `advisor output <n>` under the feature. A planner failure does not stop the feature. A tie-break failure does not become the verdict. The orchestrator records `decide_dispute`.
+   The prompt says read-only. Do not edit files, push, open a pull request, or create a branch. Read the code. Return a structured critique: a ranking, a confidence, and citations of files and lines. Include the options, the Fix or feature page, and the relevant graph nodes. An Argon session also receives the Opus critique.
+
+   If the cloud agent makes commits anyway, ignore those commits and archive the agent. Archive each advisor agent after its critique is saved.
+
+   On a credit or unavailable-model failure, mark that row `failed` and try the local CLI only for Opus. Record a new launched row before the CLI runs, and store that the proof is a CLI run. Same-model tie-break still skips and does not use the CLI. Never message a teammate for a critique.
+
+4. Record `advisor_finished` or `tiebreak_finished` on the Advisor calls page. Store the cloud agent id (`bc-...`), its `cursor.com` URL, the model id actually used, and the raw critique on the Notion page `advisor output <n>` under the feature. A planner failure does not stop the feature. A tie-break failure does not become the verdict. The orchestrator records `decide_dispute`. If no runtime can start, record `skipped: no_runtime` and say so plainly through `tldr`.
 
 ## Events
 

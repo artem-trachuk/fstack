@@ -379,11 +379,9 @@ def main() -> int:
     for message in file_wording_errors(ROOT):
         check(False, message)
     check(True, "state wording names Notion pages")
-    for bot_name in ("verifier.yaml", "advisor.yaml"):
-        bot = yaml.safe_load((ROOT / "bots" / bot_name).read_text(encoding="utf-8"))
-        check("tldr" in (bot.get("skills") or []), f"{bot_name} must include tldr")
-    advisor_bot = yaml.safe_load((ROOT / "bots" / "advisor.yaml").read_text(encoding="utf-8"))
-    check("advisors" not in (advisor_bot.get("skills") or []), "the advisor bot must not run the orchestrator launch steps")
+    verifier_bot = yaml.safe_load((ROOT / "bots" / "verifier.yaml").read_text(encoding="utf-8"))
+    check("tldr" in (verifier_bot.get("skills") or []), "verifier.yaml must include tldr")
+    check(not (ROOT / "bots" / "advisor.yaml").exists(), "the advisor is not a teammate bot")
     for message in durable_fact_errors(ROOT):
         check(False, message)
     check(True, "durable product facts are graph nodes")
@@ -467,7 +465,10 @@ def main() -> int:
     check("asks in chat" in collect and "invokes `/collect-requirements`" not in collect, "requirements start from a chat request")
     check("Cursor cloud agent" in skill_text["implement-chunk"], "implement-chunk must launch a Cursor cloud agent from Grok Bot")
     check("question card" in skill_text["tldr"] and "clickable" in skill_text["tldr"], "tldr must describe a Grok Bot question card")
-    check("fstack-verifier" in skill_text["pick-next-task"] and "fstack-advisor" in skill_text["advisors"], "skills must name teammate profile names")
+    check("fstack-verifier" in skill_text["pick-next-task"], "pick-next-task must name the verifier profile")
+    for message in advisor_runtime_errors(skill_text, (ROOT / "bots" / "orchestrator.yaml").read_text(encoding="utf-8")):
+        check(False, message)
+    check(True, "an advisor is a Cursor cloud agent with proof")
     check("plan_review" in readme and "stubs/enforcement.md" in readme, "README must mention the plan gate and the stubs")
 
     ignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
@@ -975,6 +976,42 @@ def decision_policy_errors(table: dict, skill_text: dict) -> list[str]:
     return errors
 
 
+def advisor_runtime_errors(skill_text: dict, orchestrator: str) -> list[str]:
+    """An advisor is a Cursor cloud agent. The Orchestrator does not invent the critique."""
+    errors = []
+    rule = "Never write an advisor critique or ranking from your own reasoning, and never label your own reasoning as an advisor's."
+    advisors = skill_text.get("advisors") or ""
+    policy = skill_text.get("decision-policy") or ""
+    for label, text in (("advisors", advisors), ("decision-policy", policy), ("orchestrator", orchestrator)):
+        if rule not in text:
+            errors.append(f"{label} must forbid a self-written advisor critique")
+    if "claude-opus-5-5" not in advisors or "gemini-4-argon" not in advisors:
+        errors.append("the advisors skill must launch with the default model ids")
+    if advisors.find("claude-opus-5-5") > advisors.find("gemini-4-argon"):
+        errors.append("Opus must be described before Argon")
+    if "only when" not in advisors.lower() or "low confidence" not in advisors:
+        errors.append("Argon runs only when the Opus critique leaves the decision unclear")
+    for phrase in ("bc-", "cursor.com", "advisor output", "skipped: no_runtime", "file"):
+        if phrase not in advisors:
+            errors.append(f"the advisors skill must require proof ({phrase})")
+    if "The teammate bot is never a fallback." not in advisors:
+        errors.append("a teammate bot must not be the advisor fallback")
+    if "no Argon CLI" not in advisors and "There is no Argon CLI." not in advisors:
+        errors.append("a missing Argon runtime is skipped, not sent to the CLI")
+    if "fstack-advisor" in (yaml.safe_load(orchestrator).get("teammates") or {}):
+        errors.append("orchestrator teammates must not include an advisor bot")
+    status = skill_text.get("fstack-status") or ""
+    if "without proof" not in status:
+        errors.append("fstack-status must flag an advisor entry without proof")
+    provision = skill_text.get("provision-team") or ""
+    if "fstack-role:advisor" not in provision or "retired" not in provision or "Do not delete" not in provision:
+        errors.append("provision-team must retire an existing advisor bot without deleting it")
+    for name in ("sync-bot-config", "upgrade-fstack"):
+        if "Do not clone" not in (skill_text.get(name) or ""):
+            errors.append(f"{name} must read the repository through the connector and must not clone")
+    return errors
+
+
 def fix_intake_errors(table: dict, skill_text: dict) -> list[str]:
     """A bug is a Fix page on an existing feature. It does not create a feature page."""
     errors = []
@@ -1082,7 +1119,7 @@ def sync_state_errors(root: Path) -> list[str]:
 def bot_config_errors(root: Path, skill_names: set[str], role_names: set[str]) -> list[str]:
     errors = []
     files = sorted((root / "bots").glob("*.yaml"))
-    required = {"orchestrator.yaml", "verifier.yaml", "advisor.yaml"}
+    required = {"orchestrator.yaml", "verifier.yaml"}
     found = {path.name for path in files}
     if not required <= found:
         errors.append(f"missing bot configs: {sorted(required - found)}")
@@ -1157,7 +1194,9 @@ def bot_config_errors(root: Path, skill_names: set[str], role_names: set[str]) -
             if not isinstance(teammates, dict):
                 errors.append("orchestrator.yaml needs teammates")
             else:
-                for role_name in ("verifier", "advisor"):
+                if "advisor" in teammates:
+                    errors.append("orchestrator.yaml must not list an advisor teammate")
+                for role_name in ("verifier",):
                     teammate = teammates.get(role_name)
                     if not isinstance(teammate, dict):
                         errors.append(f"orchestrator.yaml needs teammates.{role_name}")
@@ -1181,10 +1220,10 @@ def bot_config_errors(root: Path, skill_names: set[str], role_names: set[str]) -
             reply = str(handoff.get("reply") or "")
             if "fstack-handoff" not in send or "ask:" not in send or "prompt:" not in send:
                 errors.append("orchestrator.yaml handoff send must include fstack-handoff, ask, and prompt")
-            if "fstack-reply" not in reply or "verdict:" not in reply or "critique:" not in reply:
-                errors.append("orchestrator.yaml handoff reply must include fstack-reply, verdict, and critique")
-            if handoff.get("asks") != ["verdict", "critique"]:
-                errors.append("orchestrator.yaml handoff asks must be verdict and critique")
+            if "fstack-reply" not in reply or "verdict:" not in reply:
+                errors.append("orchestrator.yaml handoff reply must include fstack-reply and verdict")
+            if handoff.get("asks") != ["verdict"]:
+                errors.append("orchestrator.yaml handoff asks must be verdict")
             covered = set()
             for routine in routines:
                 if isinstance(routine, dict) and isinstance(routine.get("on"), dict):
@@ -1206,7 +1245,7 @@ def bot_config_errors(root: Path, skill_names: set[str], role_names: set[str]) -
                 errors.append(f"{label} role_marker must be {expected}")
             elif marker not in str(data.get("description") or ""):
                 errors.append(f"{label} description must include its role marker")
-        if label in {"verifier.yaml", "advisor.yaml"}:
+        if label == "verifier.yaml":
             readers = [
                 item for item in connectors
                 if isinstance(item, dict) and item.get("id") == "github" and item.get("access") == "read"

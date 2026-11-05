@@ -1,6 +1,6 @@
 # fstack
 
-fstack is a way to deliver one software feature with a small team of bots. You chat with the Orchestrator. It keeps the feature in Notion, asks you with question cards, and launches a Cursor cloud agent for each chunk. A Verifier and an Advisor are separate bots it messages. You review the stacked pull requests once, then approve release.
+fstack is a way to deliver one software feature with a small team of bots. You chat with the Orchestrator. It keeps the feature in Notion, asks you with question cards, and launches a Cursor cloud agent for each chunk. The Verifier is a teammate it messages. An advisor is a separate read-only Cursor cloud agent. You review the stacked pull requests once, then approve release.
 
 The name is short for feature stack. Statuses and transitions live in [`state/transitions.yaml`](state/transitions.yaml). Skills follow that table. There is no command-line runner. Grok Bot is the host these skills are written for. A Cursor plugin install is a secondary option at the end of this file.
 
@@ -10,7 +10,7 @@ Create three bots from the configs in [`bots/`](bots/) and connect Notion and Gi
 
 1. In Grok Bot, choose New Bot. Name it **Fstack Orchestrator**. In the first message, paste the persona and instructions from [`bots/orchestrator.yaml`](bots/orchestrator.yaml) and ask it to remember them.
 2. Tell that bot: "Follow the sync-bot-config skill. The config file is bots/orchestrator.yaml." It copies the skills from this repository, sets its profile, and saves its routines. The first run is the bootstrap. The weekly routine keeps it current.
-3. Do not create the Verifier or the Advisor yourself.
+3. Do not create the Verifier yourself. The Orchestrator provisions it. An advisor is not a bot.
 4. Connect Notion and the repo reader when the Orchestrator shows a connect card. Other inputs are sources in the product config: a kind plus a reader. Ask the Orchestrator to install fstack. It provisions the other bots. Their feature inputs still arrive as messages. Each teammate syncs through a read-only repo reader, or by a public fetch of the skill repository when that reader is absent.
 5. Schedules use the timezone in Grok Bot settings under Bot. The five cron fields do not name a zone.
 
@@ -83,7 +83,7 @@ The prompt shape the stub will someday use is unchanged: the orchestrator builds
 
 `tldr` rewrites messages to the human. Question ids, options, the release command, shas, and pull request URLs stay verbatim.
 
-`planner_review` critiques gap analysis and the chunk split. `verify_tiebreak` is reserved for a future disputed verdict. The stub never asks for it, because it does not judge the chunk. Both advisors are read-only. A feature allows six advisor calls, and two of those are reserved for the tie-break. The tie-break is advice. The orchestrator decides or escalates.
+`planner_review` critiques gap analysis and the chunk split. `verify_tiebreak` is reserved for a future disputed verdict. The stub never asks for it, because it does not judge the chunk. Both are read-only Cursor cloud agents. Opus runs first. Argon runs only when the decision is still unclear. A feature allows six advisor calls, and two of those are reserved for the tie-break. The tie-break is advice. The orchestrator decides or escalates. A critique needs an agent id or a CLI run record, and file citations.
 
 ## Configuration
 
@@ -132,7 +132,7 @@ advisors:
       enabled: true
 ```
 
-`verify_tiebreak.fallback` is another Cursor model to try inside Cursor. `advisors.fallback` is a local CLI used only when Cursor cannot start the advisor, for example when the account has no credits for that model. The shipped entry is the Claude Code CLI. setup checks that `claude` is on `PATH` and signed in, and it does not read or print tokens. A local CLI runs under the user's own subscription terms.
+`verify_tiebreak.fallback` is another Cursor model to try inside Cursor. `advisors.fallback` is a local CLI used only when Cursor cannot start Opus, for example when the account has no credits for that model. The shipped entry is the Claude Code CLI. There is no Argon CLI. setup checks that `claude` is on `PATH` and signed in, and it does not read or print tokens. A local CLI runs under the user's own subscription terms. A teammate bot is never the advisor.
 
 If the tie-break would use the same model as the verifier, including when both are `inherit`, the orchestrator skips it and asks the human. That independence rule is not a credit failure, so it does not switch to the local CLI.
 
@@ -177,7 +177,7 @@ A chunk id is `NN-slug`. Status values and the events that change them are only 
 | `verify` | Verifier, at the same point in the flow | Returns `not_implemented` and does not judge the chunk |
 | `build-context` | Orchestrator, before an action | Writes the prompt onto a Notion page |
 | `tldr` | Before a human-facing message | Short prose, verbatim decisions |
-| `advisors` | Gap analysis, split, one dispute per attempt | Read-only critique. A local CLI fallback counts toward the same cap |
+| `advisors` | Gap analysis, split, one dispute per attempt | Read-only Cursor cloud agent. Opus first, Argon only if still unclear |
 | `escalate` | Orchestrator | Stops for retry, accept, a spec change, or stop |
 | `review-stack` | Orchestrator, after every chunk is verified | Asks for review and waits |
 | `release` | Orchestrator, after review | Asks, then merges only the approved shas, then proposes memories |
@@ -203,7 +203,7 @@ Run `python3 scripts/validate_plugin.py` after the edit. It checks the manifest,
 
 Grok Bot is the primary host. Configs in `bots/` are version `0.1`. Each file has a profile (`name`, `title`, `description`, `persona`, `instructions`), skills copied from this repo, a `model_role` from `fstack.yaml`, connectors, teammates, a handoff message, and routines. A routine has a name, a prompt, and either a five-field cron schedule or a GitHub pull-request event. Cron uses the timezone in Grok Bot settings under Bot. The files name no host, user, or bot id. Address a teammate by the `name` in its config, which is the profile name you give it at creation.
 
-The Orchestrator connects to Notion and GitHub. It reads other inputs through the `sources` list in the product config. It messages the Verifier and the Advisor. The message starts with `fstack-handoff` and includes the role, feature, chunk, ask (`verdict` or `critique`), and the prompt. The reply starts with `fstack-reply`. The Verifier and Advisor each have one read-only reader for the skill repository, used only by sync. An Advisor can instead be the `claude` command on the bot computer when that teammate is unavailable. See `advisors.fallback` in `fstack.yaml`.
+The Orchestrator connects to Notion and GitHub. It reads repositories through the GitHub connector and does not clone. It messages the Verifier. The message starts with `fstack-handoff` and includes the role, feature, chunk, ask (`verdict`), and the prompt. The reply starts with `fstack-reply`. The Verifier has one read-only reader for the skill repository, used only by sync. An advisor is a Cursor cloud agent. Opus uses `claude-opus-5-5`. Argon uses `gemini-4-argon` only when the first critique leaves the choice unclear. See `advisors.fallback` in `fstack.yaml`.
 
 The Orchestrator also has a routine for pull requests on chunk branches: opened, pushed, merged, and commented. Public docs confirm that a routine can start from a GitHub event. They do not publish the exact event-field names, so the bot maps those four words onto the host's GitHub trigger and narrows it to branches named `fstack/`.
 

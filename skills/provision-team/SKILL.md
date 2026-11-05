@@ -53,11 +53,13 @@ Record that reply in `team_sync` and record `teammate_synced`. If `team_sync` al
 
 ## Connectors
 
-Missing connectors, including read-only repo access for the Verifier and Advisor, need the human. Batch every missing connector for every bot into one question card. Do not authorize a connector yourself and do not ask a teammate to skip authorization. On yes, each teammate adds only the connectors named in that card.
+Missing connectors, including read-only repo access for the Verifier, need the human. Batch every missing connector for every bot into one question card. Do not authorize a connector yourself and do not ask a teammate to skip authorization. On yes, each teammate adds only the connectors named in that card.
 
 ## Retired roles
 
-If `team` has a role whose yaml is gone, do not delete the bot. Add the role to `team_retired` and ask the human what to do with it. Do not send it another sync.
+The advisor is not a teammate. If `team` has an advisor id, or a search finds a bot whose description contains `fstack-role:advisor` or whose profile name is `fstack-advisor`, that bot is retired. Batch the rename with any other first rename on one question card. On yes, set the description to include retired. Do not delete the bot. Do not message it to sync.
+
+If `team` has any other role whose yaml is gone, do not delete the bot. Add the role to `team_retired` and ask the human what to do with it. Do not send it another sync.
 
 ## Idempotent
 
