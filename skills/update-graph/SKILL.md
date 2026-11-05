@@ -28,6 +28,8 @@ Status is `awaiting_graph_update`. If the feature is `stopped`, or it never merg
 
 2. Build the promotion: new nodes, changed evidence, removed nodes, and `supersedes` edges from the new node to the one it replaces. Set last-verified commits from the merged commits. Set provenance to this feature.
 
+   When a Fix page is related to the feature, update the nodes that page links. Write the corrected behaviour, a regression check or the verification link, and provenance to that Fix page. Do not add a feature node. Do not add a node that stands for the bug.
+
 3. If a proposed node contradicts an active node, record `graph_flagged`. Do not promote the contradicted node. Ask the human with one question card. Options are keep the graph, replace it, or stop. End the turn.
 
 4. Read `graph.promote` from the effective workflow config. The repo default is `require_approval`.

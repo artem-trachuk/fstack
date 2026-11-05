@@ -436,6 +436,9 @@ def main() -> int:
         check("Follow the debug-log contract." in skill_path.read_text(encoding="utf-8"), f"{skill_path.parent.name} must follow the debug-log contract")
     check("debug_toggled" in skill_text["configure-workflow"], "turning debug on or off is a change-log event")
     check("export the debug log" in skill_text["fstack-status"], "fstack-status must export a debug trace")
+    for message in fix_intake_errors(table, skill_text):
+        check(False, message)
+    check(True, "a fix stays on the existing feature")
 
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     for heading in ("## Install", "## Quick start", "## Flow", "## Configuration", "## Workspace", "## Adding a bot or a skill"):
@@ -639,6 +642,7 @@ def relation_declaration_errors(table: dict, design: str) -> list[str]:
         "coverage",
         "decision",
         "verification",
+        "fix",
         "workflow",
         "debug_log",
     }
@@ -656,6 +660,7 @@ def relation_declaration_errors(table: dict, design: str) -> list[str]:
         "coverage": ("coverage", "coverage_extra"),
         "decision": ("decision", "decision_extra"),
         "verification": ("verification", "verification_extra"),
+        "fix": ("fix", "fix_extra"),
         "workflow": ("workflow", "workflow_extra"),
         "debug_log": ("debug_log", "debug_log_extra"),
     }
@@ -803,7 +808,7 @@ def workflow_config_errors(root: Path) -> list[str]:
     if workflow.get("version") != 1:
         errors.append("workflow.version must be 1")
     slots = workflow.get("slots") or {}
-    required = {"survey", "gap_analysis", "split", "implement", "verify", "review", "release", "update_graph"}
+    required = {"survey", "gap_analysis", "split", "implement", "verify", "review", "release", "update_graph", "fix"}
     if not required <= set(slots):
         errors.append(f"workflow slots missing: {sorted(required - set(slots))}")
     if (slots.get("verify") or {}).get("skill") != "verify":
@@ -899,6 +904,34 @@ def memory_design_errors(memory_skill: str, design: str, table: dict, setup: str
     return errors
 
 
+def fix_intake_errors(table: dict, skill_text: dict) -> list[str]:
+    """A bug is a Fix page on an existing feature. It does not create a feature page."""
+    errors = []
+    collect = skill_text.get("collect-requirements") or ""
+    filed = skill_text.get("file-fix") or ""
+    if "new_feature" not in collect or "`fix`" not in collect:
+        errors.append("fix intake must classify new_feature or fix")
+    if "Never create a Features page for a fix" not in collect or "Never create a Features page for a fix" not in filed:
+        errors.append("fix intake must refuse a new feature page")
+    required = (table.get("required_relations") or {}).get("fix") or []
+    if "fix" not in (table.get("required_relations") or {}) or "Product" not in required or "Feature" not in required:
+        errors.append("Fix kind must be in required_relations")
+    status = skill_text.get("fstack-status") or ""
+    if "Fix entry" not in status or "without approval" not in status:
+        errors.append("converting a mistaken feature page waits for approval")
+    if "not a fix" not in (skill_text.get("gap-analysis") or ""):
+        errors.append("an ambiguous requirement is a question, not a fix")
+    if "Do not add a feature node" not in (skill_text.get("update-graph") or ""):
+        errors.append("a fix updates existing graph nodes")
+    create_feature = re.compile(r"create a features? page", re.IGNORECASE)
+    forbid = re.compile(r"\b(never|do not|must not)\b", re.IGNORECASE)
+    for name, text in skill_text.items():
+        for line in text.splitlines():
+            if create_feature.search(line) and re.search(r"\bfix\b", line, re.IGNORECASE) and not forbid.search(line):
+                errors.append(f"{name} creates a feature page for a fix")
+    return errors
+
+
 def notion_skills_tool_errors(root: Path) -> list[str]:
     """A skill may name a Notion Skills tool only to forbid calling it."""
     errors = []
@@ -932,6 +965,7 @@ def notion_schema_errors(table: dict, design: str) -> list[str]:
         ("survey_fields", "survey", "survey_extra"),
         ("decision_fields", "decision", "decision_extra"),
         ("verification_fields", "verification", "verification_extra"),
+        ("fix_fields", "fix", "fix_extra"),
         ("debug_log_fields", "debug_log", "debug_log_extra"),
         ("workflow_fields", "workflow", "workflow_extra"),
     )

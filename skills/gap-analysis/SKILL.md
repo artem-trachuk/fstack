@@ -44,6 +44,8 @@ If `current_product` is absent, do not use rules 1, 2, or 5. An authoritative it
 
 `done` is not a chunk. `needs_decision`, `conflict`, and `undocumented` are not chunks until the human accepts one as a requirement and the coverage gate approves it. A conflict is never implemented from the table alone.
 
+When a Fix page is related to the feature, compare its Expected and Actual text with the linked graph node's recorded behaviour and with the authoritative requirements. Cite the node's evidence. Where the requirement agrees with Expected and the node or the product disagrees, the row is `partial` or `missing` and buildable. If the requirement itself is ambiguous, the row is a question for the human, not a fix. Classify it `needs_decision` and set the next action to `question`. Do not plan that row.
+
 ## Steps
 
 1. Follow `memory` when a feature is in progress. Follow `build-context` for `gap-analysis` when a feature page exists. If this call has no feature, compare the inputs and return the table. Do not write a feature status.

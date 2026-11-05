@@ -47,7 +47,7 @@ When the human asks what is configured, list each slot, the effective skill, the
 
 3. Read that skill's `contract`. The slot's `contract` is in `fstack.yaml`. If the skill does not declare a contract, or the two differ, refuse the binding and say what the slot requires. Do not write.
 
-4. A skip is allowed only when that slot's `skippable` is true. The shipped skippable slot is `survey`. Refuse any other skip.
+4. A skip is allowed only when that slot's `skippable` is true. The shipped skippable slot is `survey`. Refuse any other skip. The `fix` slot uses the same precedence as the other slots. Its repo default is `file-fix`. A product page or a feature override may bind another skill with contract `fix`. That binding does not change human gates or who writes Notion.
 
 5. Confirm in one line, naming the slot, the skill, the parameters, and whether the change is for this feature or the product. Then write.
 

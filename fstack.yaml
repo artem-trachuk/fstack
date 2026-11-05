@@ -182,6 +182,12 @@ workflow:
       params: {}
       notes: ""
       skippable: false
+    fix:
+      skill: file-fix
+      contract: fix
+      params: {}
+      notes: ""
+      skippable: false
 
 verify:
   max_failures_before_escalation: 2

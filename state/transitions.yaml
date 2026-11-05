@@ -252,6 +252,11 @@ events:
     from: [requirements_draft]
     to: [requirements_confirmed]
     guard: human quote accepts the requirements question, and the requirements text is non-empty
+  - name: fix_filed
+    skill: file-fix
+    from: [done, stopped, requirements_confirmed, surveyed, building]
+    to: [requirements_confirmed, surveyed, building]
+    guard: create a Fix page under the existing feature. Do not create a Features page. A done feature returns to requirements_confirmed. An in-progress feature keeps its status. A stopped feature stays stopped until the human approves a reopen.
   - name: survey_launched
     skill: survey-product
     from: [requirements_confirmed]
@@ -635,6 +640,18 @@ notion_schema:
     - {name: Feature, type: relation}
   verification:
     verdict: {name: Verdict, type: text}
+  fix:
+    expected: {name: Expected, type: text}
+    actual: {name: Actual, type: text}
+    reproduce: {name: Reproduce, type: text}
+    severity: {name: Severity, type: text}
+  fix_extra:
+    - {name: Name, type: title}
+    - {name: Product, type: relation}
+    - {name: Feature, type: relation}
+    - {name: Nodes, type: relation}
+    - {name: Chunks, type: relation}
+    - {name: Verification, type: relation}
   verification_extra:
     - {name: Name, type: title}
     - {name: Product, type: relation}
@@ -684,6 +701,12 @@ decision_fields:
 verification_fields:
   - verdict
 
+fix_fields:
+  - expected
+  - actual
+  - reproduce
+  - severity
+
 debug_log_fields:
   - opened
 
@@ -700,6 +723,7 @@ required_relations:
   coverage: [Product, Feature]
   decision: [Product, Feature]
   verification: [Product, Chunk]
+  fix: [Product, Feature]
   workflow: [Product]
   debug_log: [Product]
 
@@ -709,6 +733,7 @@ optional_relations:
   chunk: [Depends on]
   coverage: [Node]
   survey: [Feature]
+  fix: [Nodes, Chunks, Verification]
   workflow: [Feature]
   debug_log: [Previous]
 

@@ -19,7 +19,7 @@ Version of the Agent Operating Guide: `0.0.6`, published `2026-10-30`, from [Not
 One private page named for the product. A product owns features, the workflow config, sources, and zero or more repos. Preferences and lessons live in Notion Memory, not in a database this product creates. Each repo is a code location with a name, a role, an optional subpath, and a default branch. The product does not have one base commit or one pull request. Features, chunks, coverage rows, and workflow pages point back with a Product relation.
 
 - The Agent Operating Guide is the user's private page in a Documents database. Setup keeps an existing guide and suggests additions. A new guide uses version `0.0.6`, published `2026-10-30`, and the official sections. fstack records its product home and databases under destinations only after the human approves those additions. Skills records the repository from `plugin.json`. Other unconfirmed fields stay "Not set up yet".
-- Linked databases: Features, Chunks, Coverage, Graph nodes, Graph edges, Workflow config, Survey, Decision, Verification, and Debug log. Do not create a Memories database.
+- Linked databases: Features, Chunks, Coverage, Graph nodes, Graph edges, Workflow config, Survey, Decision, Verification, Debug log, and Fixes. Do not create a Memories database.
 
 ### Features
 
@@ -55,7 +55,7 @@ Property names and types come from `notion_schema.features` and `notion_schema.f
 | Chunks | relation | Extra |
 | Product | relation | Extra. The product this feature belongs to |
 
-The page body has three transient sections: Requirements, Questions, and Plan. Decisions are their own pages, related to the feature and the product. The feature page links to those pages and does not copy the entries into its body. Durable product facts are graph nodes, not sections of this page. The feature stores node relations only. Child pages hold prompts and diffs. Verification is its own page, related to the chunk. Title prompt and diff pages `prompt <action> a<attempt>` and `diff <chunk-id> a<attempt>`. Title a verification page `verification <chunk-id> a<attempt>`. The Orchestrator creates that verification page when the verifier reply arrives.
+The page title and description stay about the feature. A bug is not a new feature and does not rename this page. The page body has three transient sections: Requirements, Questions, and Plan. Decisions are their own pages, related to the feature and the product. The feature page links to those pages and does not copy the entries into its body. Durable product facts are graph nodes, not sections of this page. The feature stores node relations only. Child pages hold prompts and diffs. Verification is its own page, related to the chunk. Title prompt and diff pages `prompt <action> a<attempt>` and `diff <chunk-id> a<attempt>`. Title a verification page `verification <chunk-id> a<attempt>`. The Orchestrator creates that verification page when the verifier reply arrives.
 
 ### Chunks
 
@@ -180,6 +180,25 @@ One page per item, in the Coverage database. Property names come from `notion_sc
 
 A chunk is planned only from an approved buildable row, `partial` or `missing`. `needs_decision`, `conflict`, and `undocumented` are not planned unless the human chose implement and the gate then approved that row. Writing the decision back to a source uses that source's writer, and only after approval.
 
+### Fixes
+
+A bug or a regression is a page in the Fixes database, related to the existing feature. Property names come from `notion_schema.fix` and `notion_schema.fix_extra`.
+
+| Property | Type | Field |
+| --- | --- | --- |
+| Name | title | The broken behaviour. Extra |
+| Expected | text | `expected`. What the feature should do |
+| Actual | text | `actual`. What it does instead |
+| Reproduce | text | `reproduce`. How to see the failure |
+| Severity | text | `severity` |
+| Product | relation | Extra. Required |
+| Feature | relation | Extra. Required. Every feature this fix belongs to |
+| Nodes | relation | Extra. Empty until the graph match is known |
+| Chunks | relation | Extra. Empty until the plan exists |
+| Verification | relation | Extra. Empty until a verification page exists |
+
+A fix may span features and repos. Each chunk still names one repo. `fstack-status` treats a Fix page with an empty Product or Feature relation as unlinked.
+
 ### Workflow config
 
 One database per product. setup-product creates it and seeds it from `workflow`, `sources`, and `authoritative_kinds` in `fstack.yaml`. Human gates and the rule that only the Orchestrator writes Notion are not fields on this database. They stay in the repo.
@@ -242,7 +261,7 @@ Do not save temporary progress, copied code, a repository fact, a guess, generic
 
 ## Links
 
-Pages are separate. They stay connected. `required_relations` in `state/transitions.yaml` names the relation each page type must set. The product page is the root. Every other fstack page is reachable from it by those relations. A feature page relates to its chunks and to the graph nodes it read, added, changed, or removed. A chunk relates to that feature and to the nodes it touches. A survey page relates to the product and to the nodes it refreshed. Coverage relates to its feature and its node. A decision relates to its feature. A verification relates to its chunk. Notion Memory is linked from a feature page by a mention in the body, not by a required relation. An empty required relation is an unlinked page. A page that no path from the product page reaches is an orphan. `fstack-status` reports both when asked. It does not delete them, and it does not report a memory as unlinked.
+Pages are separate. They stay connected. `required_relations` in `state/transitions.yaml` names the relation each page type must set. The product page is the root. Every other fstack page is reachable from it by those relations. A feature page relates to its chunks and to the graph nodes it read, added, changed, or removed. A chunk relates to that feature and to the nodes it touches. A survey page relates to the product and to the nodes it refreshed. Coverage relates to its feature and its node. A decision relates to its feature. A verification relates to its chunk. A fix relates to its product and its feature. Notion Memory is linked from a feature page by a mention in the body, not by a required relation. An empty required relation is an unlinked page. A page that no path from the product page reaches is an orphan. `fstack-status` reports both when asked. It does not delete them, and it does not report a memory as unlinked.
 
 ## Notion MCP
 

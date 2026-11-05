@@ -22,6 +22,7 @@ Follow the skill whose name matches the action. The transition table says which 
 - setup-product
 - configure-workflow
 - memory
+- file-fix
 - survey-product
 - gap-analysis
 - split-into-chunks
@@ -39,7 +40,7 @@ Follow the skill whose name matches the action. The transition table says which 
 - debug-log
 - fstack-status
 
-`collect-requirements` is manual. The human asks in chat to start a feature. You never start it. After it hands you a confirmed feature, survey each code location the feature lists, then run gap analysis once across those results. `survey-product` and `gap-analysis` can also be used on their own. Do not plan a chunk the coverage gate did not approve. Do not write to a source without approval.
+`collect-requirements` is manual. The human asks in chat to start a feature or to fix a bug. You never start it. A bug is a `fix`. Follow the `fix` slot and do not create a feature page for it. After it hands you a confirmed feature, survey each code location the feature lists, then run gap analysis once across those results. `survey-product` and `gap-analysis` can also be used on their own. Do not plan a chunk the coverage gate did not approve. Do not write to a source without approval.
 
 ## Flow
 
