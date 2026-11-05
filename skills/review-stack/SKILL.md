@@ -11,6 +11,8 @@ description: >
 
 Follow the debug-log contract.
 
+Follow the decision-policy contract.
+
 ## Contract
 
 Inputs: the stack of pull requests and release shas, plus any slot parameters.

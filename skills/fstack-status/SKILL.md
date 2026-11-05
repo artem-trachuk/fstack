@@ -9,6 +9,8 @@ description: >
 
 Follow the debug-log contract.
 
+Follow the decision-policy contract.
+
 A new chat does not remember the last turn. Notion does. Feature pages are not in the git repository.
 
 ## When to use
@@ -27,9 +29,9 @@ The human names a feature, answers a question card, or asks where the work stand
 
    A source-write question (`source_write`) uses `source_write_applied` only after a direct yes, and only through the writer configured on that source. No, or a source with no writer, leaves the text on the row and writes nothing. Then set Status to `awaiting_coverage_approval` and send the coverage gate.
 
-   The coverage gate (`coverage_approval`) uses `approve_coverage` only for a direct yes or approve. That sets Approved on each listed `partial` or `missing` row and sets Status to `ready_to_plan`. Stop uses `human_decision` and sets Status to `stopped`. Do not plan a row the human did not approve.
+   The coverage gate (`coverage_approval`) uses `approve_coverage` for a direct yes or approve, and also when `autonomy` is `auto` and the rows are `partial` or `missing` and satisfy the authoritative requirement. That sets Approved and sets Status to `ready_to_plan`. Stop uses `human_decision` and sets Status to `stopped`. Do not plan a row that is not approved. Do not ask the human to choose an implementation.
 
-   Graph promotion (`graph_promotion`) uses `graph_promoted` only for a direct yes or approve. Stop uses `human_decision`, sets Status to `stopped`, and does not promote. A contradicted node stays unpromoted until the human chooses.
+   Graph promotion (`graph_promotion`) uses `graph_promoted` for a direct yes or approve, and also when `autonomy` is `auto`. Stop uses `human_decision`, sets Status to `stopped`, and does not promote. An authoritative conflict stays unpromoted until the human chooses. Any other contradiction is decided and logged.
 
    A plan question uses `approve_plan` only for a direct yes or approve.
 

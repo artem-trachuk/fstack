@@ -70,6 +70,8 @@ advisors:
     when: [verifier-disputed]
     fallback: [opus]
     must_differ_from: verifier
+  # Role names configured for a decision. Not model names.
+  decision: [planner_review, verify_tiebreak]
   max_calls_per_feature: 6
   reserve:
     verify_tiebreak: 2
@@ -103,6 +105,9 @@ release_policy:
 
 # Off by default. A product page or a feature override may turn it on.
 debug: false
+
+# auto decides and continues. ask_more adds check-ins. Neither disables a human gate.
+autonomy: auto
 
 # Product graph. Kinds are open; a product page may add more. promote is a preference, not a fixed gate.
 graph:
@@ -188,6 +193,12 @@ workflow:
       params: {}
       notes: ""
       skippable: false
+    advise:
+      skill: advisors
+      contract: advise
+      params: {}
+      notes: ""
+      skippable: true
 
 verify:
   max_failures_before_escalation: 2

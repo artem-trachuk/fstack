@@ -12,6 +12,8 @@ description: >
 
 Follow the debug-log contract.
 
+Follow the decision-policy contract.
+
 This skill stands alone. Give it the sources that are present. It returns a coverage table. It does not read a repository and it does not start `survey-product`.
 
 ## Inputs
@@ -52,11 +54,11 @@ When a Fix page is related to the feature, compare its Expected and Actual text 
 
 2. Read every present source. Write one Coverage row per item. Record `record_coverage` when a feature is in progress.
 
-3. Follow `advisors` for `planner_review` once when a feature is in progress. A failed call does not stop you. Skip the advisor when this call has no feature.
+3. Follow the decision-policy contract for a non-trivial classification. That asks each advisor named in `advisors.decision`, including `planner_review`, to critique and rank the options. A failed call does not stop you. Skip the advisors when this call has no feature or the `advise` slot is skipped.
 
-4. Batch every `question` row into one card for the human. Options for each row: `implement`, `write_back`, `skip`, and `defer`. `implement` makes the row authoritative and buildable: set the classification to `missing` or `partial`. `skip` and `defer` are not chunks. `write_back` stores proposed text on the row and does not send it. End the turn when a feature is waiting. Do not plan chunks in this turn.
+4. Decide rows that are not human-only. Do not ask the human to choose an implementation. A conflict between authoritative sources, or a user-visible requirement that no authoritative source settles, is human-only. Batch those questions into one card. Options for each such row: `implement`, `write_back`, `skip`, and `defer`. `implement` makes the row buildable. `skip` and `defer` are not chunks. `write_back` stores proposed text and does not send it. Keep working on rows the card does not block.
 
-5. The coverage gate lists the buildable rows, `partial` and `missing`, including rows the human marked `implement`. The options are approve and stop. `approve_coverage` is recorded by the caller that owns the feature. When this skill is used alone, return the table and the proposed questions. Do not approve them yourself.
+5. Under `autonomy` `auto`, record the buildable `partial` and `missing` rows as approved and continue. Under `ask_more`, the coverage gate is one card with approve and stop, batched with any other human-only question. `approve_coverage` is recorded by the caller. When this skill is used alone, return the table. Do not approve it yourself.
 
 A `write_back` is sent only by the source's `writer`, and only after the human approves that text. If the source has no writer, keep the text on the row and do not invent a destination. Do not write to a source unless the human approves that write.
 

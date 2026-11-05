@@ -10,6 +10,8 @@ description: >
 
 Follow the debug-log contract.
 
+Follow the decision-policy contract.
+
 The human creates only the Orchestrator. This skill provisions the other roles. It uses host capabilities by name: create teammate, update teammate profile, message teammate, and this bot's persistent state. It stores no bot id in the repo and no path on a machine.
 
 ## When to use
@@ -31,7 +33,7 @@ For each `bots/<name>.yaml` other than the Orchestrator:
 
 1. Read its `model_role` and `role_marker`. The marker is a stable token such as `fstack-role:verifier`. It is not a display name.
 2. If `team` has an id for that role, fetch that teammate. Use it only when its profile still contains the same marker. A display-name match is not enough.
-3. If `team` has no id, search teammates for that marker in the description or profile. One match: record its id. Several matches: ask the human which id to keep. None: the role is missing.
+3. If `team` has no id, search teammates for that marker in the description or profile. One match: record its id. Several matches: follow the decision-policy contract and keep the best-evidenced id when it is clearly ahead. Ask only when the top candidates are genuinely tied. None: the role is missing.
 
 ## Create and rename
 

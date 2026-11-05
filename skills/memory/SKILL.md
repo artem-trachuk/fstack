@@ -10,6 +10,8 @@ description: >
 
 Follow the debug-log contract.
 
+Follow the decision-policy contract.
+
 Notion holds three different things. The product graph holds durable product facts. Notion Memory holds preferences and lessons. A feature page holds only what is transient: links to Decision pages, the plan, and status. Do not copy a graph fact into a memory, and do not copy a memory into a graph node.
 
 The git repository named by the `repository` field in `plugin.json` is the only source of skill files. Bots copy them from that repo. Do not save skills as Notion Skills, even when the human picks the Shared context layer. Never call `notion-upload-skill`, `notion-download-skill`, or `notion-complete-mcp-setup` with type skills, and do not call `notion-get-enabled-skills`.
@@ -69,7 +71,7 @@ Stop. Do not write the feature record or the memory onto the local disk. `.fstac
 
 ## Save a lesson
 
-At the end of a feature, propose the lessons in a question card. Write them only after the human says yes, approve, or approved for that question id. Each accepted lesson is Type Work, names the product, and links the feature page. A refusal leaves Notion unchanged.
+At the end of a feature, follow the decision-policy contract. Under `autonomy` `auto`, write each lesson that qualifies and log the choice. Under `ask_more`, propose the lessons in one question card and write them only after yes, approve, or approved. Each lesson is Type Work, names the product, and links the feature page. A refusal leaves Notion unchanged.
 
 ## Events
 

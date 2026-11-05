@@ -9,6 +9,8 @@ description: >
 
 Follow the debug-log contract.
 
+Follow the decision-policy contract.
+
 Prepare the product. Do not write session model slugs into `fstack.yaml`.
 
 ## When to use

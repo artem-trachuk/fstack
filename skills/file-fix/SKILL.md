@@ -11,6 +11,8 @@ description: >
 
 Follow the debug-log contract.
 
+Follow the decision-policy contract.
+
 A fix is a correction to existing behaviour. The feature page keeps its title and its description. The bug is a Fix page related to that feature.
 
 ## Inputs
@@ -29,13 +31,13 @@ A fix is a correction to existing behaviour. The feature page keeps its title an
 
 1. Read the product graph. Match the broken behaviour to existing nodes. Cite each candidate with the node's evidence: location, path, and commit. A confident match is exactly one feature whose nodes describe that behaviour, with no second feature in contention.
 
-2. With one confident match, use that feature. With several candidates, or with none, ask the human on one question card which feature the fix belongs to. Options are the candidate features, plus stop. Do not guess. End the turn while the card is open.
+2. Score the candidates on the evidence you cited. Use the best-evidenced feature when it is clearly ahead. Follow the decision-policy contract, and ask the configured advisors when more than one feature is plausible. Ask only when the top candidates are genuinely tied after checking evidence. Do not ask the human to choose a fix approach. If no feature has evidence, ask which existing feature it belongs to, in the same batched card as any other human-only question. Never create a Features page for a fix.
 
-3. Never create a Features page for a fix. Do not rename the feature page, and do not rewrite its description to the bug. A fix may list more than one feature and more than one repo. Set Feature to every feature the human confirmed, or to the one confident match. Each later chunk still names one repo.
+3. Never create a Features page for a fix. Do not rename the feature page, and do not rewrite its description to the bug. A fix may list more than one feature and more than one repo. Set Feature to the chosen features. Each later chunk still names one repo.
 
-4. Create the Fix page. Title it with the broken behaviour, not with a new feature name. Fill Expected, Actual, Reproduce, and Severity from the human's message. If one of those is missing, ask for it on the question card before you write the page. Do not invent them. Link the matched nodes when you have them. Leave Chunks and Verification empty until split and verification create those pages.
+4. Create the Fix page. Title it with the broken behaviour, not with a new feature name. Fill Expected, Actual, Reproduce, and Severity from the human's message. Leave a missing field blank. Do not invent a behaviour, and do not ask which approach to take. If the desired behaviour is ambiguous in a way users would notice and no authoritative source settles it, batch that question. Link the matched nodes. Leave Chunks and Verification empty until they exist.
 
-5. A feature whose status is `done` returns to `requirements_confirmed`, so survey and gap analysis run on the fix. A feature already in progress keeps its status. A `stopped` feature stays stopped until the human approves a reopen on the question card. Record `fix_filed`. If Notion is unreachable, show the unsaved Fix page and stop.
+5. A feature whose status is `done` returns to `requirements_confirmed`, so survey and gap analysis run on the fix. A feature already in progress keeps its status. A stopped feature is reopened when the human asked for the fix. Record that decision. Record `fix_filed`. If Notion is unreachable, show the unsaved Fix page and stop.
 
 ## Events
 

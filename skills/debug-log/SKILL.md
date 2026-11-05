@@ -10,6 +10,8 @@ description: >
 
 Follow the debug-log contract.
 
+Follow the decision-policy contract.
+
 ## Contract
 
 Only the Orchestrator writes the Debug log. A teammate or an implementer returns its own trace entries in the reply payload. The Orchestrator appends those entries. Do not write the log from any other role.

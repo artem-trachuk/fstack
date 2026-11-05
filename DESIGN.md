@@ -222,7 +222,7 @@ Property names come from `notion_schema.workflow` and `notion_schema.workflow_ex
 | Old | text | `old` |
 | New | text | `new` |
 
-The product page body holds code locations, sources, authoritative kinds, release policy, graph kind lists, `graph.promote`, `debug`, and standing preferences. A preference may override `plan_review`, `notify`, `graph.promote`, or `debug`. It must not override human gates or who writes Notion. Notion Memory holds preferences and lessons. The graph holds product facts. Do not store the same fact in both.
+The product page body holds code locations, sources, authoritative kinds, release policy, graph kind lists, `graph.promote`, `debug`, `autonomy`, and standing preferences. A preference may override `plan_review`, `notify`, `graph.promote`, `debug`, or `autonomy`. It must not override human gates or who writes Notion. `autonomy` ships as `auto`. The Orchestrator decides a fix approach, a design, and a chunk split, after the configured advisors rank a non-trivial choice. Any work item, `new_feature` or `fix`, defaults to one chunk per repo. A split happens only when size, independent risk, multiple repos, or a staged rollout clearly helps. Notion Memory holds preferences and lessons. The graph holds product facts. Do not store the same fact in both.
 
 ### Debug log
 

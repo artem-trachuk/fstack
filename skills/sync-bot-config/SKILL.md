@@ -10,6 +10,8 @@ description: >
 
 Follow the debug-log contract.
 
+Follow the decision-policy contract.
+
 The git repository is the only source of skill files and bot config. This bot applies the config with its own tools. There is no public API to call, and this skill names no bot id, home directory, or person.
 
 ## When to use

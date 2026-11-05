@@ -22,7 +22,7 @@ Chat with the Orchestrator. Do not start a feature from another bot.
 2. Ask it to start a feature and describe what you want. That request is the only way requirements collection starts. A bug is a fix on an existing feature, not a new feature page. Confirm the requirements page when the question card asks.
 3. When the feature lists code locations, `survey-product` reads the product graph first. It re-surveys only nodes whose evidence is stale for that location's current commit, and areas the graph does not cover. The first survey seeds the graph. The read is read-only. With no locations, this step is skipped.
 4. Gap analysis compares the sources that are present against the graph, not against a fresh read of the code. Coverage rows point at node ids. A source is a kind, such as requirements, design, or the current product, plus whatever reader the host has. You answer one card for conflicts, items that are not backed by an authoritative source, and behaviour a location has with no requirement. The choices are implement, write back to a source, skip, or defer. A write happens only after you approve it, and only if that source has a writer.
-5. You approve the coverage table. Only approved rows that are partial or missing become chunks, and each chunk targets one location. Stacks do not cross locations. Plan approval waits only when `plan_review` is `approve`. The shipped value is `notify`, so coding starts after the plan is shown. Release is per location, then the feature follows `release_policy`: `all_or_none` or `per_repo`.
+5. Clear partial and missing rows become chunks, one per location. A simple feature, update, or fix is one chunk per repo and goes straight to implementation. A split happens only when size, independent risk, multiple repos, or a staged rollout clearly helps. Stacks do not cross locations. A plan question is only for that multi-chunk case when `autonomy` is `ask_more`. Release is per location, then the feature follows `release_policy`: `all_or_none` or `per_repo`.
 6. For each chunk it launches one Cursor cloud agent, stacked on the previous branch. When the run finishes, the Orchestrator is revived with the branch, the pull request, and the report. It messages the Verifier. Verification is a stub, so you get a card: accept the chunk unverified, or stop. That choice is saved in Notion. The stack does not continue until you answer.
 7. Review the stacked pull requests when the card asks. That card does not approve release.
 8. Answer the later release card. The stack is merged only after you approve the effect and the shas that card names.
@@ -94,7 +94,9 @@ The prompt shape the stub will someday use is unchanged: the orchestrator builds
 | `state.backend` | `notion` | Feature records live in the user's Notion workspace |
 | `memory.backend` | `notion` | Notion Memory. Lessons are Type Work. Working style is Type Preference |
 | `memory.instructions_version` | `0.0.6` | Sent on every Notion MCP call |
-| `plan_review` | `notify` | Show the plan and continue. `approve` waits for a yes |
+| `plan_review` | `notify` | Show a multi-chunk plan and continue. `approve` waits only when `autonomy` is `ask_more` |
+| `autonomy` | `auto` | Decide and continue. `ask_more` adds check-ins. Human gates stay on |
+| `workflow.slots.advise` | `advisors` | On for a non-trivial choice. The configured advisors rank the options |
 | `review.mode` | `end_of_stack` | One human review for the stack, then one release question |
 | `verify.max_failures_before_escalation` | `2` | Counted with `attempts_since_decision`, using `>=` |
 | `release.command` | empty | An approved release merges the stack and stops |
