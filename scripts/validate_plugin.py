@@ -306,6 +306,14 @@ def main() -> int:
     for heading in ("## Install", "## Quick start", "## Flow", "## Configuration", "## Workspace", "## Adding a bot or a skill"):
         check(heading in readme, f"README missing {heading}")
     check("```mermaid" in readme and "state/transitions.yaml" in readme, "README needs the flow and the transition table")
+    check(readme.find("Grok Bot") < readme.find("## Cursor plugin"), "README must lead with Grok Bot")
+    check("### Bootstrap" in readme and "bots/orchestrator.yaml" in readme, "README must explain the first sync")
+    check("fstack-handoff" in readme and "fstack-reply" in readme, "README must document the teammate message")
+    collect = skill_text["collect-requirements"]
+    check("asks in chat" in collect and "invokes `/collect-requirements`" not in collect, "requirements start from a chat request")
+    check("Cursor cloud agent" in skill_text["implement-chunk"], "implement-chunk must launch a Cursor cloud agent from Grok Bot")
+    check("question card" in skill_text["tldr"] and "clickable" in skill_text["tldr"], "tldr must describe a Grok Bot question card")
+    check("fstack-verifier" in skill_text["pick-next-task"] and "fstack-advisor" in skill_text["advisors"], "skills must name teammate profile names")
     check("plan_review" in readme and "stubs/enforcement.md" in readme, "README must mention the plan gate and the stubs")
 
     ignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
@@ -477,15 +485,67 @@ def bot_config_errors(root: Path, skill_names: set[str], role_names: set[str]) -
         if not isinstance(routines, list) or not routines:
             errors.append(f"{label} needs at least one routine")
             continue
+        allowed_events = {"opened", "pushed", "merged", "commented"}
         for routine in routines:
             if not isinstance(routine, dict) or not str(routine.get("name") or "").strip():
                 errors.append(f"{label} routine needs a name")
                 continue
-            fields = str(routine.get("cron") or "").split()
-            if len(fields) != 5 or not all(cron_field.match(field) for field in fields):
-                errors.append(f"{label} routine {routine.get('name')} needs a 5-field cron")
+            cron = str(routine.get("cron") or "").strip()
+            trigger = routine.get("on")
+            if cron:
+                fields = cron.split()
+                if len(fields) != 5 or not all(cron_field.match(field) for field in fields):
+                    errors.append(f"{label} routine {routine.get('name')} needs a 5-field cron")
+            if trigger is not None:
+                if not isinstance(trigger, dict) or trigger.get("source") != "github":
+                    errors.append(f"{label} routine {routine.get('name')} event source must be github")
+                else:
+                    events = trigger.get("events") or []
+                    if not isinstance(events, list) or not events or not set(events) <= allowed_events:
+                        errors.append(f"{label} routine {routine.get('name')} events must be opened, pushed, merged, or commented")
+            if not cron and not trigger:
+                errors.append(f"{label} routine {routine.get('name')} needs a cron or a GitHub event")
             if not str(routine.get("prompt") or "").strip():
                 errors.append(f"{label} routine {routine.get('name')} needs a prompt")
+        if label == "orchestrator.yaml":
+            teammates = data.get("teammates")
+            if not isinstance(teammates, dict):
+                errors.append("orchestrator.yaml needs teammates")
+            else:
+                for role_name in ("verifier", "advisor"):
+                    teammate = teammates.get(role_name)
+                    if not isinstance(teammate, dict):
+                        errors.append(f"orchestrator.yaml needs teammates.{role_name}")
+                        continue
+                    config_rel = str(teammate.get("config") or "")
+                    config_path = root / config_rel
+                    if not config_path.is_file():
+                        errors.append(f"orchestrator.yaml teammate {role_name} config is missing")
+                        continue
+                    other = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+                    if other.get("name") != teammate.get("name"):
+                        errors.append(f"orchestrator.yaml teammate {role_name} name must match {config_rel}")
+                    handoff = other.get("handoff") or {}
+                    if handoff.get("expect") != "fstack-handoff" or handoff.get("reply") != "fstack-reply":
+                        errors.append(f"{config_rel} handoff must expect fstack-handoff and reply fstack-reply")
+                    expected_ask = "verdict" if role_name == "verifier" else "critique"
+                    if handoff.get("ask") != expected_ask:
+                        errors.append(f"{config_rel} handoff ask must be {expected_ask}")
+            handoff = data.get("handoff") or {}
+            send = str(handoff.get("send") or "")
+            reply = str(handoff.get("reply") or "")
+            if "fstack-handoff" not in send or "ask:" not in send or "prompt:" not in send:
+                errors.append("orchestrator.yaml handoff send must include fstack-handoff, ask, and prompt")
+            if "fstack-reply" not in reply or "verdict:" not in reply or "critique:" not in reply:
+                errors.append("orchestrator.yaml handoff reply must include fstack-reply, verdict, and critique")
+            if handoff.get("asks") != ["verdict", "critique"]:
+                errors.append("orchestrator.yaml handoff asks must be verdict and critique")
+            covered = set()
+            for routine in routines:
+                if isinstance(routine, dict) and isinstance(routine.get("on"), dict):
+                    covered.update(routine["on"].get("events") or [])
+            if not {"opened", "pushed", "merged", "commented"} <= covered:
+                errors.append("orchestrator.yaml must listen for opened, pushed, merged, and commented pull requests")
     return errors
 
 

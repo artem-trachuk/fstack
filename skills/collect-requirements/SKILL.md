@@ -2,18 +2,18 @@
 name: collect-requirements
 description: >
   Write one feature's requirements on a Notion page and ask the human to confirm that page.
-  Use only when the human explicitly invokes /collect-requirements.
+  Use only when the human explicitly asks in chat to start a feature or collect requirements.
   Never start this skill from another skill, a schedule, or a guess that a feature needs requirements.
 disable-model-invocation: true
 ---
 
 # Collect requirements
 
-This skill runs only when the human invokes `/collect-requirements`.
+This skill runs only when the human asks in chat to start a feature or to collect requirements. On Grok Bot that is a normal message to the Orchestrator. On Cursor, a slash command is one way to ask, not the only way. Another skill must not start this one.
 
 ## When to use
 
-The human typed `/collect-requirements` and wants a feature started.
+The human asked in chat to start a feature.
 
 ## Steps
 

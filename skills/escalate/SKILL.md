@@ -20,7 +20,7 @@ The chunk stops. The human chooses. Record `waiting_on` before you end the turn.
 
 ## Steps
 
-1. Set the chunk to `escalated` and `feature_status` to `escalated`. Record `escalate_chunk` with the reason, the attempt, and `handoff_failures`. Set `waiting_on` kind `escalation` and question id `Q-<slug>-<chunk-id>-unblock`.
+1. Set the chunk to `escalated` and `feature_status` to `escalated`. Record `escalate_chunk` with the reason, the attempt, and `handoff_failures`. Set `waiting_on` kind `escalation` and question id `Q-<slug>-<chunk-id>-unblock`. Send that decision as a question card through `tldr`, with options `retry`, `accept`, `change_spec`, and `stop`.
 
 2. The options are `retry`, `accept`, `change_spec`, and `stop`. `accept` means ship this sha anyway. Send them through `tldr` and end the turn.
 

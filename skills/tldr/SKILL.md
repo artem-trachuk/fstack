@@ -17,7 +17,9 @@ You are about to show the human a question card, an escalation, a review request
 
 1. Start with what the human needs to do. When you need nothing, start with the status.
 
-2. Use the question card in `.fstack/templates/question-card.md` for a decision. Keep the question id, each option id, the default, and the impact line verbatim. A partial answer names the ids it covers. The rest stay open.
+2. Use the question card in `templates/question-card.md` for a decision. Keep the question id, each option id, the default, and the impact line verbatim. A partial answer names the ids it covers. The rest stay open.
+
+   On Grok Bot, send the short prose, then a question card whose clickable options are those option ids. Gap analysis, the unverified-chunk decision, escalation, stack review, plan approval, and release approval all use a card. The card ends the turn. On the Cursor plugin, ask the same options in chat. A click on an option is the reply. A typed reply still has to match the approval rule for that question.
 
 3. Keep `release.command`, verified shas, and pull request URLs verbatim. Do not shorten them to fit a word count.
 

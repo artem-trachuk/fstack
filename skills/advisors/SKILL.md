@@ -30,13 +30,13 @@ Use a local CLI only when the Cursor advisor cannot start because the account ha
 
 Walk `advisors.fallback` in order. Use an entry only when `enabled` is true and `.fstack/resolved.yaml` `advisor_cli` says it is available and signed in. The `command` is a name on `PATH`. Do not build a filesystem path, a user name, or a machine name.
 
-For `runtime: claude-cli`, run from the feature workspace:
+For `runtime: claude-cli`, run:
 
 `claude -p --model <model> --tools Read,Grep,Glob --allowedTools Read,Grep,Glob`
 
 Use the configured `command` and `model` alias. `--tools` leaves only Read, Grep, and Glob available. Do not allow Edit, Write, or Bash. Do not add a flag that skips permissions. A local CLI runs under the user's own subscription terms.
 
-Write the prompt onto the Notion page `advisor input <n>` under the feature before the command. Run the command with the product repository as its working directory, not a fstack state folder, and pass the prompt text. Save stdout onto the Notion page `advisor output <n>`. That page is the critique. The Orchestrator writes both pages. The advisor agent does not. Do not paste them into a pull request. Do not put tokens, credential paths, or environment secrets in the prompt or on the command line.
+Write the prompt onto the Notion page `advisor input <n>` under the feature before the command. Pass the prompt text. If a product checkout is already on this computer, use it as the working directory. Do not clone a repository to get one. Save stdout onto the Notion page `advisor output <n>`. That page is the critique. The Orchestrator writes both pages. The advisor does not. Do not paste them into a pull request. Do not put tokens, credential paths, or environment secrets in the prompt or on the command line.
 
 If the cap would be exceeded by this call, do not start it.
 
@@ -50,7 +50,7 @@ If Cursor cannot start and every fallback is disabled, unavailable, or not signe
 
 2. Follow `build-context`. A tie-break uses `verify-tiebreak`, with the same patch as verify and no fstack notes.
 
-3. Record `advisor_launched` or `tiebreak_launched`, then start the Cursor advisor. On a credit or unavailable-model failure, mark that row `failed` and try the local CLI list above. Record a new launched row before the CLI runs.
+3. Record `advisor_launched` or `tiebreak_launched`, then start the advisor. On Grok Bot, send the handoff in `bots/orchestrator.yaml` to the teammate whose profile name is `fstack-advisor` and end the turn. The reply starts with `fstack-reply` and the critique is the `critique` field. If that teammate is unavailable, or a Cursor advisor model cannot start because of credits or an unavailable model, use the local CLI above. On the Cursor plugin, launch the advisor agent. On a credit or unavailable-model failure, mark that row `failed` and try the local CLI list above. Record a new launched row before the CLI runs. Same-model tie-break still skips and does not use the CLI or the teammate.
 
 4. Record `advisor_finished` or `tiebreak_finished` with the critique path. A planner failure does not stop the feature. A tie-break failure does not become the verdict. The orchestrator records `decide_dispute`.
 

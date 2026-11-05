@@ -27,15 +27,15 @@ The plugin root is the directory that contains `.cursor-plugin/plugin.json` whos
 
 3. Ensure `.gitignore` contains a `.fstack/` line. Append that line when it is missing. That line is a guard for machine-specific config. It is the only fstack edit that belongs in the repository. Do not commit feature files. Feature state is not written under `.fstack/`.
 
-4. Resolve models into `.fstack/resolved.yaml` using `templates/resolved.yaml`. Detect the Cursor slugs this session can pass to a subagent. If you cannot detect any, set each model to `inherit`, set `source` to `unresolved`, and say so. Do not invent a slug. Do not put Notion page bodies in this file. It holds resolved model slugs and, after the next step, Notion ids only.
+4. Resolve models into `.fstack/resolved.yaml` using `templates/resolved.yaml`. On Grok Bot, set each model to `inherit` and `source` to `unresolved` unless the human names a slug this account can pass to a Cursor cloud agent. On the Cursor plugin, detect the slugs this session can pass when it launches an agent. If you cannot detect any, set each model to `inherit`, set `source` to `unresolved`, and say so. Do not invent a slug. Do not put Notion page bodies in this file. It holds resolved model slugs and, after the next step, Notion ids only.
 
 5. Resolve the model families into that same file.
 
    For `opus` and `argon`, walk `models.<name>.match`, then walk `effort` in list order. A slug matches a prefix when it equals the prefix or starts with the prefix plus a hyphen. The first detected slug whose effort token matches the next effort in the list wins. If the family exists but no effort matches, use the first family slug and record that under `fallbacks`. If the family is missing, use `inherit` and record why.
 
-6. Role models stay `inherit` unless `fstack.yaml` names `opus` or `argon` for that role. Resolve that short name the same way. The launcher of a subagent reads `.fstack/resolved.yaml`. Agents do not switch their own model.
+6. Role models stay `inherit` unless `fstack.yaml` names `opus` or `argon` for that role. Resolve that short name the same way. Whoever launches an agent reads `.fstack/resolved.yaml`. Agents do not switch their own model.
 
-7. Set `runtime` to `cloud` when this session can start a Cursor cloud agent that opens a pull request against a non-default base. Otherwise set `local_worktree` and tell the human, through the `tldr` skill, that the implementer still receives the chunk spec in its launch prompt. Do not create a fstack worktree and do not copy state into the product checkout. Record the reason in `runtime_note`.
+7. On Grok Bot, set `runtime` to `cloud`. Coding is a Cursor cloud agent on the product repository. On the Cursor plugin, set `runtime` to `cloud` when this session can start a Cursor cloud agent that opens a pull request against a non-default base. Otherwise set `local_worktree` and tell the human, through the `tldr` skill, that the implementer still receives the chunk spec in its launch prompt. Do not create a fstack worktree and do not copy state into the product checkout. Record the reason in `runtime_note`.
 
 8. For each `advisors.fallback` entry, record availability in the resolved file under `advisor_cli`. Do not rewrite `fstack.yaml`. Skip an entry whose `enabled` is not true.
 
@@ -49,7 +49,7 @@ The plugin root is the directory that contains `.cursor-plugin/plugin.json` whos
 
    Ask the human to authenticate the Notion MCP. Confirm the connection by telling them their name and workspace name. Read the current setup notes with `notion-get-setup-guide`. Pass `instructions_version` from `memory.instructions_version` (`0.0.6`) on every Notion MCP call.
 
-   Follow `memory` and `DESIGN.md`. Call `notion-fetch` on `notion://docs/memory` before creating a Memories database, and on `notion://docs/notion-flavored-markdown` before writing any page body. Search with `notion-search` for an existing project page and for Features, Chunks, and Memories databases. Show the human one yes-or-no question before creating any schema. Private is the default. Do not create pages until they approve. Ask again before anything is written to a shared or team space.
+   Follow `memory` and `DESIGN.md`. Call `notion-fetch` on `notion://docs/memory` before creating a Memories database, and on `notion://docs/notion-flavored-markdown` before writing any page body. Search with `notion-search` for an existing project page and for Features, Chunks, and Memories databases. Show the human one yes-or-no question before creating any schema. On Grok Bot that question is a question card. Private is the default. Do not create pages until they approve. Ask again before anything is written to a shared or team space.
 
    After approval, create or reuse a private project page with `notion-create-pages`, the three databases with `notion-create-database`, and a private Agent Operating Guide page. Set the guide version to `0.0.6` and the published date to `2026-10-30`. Fill the guide's destinations with the real links. Leave anything you did not create as "Not set up yet". Record the page and database ids in `.fstack/resolved.yaml` only. Update later text with `notion-update-page`.
 
@@ -65,4 +65,4 @@ This skill does not record a feature event.
 
 ## Next
 
-Stop when the human invoked `/setup-project` directly, and tell them the next step is `/collect-requirements`. When another skill sent you here, return to it. Do not start requirements collection.
+Stop when the human asked to set up fstack, and tell them to ask you to start a feature when they are ready. When another skill sent you here, return to it. Do not start requirements collection.

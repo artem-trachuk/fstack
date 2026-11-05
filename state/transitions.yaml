@@ -88,7 +88,7 @@ next_rules:
   - id: done
     when: feature_status is done
     action: next_feature
-    detail: Move to the next feature whose status is not done or stopped. A new feature starts only when the human invokes /collect-requirements.
+    detail: Move to the next feature whose status is not done or stopped. A new feature starts only when the human asks in chat.
   - id: waiting
     when: waiting_on is set
     action: route_reply_or_wait
@@ -96,7 +96,7 @@ next_rules:
   - id: draft
     when: feature_status is requirements_draft
     action: collect_requirements
-    detail: The human already invoked /collect-requirements. Do not open that skill yourself.
+    detail: The human already asked in chat to start this feature. Do not open that skill yourself.
   - id: gap
     when: feature_status is requirements_confirmed
     action: gap_analysis

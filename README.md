@@ -1,35 +1,41 @@
 # fstack
 
-fstack is a shareable Cursor plugin for a small team of agents that delivers one software feature end to end. The human starts requirements, reviews the stack once, and approves release. An orchestrator plans the work and launches Cursor coding agents. A verifier returns a verdict from the spec and the patch.
+fstack is a way to deliver one software feature with a small team of bots. You chat with the Orchestrator. It keeps the feature in Notion, asks you with question cards, and launches a Cursor cloud agent for each chunk. A Verifier and an Advisor are separate bots it messages. You review the stacked pull requests once, then approve release.
 
-The name is short for feature stack. Coding runs in Cursor. Model names in the config are Cursor models. Legal statuses and transitions live in [`state/transitions.yaml`](state/transitions.yaml). Skills follow that table. There is no command-line runner.
+The name is short for feature stack. Statuses and transitions live in [`state/transitions.yaml`](state/transitions.yaml). Skills follow that table. There is no command-line runner. Grok Bot is the host these skills are written for. A Cursor plugin install is a secondary option at the end of this file.
 
 ## Install
 
-This repository is the plugin. The Cursor manifest is `.cursor-plugin/plugin.json`. The root `plugin.json` is the Agent Plugins manifest, so the skills also load in hosts that follow that standard. Rules and agents are Cursor plugin components.
+Create three bots from the configs in [`bots/`](bots/) and connect Notion and GitHub on the account that will run them.
 
-Local install:
-
-1. Copy this repository to `~/.cursor/plugins/local/fstack`. Cursor skips a symlink that points outside that folder, so copy the files.
-2. Reload the window.
-3. Open Customize and confirm the fstack skills, the orchestrator, verifier, and advisor agents, and the human-gates rule.
-
-From a team marketplace, install **fstack** from Customize after an admin imports this repository. Publishing to the public Cursor marketplace is a separate submission at [cursor.com/marketplace/publish](https://cursor.com/marketplace/publish). This repo stays a single plugin at the root, with no marketplace manifest, until an import shows that one is required.
+1. In Grok Bot, choose New Bot. Name it **Fstack Orchestrator**. In the first message, paste the persona and instructions from [`bots/orchestrator.yaml`](bots/orchestrator.yaml) and ask it to remember them.
+2. Tell that bot: "Follow the sync-bot-config skill. The config file is bots/orchestrator.yaml." It copies the skills from this repository, sets its profile, and saves its routines. The first run is the bootstrap. The weekly routine keeps it current.
+3. Repeat for [`bots/verifier.yaml`](bots/verifier.yaml) and [`bots/advisor.yaml`](bots/advisor.yaml). Use the profile `name` in each file. Do not invent a platform id.
+4. Connect Notion and GitHub when the Orchestrator shows a connect card. The Verifier and Advisor do not need those connectors. Their inputs arrive as messages.
+5. Schedules use the timezone in Grok Bot settings under Bot. The five cron fields do not name a zone.
 
 ## Quick start
 
-In the product repository, with the plugin installed:
+Chat with the Orchestrator. Do not start a feature from another bot.
 
-1. Invoke `/setup-project`. This writes `fstack.yaml` when it is missing, ignores `.fstack/` for machine-specific config, and connects Notion. You approve the project page and databases before any schema is created.
-2. Invoke `/collect-requirements` and describe the feature. Confirm the requirements page when asked. This is the only way requirements collection starts.
-3. Answer the question card from gap analysis. If nothing is open, the orchestrator says so and continues.
-4. The orchestrator splits the feature into stacked chunks. Plan approval waits only when `plan_review` is `approve`. The shipped value is `notify`, so coding starts after the plan is shown.
-5. Each chunk is implemented by a Cursor coding agent. The flow then calls `verify`. That skill is a stub: it returns `not_implemented` and does not check the patch. You choose `accept_unverified` or `stop`. The choice is logged. The stack does not continue until you do.
-6. Review the stacked pull requests when asked. That question does not approve release.
-7. Answer the later release question. The stack is merged only after you explicitly approve the effect and the shas that question names.
-8. After release, the orchestrator moves to the next open feature. A new feature still starts with `/collect-requirements`.
+1. Ask it to set up fstack for the product repository. It writes `fstack.yaml` if needed, ignores `.fstack/` for machine config, and connects Notion. You approve the project page and databases before any schema is created.
+2. Ask it to start a feature and describe what you want. That request is the only way requirements collection starts. Confirm the requirements page when the question card asks.
+3. Answer the gap-analysis card. If nothing is open, the Orchestrator says so and continues.
+4. It splits the feature into stacked chunks. Plan approval waits only when `plan_review` is `approve`. The shipped value is `notify`, so coding starts after the plan is shown.
+5. For each chunk it launches one Cursor cloud agent, stacked on the previous branch. When the run finishes, the Orchestrator is revived with the branch, the pull request, and the report. It messages the Verifier. Verification is a stub, so you get a card: accept the chunk unverified, or stop. That choice is saved in Notion. The stack does not continue until you answer.
+6. Review the stacked pull requests when the card asks. That card does not approve release.
+7. Answer the later release card. The stack is merged only after you approve the effect and the shas that card names.
+8. After release, the Orchestrator proposes lessons. They are written to Notion only if you approve. Then it can start the next feature, and only when you ask.
 
-A later session resumes with `/fstack-status` and the feature slug.
+A later chat with the same Orchestrator resumes from Notion. Ask where the feature stands.
+
+## Cursor plugin
+
+The same skills also load as a Cursor plugin. This is not required for Grok Bot.
+
+The Cursor manifest is `.cursor-plugin/plugin.json`. The root `plugin.json` is the Agent Plugins manifest. To try it inside Cursor, copy this repository to `~/.cursor/plugins/local/fstack`, reload the window, and confirm the skills in Customize. A team marketplace install is a separate step. Cursor skips a symlink that points outside that folder, so copy the files.
+
+In Cursor, asking in chat is still how a feature starts. A slash command is only one way to ask.
 
 ## Flow
 
@@ -48,7 +54,7 @@ flowchart TD
   release[release]
   done([Next feature])
 
-  human -->|invokes /collect-requirements| collect
+  human -->|asks in chat| collect
   collect --> gap
   gap --> questions
   questions --> human
@@ -119,7 +125,7 @@ If the tie-break would use the same model as the verifier, including when both a
 
 Human gates stay fixed: merge, release, and outward messages `require_approval`, and `collect_requirements` `manual_only`. setup stops when a config weakens them. Only a human quote of yes, approve, or approved counts, and only for the question id that was asked.
 
-Roles name an agent and a model. They do not list skills. The agent file is the skill list. The parent that launches a subagent passes the model from `.fstack/resolved.yaml`.
+Roles name an agent and a model. They do not list skills. The agent file is the skill list. Whoever launches a coding agent, verifier, or advisor passes the model from `.fstack/resolved.yaml`.
 
 `implementer.runtime` ships as `cloud`. setup sets `local_worktree` in the resolved file when this session cannot start a cloud agent that opens a pull request onto a non-default base. The implementer still gets the chunk spec in the launch prompt.
 
@@ -127,7 +133,7 @@ Roles name an agent and a model. They do not list skills. The agent file is the 
 
 `state.backend` and `memory.backend` are `notion`. The schema is in [DESIGN.md](DESIGN.md): a private project page, an Agent Operating Guide at version `0.0.6`, and Features, Chunks, and Memories databases. Feature documents are pages. Chunk specs are pages. Memories are one topic each.
 
-The Orchestrator is the only role that calls Notion. It copies the chunk spec into the coding agent's launch prompt, passes the verifier its prompt and patch, and passes advisors their input pages' text. `/fstack-status` reads the Features database.
+The Orchestrator is the only role that calls Notion. It copies the chunk spec into the coding agent's launch prompt, passes the verifier its prompt and patch, and passes advisors their input pages' text. Asking the Orchestrator where the feature stands reads the Features database.
 
 Gitignored `.fstack/resolved.yaml` holds resolved model slugs and Notion ids. It is not a copy of the feature. If Notion is unreachable, the Orchestrator stops and shows the unsaved content. It does not write that content to disk.
 
@@ -146,7 +152,7 @@ A chunk id is `NN-slug`. Status values and the events that change them are only 
 | Skill | Who invokes it | What it does |
 | --- | --- | --- |
 | `setup-project` | Human, or the orchestrator when config is missing | Copies templates, resolves models, records runtime |
-| `collect-requirements` | Human, `/collect-requirements` only | Writes the requirements page, then hands off to the orchestrator |
+| `collect-requirements` | Human, only after an explicit chat request | Writes the requirements page, then hands off to the orchestrator |
 | `gap-analysis` | Orchestrator | Sends a question card, or records that nothing is open |
 | `split-into-chunks` | Orchestrator | Writes the stack and follows `plan_review` |
 | `pick-next-task` | Orchestrator | Applies the next-rule list once |
@@ -167,7 +173,7 @@ A chunk id is `NN-slug`. Status values and the events that change them are only 
 
 ## Adding a bot or a skill
 
-Add a skill by creating `skills/<name>/SKILL.md`. The frontmatter `name` matches the folder. `description` says what it does and when to use it. Set `disable-model-invocation: true` when it must run only from an explicit `/` invocation.
+Add a skill by creating `skills/<name>/SKILL.md`. The frontmatter `name` matches the folder. `description` says what it does and when to use it. On the Cursor plugin, `collect-requirements` sets `disable-model-invocation: true` so Cursor does not start it. The rule on every host is the skill text: only an explicit human request in chat.
 
 Add a Cursor agent by creating `agents/<name>.md` with `name` and `description`, then a `roles` entry in `fstack.yaml` with `agent` and `model`. Put the skills it follows in the agent file. A read-only plugin agent sets `permissionMode: readonly`. When the bot needs a prompt, add `templates/prompts/<action>.md` and name the action in `build-context`. New statuses and events go in `state/transitions.yaml` first.
 
@@ -177,11 +183,22 @@ Run `python3 scripts/validate_plugin.py` after the edit. It checks the manifest,
 
 ## Bots
 
-The Orchestrator, Verifier, and Advisor also have host-neutral configs in `bots/`. Each file is version `0.1` and has a profile (`name`, `title`, `description`, `persona`, `instructions`), the skills to copy from this repo, a `model_role` from `fstack.yaml`, connectors, and routines. A routine has a name, a prompt, and a five-field cron schedule.
+Grok Bot is the primary host. Configs in `bots/` are version `0.1`. Each file has a profile (`name`, `title`, `description`, `persona`, `instructions`), skills copied from this repo, a `model_role` from `fstack.yaml`, connectors, teammates, a handoff message, and routines. A routine has a name, a prompt, and either a five-field cron schedule or a GitHub pull-request event. Cron uses the timezone in Grok Bot settings under Bot. The files name no host, user, or bot id. Address a teammate by the `name` in its config, which is the profile name you give it at creation.
 
-The Orchestrator connects to Notion and GitHub. The Verifier and Advisor list no connectors, because the Orchestrator passes their inputs.
+The Orchestrator connects to Notion and GitHub. It messages the Verifier and the Advisor. The message starts with `fstack-handoff` and includes the role, feature, chunk, ask (`verdict` or `critique`), and the prompt. The reply starts with `fstack-reply`. The Verifier and Advisor have no connectors. An Advisor can instead be the `claude` command on the bot computer when that teammate is unavailable. See `advisors.fallback` in `fstack.yaml`.
 
-Bootstrap: create the bot in the host, then tell it to follow `sync-bot-config` for its file, for example `bots/orchestrator.yaml`. The bot reads the latest default branch of the repository in `plugin.json`, copies the listed skills as `<slug>/SKILL.md` folders, and sets its profile and routines. The commit it applied is stored in gitignored `.fstack/resolved.yaml`. The weekly routine in the config runs the same skill. Adding a connector waits for the human. The files name no host, user, or bot id.
+The Orchestrator also has a routine for pull requests on chunk branches: opened, pushed, merged, and commented. Public docs confirm that a routine can start from a GitHub event. They do not publish the exact event-field names, so the bot maps those four words onto the host's GitHub trigger and narrows it to branches named `fstack/`.
+
+### Bootstrap
+
+1. In Grok Bot, choose New Bot. Name it with the `title` from [`bots/orchestrator.yaml`](bots/orchestrator.yaml). The profile `name` to remember is `fstack-orchestrator`.
+2. Paste that file's persona and instructions into the first message and ask the bot to remember them.
+3. Send: "Follow the sync-bot-config skill. The config file is bots/orchestrator.yaml."
+4. Approve the Notion and GitHub connect cards when they appear. Do not approve any other connector in that turn.
+5. Repeat steps 1–3 for [`bots/verifier.yaml`](bots/verifier.yaml) (`fstack-verifier`) and [`bots/advisor.yaml`](bots/advisor.yaml) (`fstack-advisor`). They do not get Notion or GitHub.
+6. Tell the Orchestrator the product repository. Ask it to set up fstack. That is the first real task.
+
+The sync records the applied commit in gitignored `.fstack/resolved.yaml`. The weekly routine in each config runs the same skill later. Adding a connector still waits for you.
 
 ## License
 

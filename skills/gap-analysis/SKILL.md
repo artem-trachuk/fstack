@@ -12,7 +12,7 @@ Read the confirmed requirements and list what is still open.
 
 ## When to use
 
-`feature` Status is `requirements_confirmed`. If the requirements are still a draft, stop and tell the human to invoke `/collect-requirements`. Do not follow that skill yourself.
+`feature` Status is `requirements_confirmed`. If the requirements are still a draft, stop and tell the human to ask in chat to start the feature. Do not follow that skill yourself.
 
 ## Steps
 
@@ -26,7 +26,7 @@ Read the confirmed requirements and list what is still open.
 
 3. Follow `advisors` for `planner_review` once for this question text. A second call with the same text is a duplicate and does not count. Fold in a critique that names a real missing question. A failed advisor call does not stop you.
 
-4. Send the question card through `tldr`. Partial answers are allowed. Record each answer with `answer_questions` when the human replies. When any answer is still empty, keep `waiting_on` and end the turn.
+4. Send the question card through `tldr`. On Grok Bot the options are clickable. Partial answers are allowed. Record each answer with `answer_questions` when the human replies. When any answer is still empty, keep `waiting_on` and end the turn.
 
 5. When every answer is filled, set `questions_status: answered` and `feature_status: ready_to_plan`.
 

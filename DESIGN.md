@@ -1,5 +1,7 @@
 # fstack design
 
+Grok Bot is the primary host. The human chats with the Orchestrator. It asks with question cards, keeps state in Notion, launches Cursor cloud agents for code, and messages the Verifier and Advisor. The Cursor plugin is a secondary host for the same skills.
+
 Skills live only in the git repository `artem-trachuk/fstack`. Bots copy them from that repo. They are not published to Notion Skills.
 
 Feature state and cross-feature memory live in the user's Notion workspace. The Orchestrator is the only role that reads or writes Notion. Coding agents, the verifier, and advisors receive excerpts in the prompts the Orchestrator writes. If Notion is unreachable, the Orchestrator stops, shows the unsaved content, and does not store it anywhere else.
@@ -99,8 +101,10 @@ The parameter lists for these tools were not re-checked field by field in this c
 
 ## Bots
 
-`bots/<role>.yaml` is the host-neutral config for a bot that plays that role. Version `0.1`. The repository stays the source of the skill files. A bot runs `sync-bot-config` on demand and on the cron in its config. It compares the default-branch commit with `bot_sync` in gitignored `.fstack/resolved.yaml`, then copies skills, updates its profile, and adds, updates, or removes routines. It asks before adding a connector.
+Grok Bot is the primary host. `bots/<role>.yaml` is the config. Version `0.1`. The repository stays the source of the skill files. A bot runs `sync-bot-config` on demand and on the cron in its config. It compares the default-branch commit with `bot_sync` in gitignored `.fstack/resolved.yaml`, then copies skills into its library as `<slug>/SKILL.md` folders, updates its profile, and adds, updates, or removes routines. It asks before adding a connector.
 
-The Orchestrator config lists Notion and GitHub. The Verifier and Advisor configs list no connectors. None of the files contains a bot id, a home directory, or a person.
+The Orchestrator messages teammates by the profile `name` in their config. The handoff text starts with `fstack-handoff`. The reply starts with `fstack-reply`. The Verifier answers `ask: verdict`. The Advisor answers `ask: critique`. Neither has Notion or GitHub connectors.
 
-Bootstrap: create the bot in the host, tell it to follow `sync-bot-config` for its yaml file, and let it apply the first commit. After that, the weekly routine keeps it current.
+A pull-request routine on the Orchestrator listens for opened, pushed, merged, and commented events on `fstack/` branches. The yaml key is quoted `"on"` because an unquoted `on` is a YAML boolean. The public routine docs confirm GitHub events and that the schedule uses Settings, Bot, Timezone. They do not publish the event payload fields, so the bot maps those four words onto the host trigger.
+
+Bootstrap is the Install section of the README: create the bot, paste the persona and instructions, then send one message that names `sync-bot-config` and the yaml file.

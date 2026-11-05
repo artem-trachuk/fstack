@@ -11,7 +11,7 @@ A new chat does not remember the last turn. Notion does. Feature pages are not i
 
 ## When to use
 
-The human names a feature, answers a question id, or asks where the work stands. With no slug, list Features pages and their Status. If Notion is unreachable, stop and say so. Do not look for a local feature folder.
+The human names a feature, answers a question card, or asks where the work stands. On Grok Bot that is a message in the Orchestrator chat. With no slug, list Features pages and their Status. If Notion is unreachable, stop and say so. Do not look for a local feature folder.
 
 ## Steps
 

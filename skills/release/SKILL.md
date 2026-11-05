@@ -16,7 +16,7 @@ The next rule is `release_question` or a merging rule. Stack review is already r
 
 ## Steps
 
-1. Follow `build-context` for `release`. Record `open_release` with the exact `release.command` and the map of chunk id to `verified_sha`. Set `waiting_on` kind `release`, question id `Q-<slug>-release`. Send the card through `tldr`, keeping the command and the shas verbatim. End the turn.
+1. Follow `build-context` for `release`. Record `open_release` with the exact `release.command` and the map of chunk id to `verified_sha`. Set `waiting_on` kind `release`, question id `Q-<slug>-release`. Send a question card through `tldr`, keeping the command and the shas verbatim. The options are approve and stop. End the turn.
 
 2. Accept only a direct reply of yes, approve, or approved to that question id. Vague praise is asked again. A hedge is asked again. If `release.command` or any `verified_sha` changed since the question, do not accept the old reply. Ask again.
 
@@ -32,7 +32,7 @@ The next rule is `release_question` or a merging rule. Stack review is already r
 
 5. When every chunk is `merged`, run `release.command` only if it is non-empty and still equals the approved string. Record `release_command_recorded`. Exit 0 sets `feature_status: done` and `release_state: done`. Any other exit sets `release_state: command_failed`, escalates, and does not roll back. An empty command finishes the same way with exit 0 and no command.
 
-6. Tell the human the release is done, through `tldr`. Then follow `memory` and propose the durable lessons from this feature: decisions, corrections, preferences, conventions. Write them to Notion only after the human says yes, approve, or approved for that question. If Notion is unreachable, show the unsaved lessons and stop. Do not start `/collect-requirements`.
+6. Tell the human the release is done, through `tldr`. Then follow `memory` and propose the durable lessons from this feature: decisions, corrections, preferences, conventions. On Grok Bot, send that proposal as a question card. Write the lessons to Notion only after the human chooses yes. If Notion is unreachable, show the unsaved lessons and stop. Do not start a new feature unless the human asks.
 
 A human can record `retry_release` with a quote after a CI or command failure. Merged chunks stay merged.
 

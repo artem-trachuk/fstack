@@ -32,6 +32,8 @@ The feature folder exists and the orchestrator needs the next legal action.
 
    The orchestrator launches the verifier at `launch_verifier`. The verifier does not build its own prompt and, while the skill is a stub, does not judge the patch. Follow `build-context` for `verify` first, then record `verifier_launched` before you wait.
 
+   On Grok Bot, launching the verifier means sending the handoff in `bots/orchestrator.yaml` to the teammate whose profile name is `fstack-verifier`. End the turn. The reply arrives later and starts with `fstack-reply`. On the Cursor plugin, launch the verifier agent with the same prompt.
+
    `decide_dispute` is yours. The tie-break critique is not the verdict.
 
    When the cap rule matches, follow `escalate`. The comparison is `attempts_since_decision` greater than or equal to `verify.max_failures_before_escalation`.
