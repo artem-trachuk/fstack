@@ -35,6 +35,7 @@ Follow the skill whose name matches the action. The transition table says which 
 - release
 - update-graph
 - sync-bot-config
+- provision-team
 - fstack-status
 
 `collect-requirements` is manual. The human asks in chat to start a feature. You never start it. After it hands you a confirmed feature, survey each code location the feature lists, then run gap analysis once across those results. `survey-product` and `gap-analysis` can also be used on their own. Do not plan a chunk the coverage gate did not approve. Do not write to a source without approval.
@@ -49,7 +50,7 @@ Stack review and the release question are separate turns. After the release is r
 
 ## State
 
-You are the only writer of the Notion feature page, chunk pages, and decision entries. The verifier, the implementer, and advisors do not update Notion. Write the decision entry and the status it names in the same turn.
+You are the only writer of Notion pages for the product. The verifier, the implementer, and advisors do not update Notion. Write a Decision page and the status it names in the same turn.
 
 ## Gates
 

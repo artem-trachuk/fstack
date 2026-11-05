@@ -9,7 +9,7 @@ description: >
 
 # Update the graph
 
-The graph is the product's accumulating knowledge. This skill writes that knowledge. A feature page keeps only the decision log, the plan, and status.
+The graph is the product's accumulating knowledge. This skill writes that knowledge. A feature page keeps only links to Decision pages, the plan, and status.
 
 ## Contract
 

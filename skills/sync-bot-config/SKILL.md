@@ -26,15 +26,17 @@ A routine named in `bots/<name>.yaml` fires, or the human asks to sync. The rout
 
 5. If `name`, `title`, `description`, `persona`, or `instructions` changed, update this bot's profile to match the file.
 
-6. Compare `routines` by name. Add a routine that is new, update its prompt and its schedule or GitHub events when they changed, and remove a routine that is no longer in the file. Do not leave a copy of a removed routine running. The event key in the yaml is quoted `"on"` because an unquoted `on` is a YAML boolean.
+6. Compare `routines` by name. Add a routine that is new, update its prompt and its schedule or events when they changed, and remove a routine that is no longer in the file. Do not leave a copy of a removed routine running. The event key in the yaml is quoted `"on"` because an unquoted `on` is a YAML boolean.
 
-7. Compare `connectors`. If a connector was added, or a purpose would widen what the bot can reach, stop and ask the human before changing it. On Grok Bot, that ask is a question card. Do not add the connector in that same turn. Removing a connector does not need approval. Report the request through `tldr`. A source reader is not a connector id in this file. The host fills `sources` in the product config.
+   A routine may be a five-field cron in the host's timezone setting, or a pull-request event: opened, pushed, merged, or commented. Map those four words onto the host's trigger and narrow it to branches named `fstack/`. Do not invent extra event types.
 
-   A routine may be a five-field cron, which runs in the timezone under Grok Bot settings, Bot. Or it may be a GitHub pull-request event: opened, pushed, merged, or commented. Map those four words onto the host's GitHub trigger and narrow it to branches named `fstack/`. Do not invent extra event types.
+7. Record the repository URL and `applied_commit` in this bot's persistent state as soon as the skills, profile, and routines match the commit. Do this on every successful apply, including when a connector is still waiting. Do not wait for connector approval to record the commit. Do not write that pair into a product code location, into `.fstack/resolved.yaml`, or onto a Notion feature or memory page. If the host has no persistent state, say the commit was not saved and do not invent a file.
 
-8. When the human approves a connector change, apply it, then continue. Record the repository URL and `applied_commit` in this bot's persistent state. On Grok Bot that is the memory that survives between chats. Do not write that pair into the product repository, into `.fstack/resolved.yaml`, or onto a Notion feature or memory page. If the host has no persistent state, say the commit was not saved and do not invent a file in the product repo.
+8. Compare `connectors`. If a connector was added, or a purpose would widen what the bot can reach, ask the human before changing it. One question card covers every missing connector. Do not add the connector in that same turn. Removing a connector does not need approval. Report the request through `tldr`. The skill repository reader is not a product source.
 
-9. Tell the human what changed: skills copied, profile fields, routines, and any connector still waiting.
+9. When the human approves a connector, apply that connector. The commit was already recorded in step 7. Tell the human what changed: skills copied, profile fields, routines, and any connector still waiting.
+
+10. If this bot is the Orchestrator, follow `provision-team` for the other files in `bots/`. That step is idempotent. A teammate applies its own file when the kickoff message names it.
 
 ## Events
 

@@ -9,6 +9,6 @@ If this workspace has no `fstack.yaml`, ignore this rule.
 
 Every bot-to-human message goes through the `tldr` skill before it is sent. Question cards, escalations, review requests, release questions, and status reports all use it. On Grok Bot a decision is a question card with clickable options. On the Cursor plugin, ask the same options in chat.
 
-Keep these verbatim, outside the short rewrite: the question id, the options, the recommended default, the impact lines, `release.command`, verified shas, and pull request URLs.
+Keep these verbatim, outside the short rewrite: the question id, the options, the recommended default, the impact lines, `release.command`, verified shas, and pull request URLs. An unsaved Notion payload is also verbatim. Do not rewrite it.
 
 `notify: conversation` delivers in this chat. Any other notify value is an outward message and waits for approval of the exact text.

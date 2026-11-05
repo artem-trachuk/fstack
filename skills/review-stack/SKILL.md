@@ -32,7 +32,7 @@ The next rule is `stack_review`.
 
    A direct yes or approve sets `review_approval` and `feature_status: awaiting_release`. The next session asks the release question. Do not ask it now.
 
-   A change request names one chunk and quotes the human. That chunk becomes `changes_requested`, its `attempts_since_decision` resets, and its `verified_sha` clears. Later chunks that have a branch get `needs_restack`. Their `verified_sha` clears until a clean range-diff or a new verify. `feature_status` returns to `building`. Any release approval is cleared.
+   A change request names one chunk and quotes the human. That chunk becomes `changes_requested`, its `attempts_since_decision` resets, and its `verified_sha` and `accepted_sha` clear. Later chunks that have a branch get `needs_restack`. Their `verified_sha` clears until a clean range-diff or a new verify. Later chunks that were `accepted_by_human` also lose `accepted_sha` until a clean restack or a new decision. `feature_status` returns to `building`. Any release approval is cleared.
 
 ## Events
 

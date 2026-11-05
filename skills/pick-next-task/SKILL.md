@@ -42,7 +42,7 @@ The Notion feature page exists and the orchestrator needs the next legal action.
 
 3. If the default branch sha moved, record `base_moved` before launching more work. Open chunks get `needs_restack`. Verified chunks get a range-diff before they stay verified.
 
-4. Append the decision on the feature page and update the status the event names in the same turn. You are the only writer.
+4. Write a Decision page related to the feature and the product, and update the status the event names in the same turn. You are the only writer.
 
 ## Events
 

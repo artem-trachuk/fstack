@@ -31,7 +31,7 @@ Change only those paths. Do not open Notion or `.fstack`. The spec in this promp
 - Existing pull request: {{pr}}
 - Previous failure summary: {{failure_summary}}
 
-If `{{pr}}` is not `(none)`, push to `{{branch}}` and update that pull request. Otherwise open one into `{{stack_base}}`. The pull request body is a short summary of the code change: what behavior changed and which acceptance criteria it covers. Do not include implementer notes, advisor critiques, verify prompts, requirements, decision logs, or diffs copied from fstack state.
+If `{{pr}}` is not `(none)`, push to `{{branch}}` and update that pull request. Otherwise open one into `{{stack_base}}`. The pull request body is a short summary of the code change: what behavior changed and which acceptance criteria it covers. Do not include implementer notes, advisor critiques, verify prompts, requirements, Decision pages, or diffs copied from fstack state.
 
 Do not merge. Do not release.
 

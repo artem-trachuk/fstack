@@ -10,8 +10,8 @@ Create three bots from the configs in [`bots/`](bots/) and connect Notion and Gi
 
 1. In Grok Bot, choose New Bot. Name it **Fstack Orchestrator**. In the first message, paste the persona and instructions from [`bots/orchestrator.yaml`](bots/orchestrator.yaml) and ask it to remember them.
 2. Tell that bot: "Follow the sync-bot-config skill. The config file is bots/orchestrator.yaml." It copies the skills from this repository, sets its profile, and saves its routines. The first run is the bootstrap. The weekly routine keeps it current.
-3. Repeat for [`bots/verifier.yaml`](bots/verifier.yaml) and [`bots/advisor.yaml`](bots/advisor.yaml). Use the profile `name` in each file. Do not invent a platform id.
-4. Connect Notion and GitHub when the Orchestrator shows a connect card. Other inputs are sources in the product config: a kind plus a reader. The Verifier and Advisor get a read-only reader for the skill repository so they can sync. Their feature inputs still arrive as messages. If that reader is absent, sync fetches the public default branch of the skill repository.
+3. Do not create the Verifier or the Advisor yourself.
+4. Connect Notion and the repo reader when the Orchestrator shows a connect card. Other inputs are sources in the product config: a kind plus a reader. Ask the Orchestrator to install fstack. It provisions the other bots. Their feature inputs still arrive as messages. Each teammate syncs through a read-only repo reader, or by a public fetch of the skill repository when that reader is absent.
 5. Schedules use the timezone in Grok Bot settings under Bot. The five cron fields do not name a zone.
 
 ## Quick start
@@ -140,7 +140,7 @@ Roles name an agent and a model. They do not list skills. The agent file is the 
 
 ## Where state lives
 
-`state.backend` and `memory.backend` are `notion`. The schema is in [DESIGN.md](DESIGN.md): a private product page, an Agent Operating Guide at version `0.0.6`, and Features, Chunks, Memories, Coverage, Graph nodes, Graph edges, and Workflow config. The graph holds durable product facts. Memory holds preferences and lessons. A feature page holds the decision log, the plan, and status. Coverage rows point at graph nodes.
+`state.backend` and `memory.backend` are `notion`. The schema is in [DESIGN.md](DESIGN.md): a private product page, an Agent Operating Guide at version `0.0.6`, and Features, Chunks, Memories, Coverage, Graph nodes, Graph edges, and Workflow config. The graph holds durable product facts. Memory holds preferences and lessons. A feature page holds links to Decision pages, the plan, and status. Coverage rows point at graph nodes.
 
 The Orchestrator is the only role that calls Notion. It copies the chunk spec into the coding agent's launch prompt, passes the verifier its prompt and patch, and passes advisors their input pages' text. Asking the Orchestrator where the feature stands reads the Features database.
 
@@ -203,14 +203,16 @@ The Orchestrator also has a routine for pull requests on chunk branches: opened,
 
 ### Bootstrap
 
-1. In Grok Bot, choose New Bot. Name it with the `title` from [`bots/orchestrator.yaml`](bots/orchestrator.yaml). The profile `name` to remember is `fstack-orchestrator`.
-2. Paste that file's persona and instructions into the first message and ask the bot to remember them.
-3. Send: "Follow the sync-bot-config skill. The config file is bots/orchestrator.yaml."
-4. Approve the Notion and GitHub connect cards when they appear. Do not approve any other connector in that turn.
-5. Repeat steps 1–3 for [`bots/verifier.yaml`](bots/verifier.yaml) (`fstack-verifier`) and [`bots/advisor.yaml`](bots/advisor.yaml) (`fstack-advisor`). They do not get Notion or GitHub.
-6. Tell the Orchestrator the product's code locations. Ask it to set up fstack. That is the first real task.
+The human creates only the Orchestrator. It provisions the other roles.
 
-The sync records the repository URL and the applied commit in the bot's persistent state, not in the product repository. The weekly routine in each config runs the same skill later. Adding a connector still waits for you.
+1. In the host, create one bot. Name it with the `title` from [`bots/orchestrator.yaml`](bots/orchestrator.yaml).
+2. Paste that file's persona and instructions into the first message and ask the bot to remember them.
+3. Connect the repo reader and Notion when it asks.
+4. Ask it to install fstack. It syncs itself, then provisions each other role in `bots/`. The first create or rename waits for one question card. After that, sync updates those same roles without asking again.
+5. Approve the one card that lists any connector those teammates still need, including read-only repo access. The Orchestrator does not authorize a connector itself.
+6. Tell the Orchestrator the product's code locations. Ask it to set up the product. That is the first feature task.
+
+The sync records the repository URL and the applied commit in the bot's persistent state, not in a product code location. The weekly routine in each config runs the same skill later. A removed role is marked retired. The bot is not deleted.
 
 ## License
 

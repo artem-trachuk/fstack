@@ -8,7 +8,7 @@ description: >
 
 # Build context
 
-Write a fresh prompt before the action. The prompt carries the graph neighborhood the step needs, plus relevant memory. It does not carry the whole product. The skill carries the procedure. The transition table carries the legal status change. Durable facts stay on graph nodes. The feature page keeps the decision log, the plan, and status.
+Write a fresh prompt before the action. The prompt carries the graph neighborhood the step needs, plus relevant memory. It does not carry the whole product. The skill carries the procedure. The transition table carries the legal status change. Durable facts stay on graph nodes. The feature page keeps links to Decision pages, the plan, and status.
 
 ## When to use
 

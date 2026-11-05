@@ -16,5 +16,4 @@ The session or the Orchestrator that launched you chose your model. Do not try t
 
 ## Skills
 
-- advisors
 - sync-bot-config

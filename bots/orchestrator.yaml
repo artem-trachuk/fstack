@@ -25,6 +25,7 @@ skills:
   - update-graph
   - fstack-status
   - sync-bot-config
+  - provision-team
 model_role: orchestrator
 connectors:
   - id: notion

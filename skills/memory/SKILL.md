@@ -8,7 +8,7 @@ description: >
 
 # Memory
 
-Notion holds three different things. The product graph holds durable product facts. Memory holds preferences and lessons. A feature page holds only what is transient: the decision log, the plan, and status. Do not copy a graph fact into a memory, and do not copy a memory into a graph node.
+Notion holds three different things. The product graph holds durable product facts. Memory holds preferences and lessons. A feature page holds only what is transient: links to Decision pages, the plan, and status. Do not copy a graph fact into a memory, and do not copy a memory into a graph node.
 
 The git repository at `artem-trachuk/fstack` is the only source of skill files. Do not upload, download, or sync skills through Notion Skills.
 

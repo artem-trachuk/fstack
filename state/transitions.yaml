@@ -384,7 +384,7 @@ events:
     skill: review-stack
     from: [awaiting_review]
     to: [awaiting_release, building]
-    guard: approve moves to awaiting_release. changes_requested names one chunk, resets that chunk, and marks later chunks needs_restack.
+    guard: approve moves to awaiting_release. changes_requested names one chunk, resets that chunk, clears its verified_sha and accepted_sha, and marks later chunks needs_restack. Later chunks that were accepted_by_human also lose accepted_sha.
   - name: open_release
     skill: release
     from: [awaiting_release]
@@ -438,6 +438,12 @@ events:
   - name: take_lease
     skill: fstack-status
     guard: human quote and the new owner. Default lease is 30 minutes.
+  - name: team_provisioned
+    skill: provision-team
+    guard: record the team map of role to bot id in the Orchestrator's persistent state. Create and rename only after the first human approval for that role. Never delete a bot. A removed role is marked retired.
+  - name: teammate_synced
+    skill: provision-team
+    guard: record the teammate's reply, the applied commit, and any connectors still missing. Do not authorize a connector.
   - name: workflow_loaded
     skill: configure-workflow
     guard: record the effective skill and config version for each slot on the feature. A chunk step also records bound_skill on the chunk. Do not change status. Do not read human gates from Notion.
@@ -456,7 +462,7 @@ events:
     guard: one change log entry with who, when, old, and new. A feature-only change stays on the feature override. Do not change human gates or who writes Notion.
 
 # Fields the orchestrator keeps on the Notion feature page and chunk pages.
-# Decisions are entries on the feature page. One entry per event.
+# Each decision is its own Decision page, related to the feature and the product.
 feature_fields:
   - state_version
   - slug
@@ -746,5 +752,5 @@ waiting_kinds:
 
 prompt_page: prompt <action> a<attempt>
 verdict_page: verification <chunk-id> a<attempt>
-decision_log: feature page Decisions section
+decision_log: Decision pages related to the feature
 chunk_id: NN-slug

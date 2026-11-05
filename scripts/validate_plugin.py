@@ -32,6 +32,7 @@ CORE_SKILLS = {
     "sync-bot-config",
     "configure-workflow",
     "update-graph",
+    "provision-team",
 }
 
 TOKENS = {
@@ -419,6 +420,14 @@ def main() -> int:
     check("accepted_by_human" in (by_name["restack_recorded"].get("chunk_to") or []), "restack must be able to keep an accepted chunk")
     check("accepted_sha" in (by_name["restack_recorded"].get("guard") or ""), "restack must update or clear accepted_sha")
     check("accepted_sha" in (by_name["escalate_chunk"].get("guard") or ""), "escalate must handle accepted_sha")
+    check("accepted_sha" in skill_text["review-stack"], "a review change request must clear accepted_sha")
+    check("on every successful apply" in skill_text["sync-bot-config"], "sync must record applied_commit on every successful apply")
+    check("team_provisioned" in skill_text["provision-team"] and "teammate_synced" in skill_text["provision-team"], "provision-team must record both team events")
+    check("changes nothing" in skill_text["provision-team"], "provision-team must be idempotent")
+    advisor_agent = (ROOT / "agents" / "advisor.md").read_text(encoding="utf-8")
+    check("\n- advisors\n" not in advisor_agent, "the Cursor advisor agent must not list the advisors skill")
+    facing = (ROOT / "rules" / "human-facing.mdc").read_text(encoding="utf-8")
+    check("unsaved Notion payload" in facing, "human-facing must exempt unsaved payloads")
 
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     for heading in ("## Install", "## Quick start", "## Flow", "## Configuration", "## Workspace", "## Adding a bot or a skill"):
@@ -1027,6 +1036,15 @@ def bot_config_errors(root: Path, skill_names: set[str], role_names: set[str]) -
                     errors.append(f"orchestrator.yaml must list the {required} connector")
             if "survey-product" not in (data.get("skills") or []):
                 errors.append("orchestrator.yaml must include survey-product")
+            if "provision-team" not in (data.get("skills") or []):
+                errors.append("orchestrator.yaml must include provision-team")
+        if label != "orchestrator.yaml":
+            marker = str(data.get("role_marker") or "")
+            expected = f"fstack-role:{data.get('model_role')}"
+            if marker != expected:
+                errors.append(f"{label} role_marker must be {expected}")
+            elif marker not in str(data.get("description") or ""):
+                errors.append(f"{label} description must include its role marker")
         if label in {"verifier.yaml", "advisor.yaml"}:
             readers = [
                 item for item in connectors
