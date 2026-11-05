@@ -1,5 +1,6 @@
 ---
 name: release
+contract: release
 description: >
   Ask the human to approve release of a reviewed stack, then merge only that approved sha.
   Use when feature_status is awaiting_release or merging.
@@ -7,6 +8,11 @@ description: >
 ---
 
 # Release
+
+## Contract
+
+Inputs: the approved review, the release command, and the release shas, plus any slot parameters.
+Outputs: merged pull requests, or a stop. No merge without a human approval.
 
 Ask the question. Act only after a direct yes or approve for that question id. There is no release script. Follow the steps and record each event. The checks in `stubs/enforcement.md` are not automated.
 

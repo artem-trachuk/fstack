@@ -1,11 +1,17 @@
 ---
 name: verify
+contract: verify
 description: >
   Stub for chunk verification. Use when the orchestrator launches the verifier for a chunk that is needs_verify.
   Do not judge the patch. Return verdict not_implemented and stop.
 ---
 
 # Verify
+
+## Contract
+
+Inputs: the verify prompt and the patch for this attempt, plus any slot parameters.
+Outputs: verdict not_implemented and the fixed message. No pass or fail.
 
 TODO: verification is not implemented. Do not inspect the patch, do not run commands, and do not decide pass or fail.
 

@@ -15,7 +15,7 @@ The human names a feature, answers a question card, or asks where the work stand
 
 ## Steps
 
-1. Read the feature page from Notion, including Status, Waiting on, and the linked chunks, and read `state/transitions.yaml`. If `state_version` is not 1, stop and say it must be migrated. If the page is missing, stop. Nothing was committed.
+1. Read the feature page from Notion, including Status, Waiting on, and the linked chunks, and read `state/transitions.yaml`. If this session has not loaded the workflow, follow `configure-workflow` first. If `state_version` is not 1, stop and say it must be migrated. If the page is missing, stop. Nothing was committed.
 
 2. If the lease belongs to someone else and has not expired, report it and stop. `take_lease` requires a human quote and the new owner. The lease lasts 30 minutes. Two writers can still race. See `stubs/enforcement.md`.
 

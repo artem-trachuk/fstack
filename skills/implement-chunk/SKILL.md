@@ -1,5 +1,6 @@
 ---
 name: implement-chunk
+contract: implement
 description: >
   Hand one chunk to a Cursor coding agent and record the agent id before waiting.
   Use when the next rule is launch_implementer for a planned, failed, or changes_requested chunk.
@@ -7,6 +8,11 @@ description: >
 ---
 
 # Implement a chunk
+
+## Contract
+
+Inputs: one chunk spec, the base branch, and any slot parameters.
+Outputs: a branch, a pull request, and the recorded head. No merge.
 
 Hand the chunk off. Do not edit product code in the orchestrator session.
 

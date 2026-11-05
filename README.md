@@ -98,6 +98,9 @@ The prompt shape the stub will someday use is unchanged: the orchestrator builds
 | `release.command` | empty | An approved release merges the stack and stops |
 | `authoritative_kinds` | `requirements` | Source kinds that can make an item buildable |
 | `sources` | kind, ref, reader | Inputs. `ref` and `reader` are how this host reads that kind. `writer` is optional |
+| `workflow.slots` | skill per slot | Repo default. A Notion project page overrides it, and a feature page overrides the project |
+
+`setup-project` creates a Workflow config database and seeds it from those repo defaults. At session start the Orchestrator reads the feature override, then the project page, then `fstack.yaml`, and records the binding and config version it used. You can say "use skill X for verification" or "for this feature only, skip survey". It checks that the skill is in the library and that its contract matches the slot, confirms in one line, and writes a change log entry. Human gates stay in the repo. The verify slot ships bound to `verify`.
 
 `models.opus` and `models.argon` are match prefixes and an effort list, in preference order. setup walks that list against the slugs this Cursor session can use. A missing family becomes `inherit`, the parent Cursor model.
 
@@ -155,7 +158,8 @@ A chunk id is `NN-slug`. Status values and the events that change them are only 
 
 | Skill | Who invokes it | What it does |
 | --- | --- | --- |
-| `setup-project` | Human, or the orchestrator when config is missing | Copies templates, resolves models, records runtime |
+| `setup-project` | Human, or the orchestrator when config is missing | Copies templates, resolves models, creates Workflow config |
+| `configure-workflow` | Session start, or the human in chat | Shows the effective bindings and writes an approved change |
 | `collect-requirements` | Human, only after an explicit chat request | Writes the requirements page, then hands off to the orchestrator |
 | `survey-product` | On its own, or after requirements when a repo exists | Read-only description of the product at a pinned commit |
 | `gap-analysis` | On its own, or after the survey | Compares the sources that are present and classifies each item |

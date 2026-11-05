@@ -106,7 +106,7 @@ next_rules:
   - id: survey
     when: feature_status is requirements_confirmed and a product repository exists
     action: survey_product
-    detail: Pin the commit. Reuse the stored map for that commit when one exists. Otherwise perform one read-only survey. Do not prescribe the mechanism.
+    detail: Pin the commit. Reuse the stored map for that commit when one exists. Otherwise perform one read-only survey. Do not prescribe the mechanism. If the effective workflow binding skips survey, record survey_skipped instead.
   - id: survey_skip
     when: feature_status is requirements_confirmed and no product repository exists
     action: skip_survey
@@ -429,6 +429,12 @@ events:
   - name: take_lease
     skill: fstack-status
     guard: human quote and the new owner. Default lease is 30 minutes.
+  - name: workflow_loaded
+    skill: configure-workflow
+    guard: record the effective skill and config version for each slot on the feature. A chunk step also records bound_skill on the chunk. Do not change status. Do not read human gates from Notion.
+  - name: workflow_changed
+    skill: configure-workflow
+    guard: one change log entry with who, when, old, and new. A feature-only change stays on the feature override. Do not change human gates or who writes Notion.
 
 # Fields the orchestrator keeps on the Notion feature page and chunk pages.
 # Decisions are entries on the feature page. One entry per event.
@@ -445,6 +451,8 @@ feature_fields:
   - lease
   - handoff_failures
   - requirements_status
+  - config_version
+  - step_bindings
 
 chunk_fields:
   - id
@@ -469,6 +477,7 @@ chunk_fields:
   - marked_for_review
   - tiebreak_for_attempt
   - blocked_reason
+  - bound_skill
 
 # Notion property names for feature_fields and chunk_fields.
 # DESIGN.md must use these names. Extras are display columns, not state fields.
@@ -486,6 +495,8 @@ notion_schema:
     lease: {name: Lease, type: text}
     handoff_failures: {name: Handoff failures, type: number}
     requirements_status: {name: Requirements status, type: select}
+    config_version: {name: Config version, type: text}
+    step_bindings: {name: Step bindings, type: text}
   feature_extra:
     - {name: Name, type: title}
     - {name: Summary, type: text}
@@ -516,6 +527,7 @@ notion_schema:
     marked_for_review: {name: Marked for review, type: checkbox}
     tiebreak_for_attempt: {name: Tie-break attempt, type: number}
     blocked_reason: {name: Blocked reason, type: text}
+    bound_skill: {name: Bound skill, type: text}
   chunk_extra:
     - {name: Feature, type: relation}
     - {name: Accepted unverified, type: checkbox}
@@ -530,6 +542,21 @@ notion_schema:
     approved: {name: Approved, type: checkbox}
   coverage_extra:
     - {name: Feature, type: relation}
+  workflow:
+    scope: {name: Scope, type: select}
+    config_version: {name: Config version, type: text}
+    slot: {name: Slot, type: text}
+    skill: {name: Skill, type: text}
+    params: {name: Params, type: text}
+    notes: {name: Notes, type: text}
+    skip: {name: Skip, type: checkbox}
+    who: {name: Who, type: text}
+    when: {name: When, type: date}
+    old: {name: Old, type: text}
+    new: {name: New, type: text}
+  workflow_extra:
+    - {name: Name, type: title}
+    - {name: Feature, type: relation}
 
 coverage_fields:
   - item
@@ -540,6 +567,19 @@ coverage_fields:
   - decision
   - write_back
   - approved
+
+workflow_fields:
+  - scope
+  - config_version
+  - slot
+  - skill
+  - params
+  - notes
+  - skip
+  - who
+  - when
+  - old
+  - new
 
 coverage_classifications:
   - done

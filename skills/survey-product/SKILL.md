@@ -1,5 +1,6 @@
 ---
 name: survey-product
+contract: survey
 description: >
   Describe how a product behaves at one pinned commit and store that description with the commit.
   Use when a repository should be surveyed, on its own or before comparing sources.
@@ -27,7 +28,7 @@ The read does not modify the product and does not open a pull request. This skil
 
 ## Steps
 
-1. If this call has no repository, return "no product source".
+1. If the effective workflow binding skips this slot, record `survey_skipped` and stop. If this call has no repository, return "no product source".
 
 2. Resolve the pinned commit. Search the stored maps for that commit. If one exists, reuse it and return it. When a feature is in progress, link that page to the feature, record `survey_filed` with reused set, set Status to `surveyed`, and stop.
 

@@ -30,6 +30,7 @@ CORE_SKILLS = {
     "fstack-status",
     "memory",
     "sync-bot-config",
+    "configure-workflow",
 }
 
 TOKENS = {
@@ -272,7 +273,7 @@ def main() -> int:
     check((ROOT / "templates" / "feature" / "feature.yaml").is_file(), "feature state template missing")
 
     orchestrator = (ROOT / "agents" / "orchestrator.md").read_text(encoding="utf-8")
-    for skill in ("setup-project", "survey-product", "gap-analysis", "split-into-chunks", "pick-next-task", "implement-chunk", "review-stack", "release", "fstack-status", "escalate"):
+    for skill in ("setup-project", "configure-workflow", "survey-product", "gap-analysis", "split-into-chunks", "pick-next-task", "implement-chunk", "review-stack", "release", "fstack-status", "escalate"):
         check(skill in orchestrator, f"orchestrator must name {skill}")
     check("You never start it." in orchestrator, "orchestrator must not start requirements collection")
     check("Do not try to switch" in orchestrator, "the launcher selects the orchestrator model")
@@ -351,6 +352,9 @@ def main() -> int:
     for message in vendor_name_errors(ROOT):
         check(False, message)
     check(True, "skills and config do not name source vendors")
+    for message in workflow_config_errors(ROOT):
+        check(False, message)
+    check(True, "workflow slots match skill contracts")
     check("partial" in skill_text["split-into-chunks"] and "missing" in skill_text["split-into-chunks"] and "approved" in skill_text["split-into-chunks"].lower(), "split-into-chunks plans only approved partial and missing rows")
     check("survey" in rule_ids and rule_ids.index("survey") < rule_ids.index("gap"), "survey is ordered before gap analysis")
 
@@ -531,6 +535,47 @@ def vendor_name_errors(root: Path) -> list[str]:
     return errors
 
 
+def workflow_config_errors(root: Path) -> list[str]:
+    """Shipped slots bind a skill whose declared contract matches the slot."""
+    errors = []
+    config = yaml.safe_load((root / "fstack.yaml").read_text(encoding="utf-8"))
+    workflow = config.get("workflow") or {}
+    if workflow.get("version") != 1:
+        errors.append("workflow.version must be 1")
+    slots = workflow.get("slots") or {}
+    required = {"survey", "gap_analysis", "split", "implement", "verify", "review", "release"}
+    if not required <= set(slots):
+        errors.append(f"workflow slots missing: {sorted(required - set(slots))}")
+    if (slots.get("verify") or {}).get("skill") != "verify":
+        errors.append("the verify slot must keep the verify stub as its default binding")
+    if (slots.get("survey") or {}).get("skippable") is not True:
+        errors.append("survey must be the skippable slot")
+    for name, slot in slots.items():
+        if not isinstance(slot, dict):
+            errors.append(f"workflow.slots.{name} must be a mapping")
+            continue
+        if name != "survey" and slot.get("skippable") is True:
+            errors.append(f"workflow.slots.{name} must not be skippable in the repo default")
+        skill = str(slot.get("skill") or "")
+        contract = str(slot.get("contract") or "")
+        path = root / "skills" / skill / "SKILL.md"
+        if not path.is_file():
+            errors.append(f"workflow slot {name} binds missing skill {skill}")
+            continue
+        meta, body = split_frontmatter(path.read_text(encoding="utf-8"))
+        if meta.get("contract") != contract or not contract:
+            errors.append(f"{skill} contract does not match slot {name}")
+        if "Inputs" not in body or "Outputs" not in body:
+            errors.append(f"{skill} must declare the inputs and outputs for slot {name}")
+    text = (root / "skills" / "configure-workflow" / "SKILL.md").read_text(encoding="utf-8")
+    for phrase in ("closest", "one line", "human gates", "change log", "workflow_loaded", "workflow_changed"):
+        if phrase not in text:
+            errors.append(f"configure-workflow must mention {phrase}")
+    if "configure-workflow" not in (root / "bots" / "orchestrator.yaml").read_text(encoding="utf-8"):
+        errors.append("orchestrator bot must include configure-workflow")
+    return errors
+
+
 def notion_doc_errors(root: Path) -> list[str]:
     """The live markdown spec URI ends in -spec. The shorter URI returns 400."""
     errors = []
@@ -574,6 +619,7 @@ def notion_schema_errors(table: dict, design: str) -> list[str]:
         ("feature_fields", "features", "feature_extra"),
         ("chunk_fields", "chunks", "chunk_extra"),
         ("coverage_fields", "coverage", "coverage_extra"),
+        ("workflow_fields", "workflow", "workflow_extra"),
     )
     for field_key, schema_key, extra_key in groups:
         fields = list(table.get(field_key) or [])

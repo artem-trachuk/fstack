@@ -108,6 +108,54 @@ sources:
     reader: survey-product
     writer: ""
 
+# Repo default for the Notion workflow config. A project page overrides this.
+# A feature page overrides the project page. Human gates are not in this block.
+workflow:
+  version: 1
+  slots:
+    survey:
+      skill: survey-product
+      contract: survey
+      params: {}
+      notes: ""
+      skippable: true
+    gap_analysis:
+      skill: gap-analysis
+      contract: gap_analysis
+      params: {}
+      notes: ""
+      skippable: false
+    split:
+      skill: split-into-chunks
+      contract: split
+      params: {}
+      notes: ""
+      skippable: false
+    implement:
+      skill: implement-chunk
+      contract: implement
+      params: {}
+      notes: ""
+      skippable: false
+    verify:
+      skill: verify
+      contract: verify
+      params: {}
+      notes: ""
+      skippable: false
+    review:
+      skill: review-stack
+      contract: review
+      params: {}
+      notes: ""
+      skippable: false
+    release:
+      skill: release
+      contract: release
+      params: {}
+      notes: ""
+      skippable: false
+
 verify:
   max_failures_before_escalation: 2
   commands: []

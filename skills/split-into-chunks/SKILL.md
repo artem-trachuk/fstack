@@ -1,5 +1,6 @@
 ---
 name: split-into-chunks
+contract: split
 description: >
   Turn approved coverage rows into stacked chunks.
   Use when feature_status is ready_to_plan and the plan has no chunks, or when the human changes scope before implementation starts.
@@ -8,6 +9,11 @@ description: >
 ---
 
 # Split into chunks
+
+## Contract
+
+Inputs: approved buildable coverage rows, the base commit, and any slot parameters.
+Outputs: ordered chunk pages, or a report that nothing is buildable.
 
 Write the stack. Chunk ids look like `01-slug`, in order. The first chunk's base is the default branch. Each later chunk's base is the previous chunk's branch `fstack/<feature>/<chunk-id>`.
 

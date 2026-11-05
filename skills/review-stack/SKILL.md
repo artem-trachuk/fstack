@@ -1,5 +1,6 @@
 ---
 name: review-stack
+contract: review
 description: >
   Ask the human to review a fully verified stack, then wait.
   Use when every chunk is verified or accepted_by_human and review_approval is empty.
@@ -7,6 +8,11 @@ description: >
 ---
 
 # Review the stack
+
+## Contract
+
+Inputs: the stack of pull requests and release shas, plus any slot parameters.
+Outputs: a human review decision. Not a release approval.
 
 One review covers the whole stack. There is no per-chunk approval gate.
 

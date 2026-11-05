@@ -19,7 +19,7 @@ Version of the Agent Operating Guide: `0.0.6`, published `2026-10-30`, from [Not
 One private page named for the repository.
 
 - Child page: Agent Operating Guide. It records the workspace, the database links, preferences, exclusions, and the setup version. Unconfirmed fields stay "Not set up yet".
-- Linked databases: Features, Chunks, Memories, Coverage, and Codebase maps.
+- Linked databases: Features, Chunks, Memories, Coverage, Codebase maps, and Workflow config.
 
 ### Features
 
@@ -43,6 +43,8 @@ Property names and types come from `notion_schema.features` and `notion_schema.f
 | Lease | text | `lease` |
 | Handoff failures | number | `handoff_failures` |
 | Requirements status | select | `requirements_status` |
+| Config version | text | `config_version`. The workflow config version this feature used |
+| Step bindings | text | `step_bindings`. Slot, skill, and whether the binding came from the feature, the project, or the repo |
 | Confirmed | date | Extra. When the human confirmed the requirements page |
 | Chunks | relation | Extra |
 | Memories | relation | Extra |
@@ -81,6 +83,7 @@ Property names and types come from `notion_schema.chunks` and `notion_schema.chu
 | Marked for review | checkbox | `marked_for_review` |
 | Tie-break attempt | number | `tiebreak_for_attempt` |
 | Blocked reason | text | `blocked_reason` |
+| Bound skill | text | `bound_skill`. The skill this chunk step actually ran |
 | Accepted unverified | checkbox | Extra. Human accepted a `not_implemented` verdict |
 
 The page body has Spec, Acceptance criteria, and Out of scope. The coding agent never opens this page. The Orchestrator copies those sections into the launch prompt.
@@ -106,6 +109,36 @@ One page per item, in the Coverage database. Property names come from `notion_sc
 | Approved | checkbox | `approved`. Set only by the coverage gate |
 
 A chunk is planned only from an approved buildable row, `partial` or `missing`. `needs_decision`, `conflict`, and `undocumented` are not planned unless the human chose implement and the gate then approved that row. Writing the decision back to a source uses that source's writer, and only after approval.
+
+### Workflow config
+
+One database per project. setup-project creates it and seeds it from `workflow`, `sources`, and `authoritative_kinds` in `fstack.yaml`. Human gates and the rule that only the Orchestrator writes Notion are not fields on this database. They stay in the repo.
+
+Property names come from `notion_schema.workflow` and `notion_schema.workflow_extra`.
+
+| Property | Type | Field |
+| --- | --- | --- |
+| Name | title | Extra. Project page, slot name, or change entry |
+| Scope | select | `scope`. `project`, `feature`, or `change` |
+| Feature | relation | Extra. Set on a feature override or a feature change. Empty for the project |
+| Config version | text | `config_version`. Increases by one on each accepted change |
+| Slot | text | `slot`. Empty on the project page and on a change row |
+| Skill | text | `skill`. The skill name bound to that slot |
+| Params | text | `params`. Optional parameters, such as `{env: staging}` |
+| Notes | text | `notes` |
+| Skip | checkbox | `skip`. A feature override may set this only when the repo slot is skippable |
+| Who | text | `who`. The human who asked for the change |
+| When | date | `when` |
+| Old | text | `old` |
+| New | text | `new` |
+
+The project page body holds sources, authoritative kinds, and standing preferences. A preference may override `plan_review` or `notify`. It must not override human gates or who writes Notion.
+
+A feature override is a page with Scope `feature` and only the slots that differ. Precedence is feature override, then the project page, then `fstack.yaml`.
+
+A change row records who, when, old, and new. The Orchestrator writes it in the same turn as the binding change.
+
+The shipped verify slot binds the skill `verify`.
 
 ### Memories
 

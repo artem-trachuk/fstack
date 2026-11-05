@@ -1,5 +1,6 @@
 ---
 name: gap-analysis
+contract: gap_analysis
 description: >
   Compare whatever sources are present and classify each item from those roles.
   Use when two or more sources should be compared, or when a feature status is surveyed.
