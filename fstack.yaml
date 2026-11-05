@@ -12,7 +12,8 @@ state_version: 1
 state:
   backend: notion
 
-# Cross-feature memory uses the same Notion workspace.
+# Preferences and lessons use Notion Memory: fetch id "memory", then search.
+# fstack does not create that database and does not add properties to it.
 # instructions_version matches Notion's agent setup guide.
 memory:
   backend: notion

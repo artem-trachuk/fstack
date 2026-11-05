@@ -24,7 +24,7 @@ The action is `collect-requirements`, `survey-product`, `gap-analysis`, `split-i
 
 3. Tokens you may fill: `feature`, `chunk_id`, `chunk_title`, `attempt`, `spec`, `acceptance_criteria`, `out_of_scope`, `allowed_files`, `branch`, `stack_base`, `pr`, `diff`, `command_results`, `failure_summary`, `requirements`, `open_questions`, `plan`, `release_plan`, `pull_requests`, `shas`, `base_sha`, `head_sha`, `release_command`, `question_id`, `advisor_name`, `artifact`, `dispute_reason`, `sources`, `graph`, `code_location`. `shas` on a survey prompt is the pinned commit for that location. `base_sha` and `head_sha` are the chunk's two commits. The verify prompt must include both, and the verifier copies both into its return.
 
-4. For `implement-chunk`, follow the chunk's Touched nodes relation and the edges one step away. Add memory pages related to that feature or product. Do not attach every node in the product. The prompt is that neighborhood, the chunk spec, and the slot parameters. A prompt or diff page is a child of the chunk, so the chunk page links back to it.
+4. For `implement-chunk`, follow the chunk's Touched nodes relation and the edges one step away. Follow `memory`: fetch with id `"memory"`, then search for memories that name this product or feature. Add those short excerpts and their links. Do not attach every node or every memory. The prompt is that neighborhood, the chunk spec, and the slot parameters. A prompt or diff page is a child of the chunk, so the chunk page links back to it.
 
 5. For `verify` and `verify-tiebreak`, build the prompt in the orchestrator session before the other agent starts.
 

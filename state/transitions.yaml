@@ -547,7 +547,6 @@ notion_schema:
     - {name: Summary, type: text}
     - {name: Confirmed, type: date}
     - {name: Chunks, type: relation}
-    - {name: Memories, type: relation}
     - {name: Product, type: relation}
   chunks:
     id: {name: Name, type: title}
@@ -641,16 +640,6 @@ notion_schema:
     - {name: Product, type: relation}
     - {name: Feature, type: relation}
     - {name: Chunk, type: relation}
-  memory:
-    type: {name: Type, type: select}
-    source: {name: Source, type: url}
-    uncertainty: {name: Uncertainty, type: text}
-    forgotten: {name: Forgotten, type: checkbox}
-    confirmed: {name: Confirmed, type: date}
-  memory_extra:
-    - {name: Name, type: title}
-    - {name: Product, type: relation}
-    - {name: Feature, type: relation}
   debug_log:
     opened: {name: Opened, type: date}
   debug_log_extra:
@@ -695,13 +684,6 @@ decision_fields:
 verification_fields:
   - verdict
 
-memory_fields:
-  - type
-  - source
-  - uncertainty
-  - forgotten
-  - confirmed
-
 debug_log_fields:
   - opened
 
@@ -718,7 +700,6 @@ required_relations:
   coverage: [Product, Feature]
   decision: [Product, Feature]
   verification: [Product, Chunk]
-  memory: [Product]
   workflow: [Product]
   debug_log: [Product]
 
@@ -728,7 +709,6 @@ optional_relations:
   chunk: [Depends on]
   coverage: [Node]
   survey: [Feature]
-  memory: [Feature]
   workflow: [Feature]
   debug_log: [Previous]
 

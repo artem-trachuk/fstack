@@ -311,9 +311,9 @@ def main() -> int:
     for message in notion_doc_errors(ROOT):
         check(False, message)
     check(True, "notion markdown spec URI")
-    for message in memory_design_errors(skill_text["memory"], (ROOT / "DESIGN.md").read_text(encoding="utf-8")):
+    for message in memory_design_errors(skill_text["memory"], (ROOT / "DESIGN.md").read_text(encoding="utf-8"), table, skill_text["setup-product"]):
         check(False, message)
-    check(True, "product memory is not Notion's built-in memory")
+    check(True, "memory uses Notion Memory")
     check(table.get("approval", {}).get("accept") == ["yes", "approve", "approved"], "approval words must be the strings yes, approve, and approved")
     check("accepted_sha" in (table.get("chunk_fields") or []) and "accepted_sha" in skill_text["release"] and "accepted_sha" in skill_text["fstack-status"], "accept_unverified must have an accepted_sha release path")
     for message in notion_schema_errors(table, (ROOT / "DESIGN.md").read_text(encoding="utf-8")):
@@ -331,7 +331,7 @@ def main() -> int:
     for message in transition_graph_errors(table):
         check(False, message)
     check(True, "transition graph")
-    check("notion-query-data-sources" in skill_text["memory"], "memory skill must query the product Memories database")
+    check("notion-query-data-sources" in skill_text["memory"], "listing Notion Memory uses notion-query-data-sources")
     check("unsaved" in skill_text["memory"], "a Notion outage must show unsaved content")
     check("notion-upload-skill" not in skill_text["memory"], "skills are not published to Notion")
     for reader in ("collect-requirements", "gap-analysis", "split-into-chunks"):
@@ -637,7 +637,6 @@ def relation_declaration_errors(table: dict, design: str) -> list[str]:
         "coverage",
         "decision",
         "verification",
-        "memory",
         "workflow",
         "debug_log",
     }
@@ -655,7 +654,6 @@ def relation_declaration_errors(table: dict, design: str) -> list[str]:
         "coverage": ("coverage", "coverage_extra"),
         "decision": ("decision", "decision_extra"),
         "verification": ("verification", "verification_extra"),
-        "memory": ("memory", "memory_extra"),
         "workflow": ("workflow", "workflow_extra"),
         "debug_log": ("debug_log", "debug_log_extra"),
     }
@@ -851,23 +849,41 @@ def notion_doc_errors(root: Path) -> list[str]:
     return errors
 
 
-def memory_design_errors(memory_skill: str, design: str) -> list[str]:
-    """Product memories are a product database. Built-in memory search is a different store."""
+def memory_design_errors(memory_skill: str, design: str, table: dict, setup: str) -> list[str]:
+    """Preferences and lessons use Notion Memory. fstack does not create that database."""
     errors = []
-    if "notion-query-data-sources" not in memory_skill or "notion-query-data-sources" not in design:
-        errors.append("product memories must be queried with notion-query-data-sources")
-    if "Decision, Correction, Preference, Convention, and Lesson" not in design:
-        errors.append("DESIGN must keep the product memory types")
-    if "Profile, Preference, Work, People, and Notes" not in design:
-        errors.append("DESIGN must say why built-in memory types do not fit")
-    for label, text in (("memory skill", memory_skill), ("DESIGN.md", design)):
-        for line in text.splitlines():
-            if "notion-memory-search" in line and not re.search(r"\bdo not\b", line, re.IGNORECASE):
-                errors.append(f"{label} mentions notion-memory-search without saying not to call it")
-            if re.search(r"parent:\s*[\"']memory[\"']", line) or re.search(r'parent:\s*"memory"', line):
-                errors.append(f"{label} creates pages in Notion's built-in memory")
-    if re.search(r"\bparent `memory`", memory_skill) and not re.search(r"do not create pages with parent `memory`", memory_skill, re.IGNORECASE):
-        errors.append("memory skill must not create pages with parent memory")
+    if 'parent: "memory"' not in memory_skill:
+        errors.append('memory writes must use parent: "memory"')
+    if "no creation_mode" not in memory_skill:
+        errors.append("memory creates must set no creation_mode")
+    types = "Profile, Preference, Work, People, or Notes"
+    if types not in memory_skill or types not in design:
+        errors.append(f"memory Type must be {types}")
+    if "notion-memory-search" not in memory_skill or '"memory"' not in memory_skill:
+        errors.append('recall fetches id "memory" and then calls notion-memory-search')
+    if "notion-delete-pages" not in memory_skill:
+        errors.append("forget uses notion-delete-pages when the page is entirely about the topic")
+    if "Decision, Correction, Preference, Convention" in memory_skill or "Decision, Correction, Preference, Convention" in design:
+        errors.append("custom memory types must not replace Notion Memory types")
+    schema = table.get("notion_schema") or {}
+    if "memory" in schema or "memory_extra" in schema or table.get("memory_fields"):
+        errors.append("do not declare a custom Memories database")
+    if "memory" in (table.get("required_relations") or {}):
+        errors.append("memory pages are not in required_relations")
+    for text in (setup, design):
+        if "Do not create a Memories database" not in text:
+            errors.append("setup and DESIGN must refuse a custom Memories database")
+            break
+    if re.search(r"\| (Uncertainty|Forgotten) \|", design):
+        errors.append("DESIGN must not add custom memory properties")
+    if "TODO(skills-in-notion)" not in memory_skill or "TODO(skills-in-notion)" not in setup:
+        errors.append("skills stay in git, with a TODO where Notion Skills would apply")
+    if "Notion agent setup choice" not in setup or "Never replace an existing guide" not in setup:
+        errors.append("setup follows the official guide and does not replace an existing one")
+    if "Daily Notion memory and setup check" not in setup or "explicit yes" not in setup:
+        errors.append("the daily loop uses the official name and needs an explicit yes")
+    if "do not call `notion-complete-mcp-setup`" not in setup.lower() and "Do not call `notion-complete-mcp-setup`" not in setup:
+        errors.append("setup must not call notion-complete-mcp-setup while skills stay in git")
     return errors
 
 
@@ -884,7 +900,6 @@ def notion_schema_errors(table: dict, design: str) -> list[str]:
         ("survey_fields", "survey", "survey_extra"),
         ("decision_fields", "decision", "decision_extra"),
         ("verification_fields", "verification", "verification_extra"),
-        ("memory_fields", "memory", "memory_extra"),
         ("debug_log_fields", "debug_log", "debug_log_extra"),
         ("workflow_fields", "workflow", "workflow_extra"),
     )
