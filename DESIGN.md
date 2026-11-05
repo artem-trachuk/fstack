@@ -18,7 +18,7 @@ Version of the Agent Operating Guide: `0.0.6`, published `2026-10-30`, from [Not
 
 One private page named for the product. A product owns features, the workflow config, sources, and zero or more repos. Preferences and lessons live in Notion Memory, not in a database this product creates. Each repo is a code location with a name, a role, an optional subpath, and a default branch. The product does not have one base commit or one pull request. Features, chunks, coverage rows, and workflow pages point back with a Product relation.
 
-- The Agent Operating Guide is the user's private page in a Documents database. Setup keeps an existing guide and suggests additions. A new guide uses version `0.0.6`, published `2026-10-30`, and the official sections. fstack records its product home and databases under destinations only after the human approves those additions. Skills records the repository from `plugin.json`. Other unconfirmed fields stay "Not set up yet".
+- The Agent Operating Guide is the user's private page in a Documents database. Setup keeps an existing guide and suggests additions. A new guide uses version `0.0.6`, published `2026-10-30`, and the official sections. That `0.0.6` is Notion's setup guide, not the fstack version. `upgrade-fstack` appends the fstack version and commit to Version history and does not change `0.0.6`. fstack records its product home and databases under destinations only after the human approves those additions. Skills records the repository from `plugin.json`. Other unconfirmed fields stay "Not set up yet".
 - Linked databases: Features, Chunks, Coverage, Graph nodes, Graph edges, Workflow config, Survey, Decision, Verification, Debug log, and Fixes. Do not create a Memories database.
 
 ### Features

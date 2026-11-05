@@ -165,6 +165,7 @@ A chunk id is `NN-slug`. Status values and the events that change them are only 
 | Skill | Who invokes it | What it does |
 | --- | --- | --- |
 | `setup-product` | Human, or the orchestrator when config is missing | Copies templates, resolves models, creates Workflow config |
+| `upgrade-fstack` | Human says update, upgrade, or sync fstack | Brings the install up to main and records the fstack version |
 | `configure-workflow` | Session start, or the human in chat | Shows the effective bindings and writes an approved change |
 | `collect-requirements` | Human, only after an explicit chat request | Classifies `new_feature` or `fix`. A fix does not create a feature page |
 | `file-fix` | The `fix` slot, after that classification | Files a Fix page under the existing feature |
