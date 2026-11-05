@@ -86,6 +86,8 @@ human_gates:
   release: require_approval
   outward_messages: require_approval
   collect_requirements: manual_only
+  coverage: require_approval
+  linear_issues: require_approval
 
 verify:
   max_failures_before_escalation: 2

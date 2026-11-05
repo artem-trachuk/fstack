@@ -1,8 +1,9 @@
 ---
 name: split-into-chunks
 description: >
-  Turn a feature with settled questions into stacked chunks.
+  Turn approved coverage rows into stacked chunks.
   Use when feature_status is ready_to_plan and the plan has no chunks, or when the human changes scope before implementation starts.
+  Plans only rows the human approved whose classification is partial or missing.
   Follows plan_review from fstack.yaml. The default notify does not wait for plan approval.
 ---
 
@@ -12,7 +13,7 @@ Write the stack. Chunk ids look like `01-slug`, in order. The first chunk's base
 
 ## When to use
 
-`questions_status` is `answered` or `none`, and no chunk has left `planned`.
+Status is `ready_to_plan` after `approve_coverage`, and no chunk has left `planned`.
 
 ## Chunk file
 
@@ -24,7 +25,9 @@ Allowed files are concrete paths or globs. They must not include `.fstack/`. One
 
 1. Follow `memory` and search for memories that bear on the plan. Then follow `build-context` for `split-into-chunks`. If Notion is unreachable, show the unsaved plan and stop.
 
-2. Write the Plan section and one Chunks page per chunk, as in `DESIGN.md`. Record `default_branch` and `default_branch_sha` on the feature.
+2. Read Coverage rows for this feature. Plan a chunk only when Approved is set and the classification is `partial` or `missing`. Skip `done`, `conflict`, `unrequested_design`, `undocumented_behaviour`, `skip`, and `defer`. An unrequested design is not a chunk unless the human chose `implement` and the coverage gate then approved that row as `missing`. If no row qualifies, tell the human there is nothing to build. Set `waiting_on` kind `plan`, question id `Q-<slug>-empty-plan`, options stop or describe a change. Do not record `save_plan` and do not set `building`. Do not launch an implementer.
+
+   Write the Plan section and one Chunks page per planned row, as in `DESIGN.md`. Record `default_branch` and `default_branch_sha` on the feature. The base SHA is the survey commit.
 
 3. Record `save_plan`.
 

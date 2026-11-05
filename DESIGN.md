@@ -18,8 +18,8 @@ Version of the Agent Operating Guide: `0.0.6`, published `2026-10-30`, from [Not
 
 One private page named for the repository.
 
-- Child page: Agent Operating Guide. It records the workspace, the three database links, preferences, exclusions, and the setup version. Unconfirmed fields stay "Not set up yet".
-- Linked databases: Features, Chunks, Memories.
+- Child page: Agent Operating Guide. It records the workspace, the database links, preferences, exclusions, and the setup version. Unconfirmed fields stay "Not set up yet".
+- Linked databases: Features, Chunks, Memories, Coverage, and Codebase maps.
 
 ### Features
 
@@ -46,6 +46,7 @@ Property names and types come from `notion_schema.features` and `notion_schema.f
 | Confirmed | date | Extra. When the human confirmed the requirements page |
 | Chunks | relation | Extra |
 | Memories | relation | Extra |
+| Existing functionality | relation | Extra. The Codebase maps page for this feature's base SHA |
 
 The page body has four sections: Requirements, Questions, Plan, Decisions. Child pages, not extra databases, hold prompts, diffs, verification results, advisor inputs, and advisor outputs. Title them `prompt <action> a<attempt>`, `diff <chunk-id> a<attempt>`, `verification <chunk-id> a<attempt>`, `advisor input <n>`, and `advisor output <n>`.
 
@@ -83,6 +84,31 @@ Property names and types come from `notion_schema.chunks` and `notion_schema.chu
 | Accepted unverified | checkbox | Extra. Human accepted a `not_implemented` verdict |
 
 The page body has Spec, Acceptance criteria, and Out of scope. The coding agent never opens this page. The Orchestrator copies those sections into the launch prompt.
+
+### Codebase maps
+
+One page per pinned base commit, shared by later features. The title starts with `Existing functionality`. Base SHA is the commit. The body is the survey: features and screens, routes and APIs, the data model, and flags, each with a file and a line. Only the Orchestrator writes this page. The read-only cloud agent does not.
+
+### Coverage
+
+One page per item, in the Coverage database. Property names come from `notion_schema.coverage` and `notion_schema.coverage_extra`.
+
+| Property | Type | Field |
+| --- | --- | --- |
+| Name | title | `item` |
+| Feature | relation | Extra. The feature this row belongs to |
+| Base SHA | text | `base_sha`. The survey commit |
+| Source | select | `source`. requirements, linear, figma, or app |
+| In design | text | `in_design`. Evidence, or empty |
+| In requirements | text | `in_requirements`. Evidence from the requirements page or Linear, or empty |
+| In app | text | `in_app`. File and line from the survey, or empty |
+| Classification | select | `classification`. done, partial, missing, conflict, unrequested_design, undocumented_behaviour |
+| Next action | select | `next_action`. plan, question, or none |
+| Decision | select | `decision`. pending, implement, add_to_linear, skip, defer, approved, or dropped |
+| Linear draft | text | `linear_draft`. Empty until a draft is proposed |
+| Approved | checkbox | `approved`. Set only by the coverage gate |
+
+A chunk is planned only from an approved row whose classification is partial or missing. An unrequested design and a conflict are not planned unless the human chose implement and the gate then approved that row.
 
 ### Memories
 
@@ -124,7 +150,7 @@ Do not call `notion-memory-search` for project memories. If a Notion call fails,
 
 Grok Bot is the primary host. `bots/<role>.yaml` is the config. Version `0.1`. The repository stays the source of the skill files. A bot runs `sync-bot-config` on demand and on the cron in its config. It compares the default-branch commit with the repository URL and applied commit in its own persistent state, then copies skills into its library as `<slug>/SKILL.md` folders, updates its profile, and adds, updates, or removes routines. That pair is not written into the product repository. It asks before adding a connector.
 
-The Orchestrator messages teammates by the profile `name` in their config. The handoff text starts with `fstack-handoff`. The reply starts with `fstack-reply`. The Verifier answers `ask: verdict`. The Advisor answers `ask: critique`. Neither has Notion or GitHub connectors.
+The Orchestrator lists Linear and Figma as optional connectors. They are not connected until the human approves. It messages teammates by the profile `name` in their config. The handoff text starts with `fstack-handoff`. The reply starts with `fstack-reply`. The Verifier answers `ask: verdict`. The Advisor answers `ask: critique`. Neither has Notion or GitHub connectors.
 
 A pull-request routine on the Orchestrator listens for opened, pushed, merged, and commented events on `fstack/` branches. The yaml key is quoted `"on"` because an unquoted `on` is a YAML boolean. The public routine docs confirm GitHub events and that the schedule uses Settings, Bot, Timezone. They do not publish the event payload fields, so the bot maps those four words onto the host trigger.
 

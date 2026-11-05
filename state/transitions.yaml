@@ -20,7 +20,10 @@ storage:
 feature_statuses:
   - requirements_draft
   - requirements_confirmed
+  - surveying
+  - surveyed
   - questions_open
+  - awaiting_coverage_approval
   - ready_to_plan
   - awaiting_plan_approval
   - building
@@ -100,9 +103,22 @@ next_rules:
     when: feature_status is requirements_draft
     action: collect_requirements
     detail: The human already asked in chat to start this feature. Do not open that skill yourself.
-  - id: gap
+  - id: survey
     when: feature_status is requirements_confirmed
+    action: survey_product
+    detail: Pin the default branch SHA. Reuse a Codebase maps page for that commit when one exists. Otherwise launch one read-only cloud agent.
+  - id: survey_wait
+    when: feature_status is surveying
+    action: resume_survey
+    detail: Resume that agent. Do not launch a second survey. File the map only from its report.
+  - id: gap
+    when: feature_status is surveyed
     action: gap_analysis
+    detail: Build the coverage table from the requirements, Linear, Figma, and the survey. The survey is required. The other sources may be empty.
+  - id: coverage_gate
+    when: feature_status is awaiting_coverage_approval
+    action: wait_for_coverage_approval
+    detail: The human approves which rows may become chunks. Only approved partial and missing rows are planned. Unrequested design and conflict are not planned unless the human already chose implement and this gate approves that row.
   - id: split
     when: feature_status is ready_to_plan and there are no chunks
     action: split_into_chunks
@@ -223,16 +239,41 @@ events:
     from: [requirements_draft]
     to: [requirements_confirmed]
     guard: human quote accepts the requirements question, and the requirements text is non-empty
-  - name: record_questions
+  - name: survey_launched
+    skill: survey-product
+    from: [requirements_confirmed]
+    to: [surveying]
+    guard: record the agent id and the pinned base sha before waiting. The agent is read-only and does not write Notion.
+  - name: survey_filed
+    skill: survey-product
+    from: [requirements_confirmed, surveying]
+    to: [surveyed]
+    guard: write or reuse the Existing functionality page for this base sha. Only the orchestrator writes Notion.
+  - name: record_coverage
     skill: gap-analysis
-    from: [requirements_confirmed, questions_open]
-    to: [questions_open, ready_to_plan]
-    guard: requirements_status is confirmed. An empty list is no_open_questions and moves to ready_to_plan.
-  - name: answer_questions
+    from: [surveyed]
+    to: [questions_open, awaiting_coverage_approval]
+    guard: one Coverage row per item. conflict, unrequested design, and undocumented behaviour open one question card. Otherwise open the coverage gate. Do not plan chunks here.
+  - name: answer_coverage_questions
     skill: fstack-status
     from: [questions_open]
-    to: [questions_open, ready_to_plan]
-    guard: partial answers stay open. All answered moves to ready_to_plan.
+    to: [questions_open, awaiting_coverage_approval]
+    guard: options are implement, add_to_linear, skip, and defer. implement makes the row missing. skip and defer are not chunks. A pending Linear draft stays on questions_open.
+  - name: linear_draft_proposed
+    skill: fstack-status
+    from: [questions_open]
+    to: [questions_open]
+    guard: save the draft text on the row. Do not create a Linear issue in this event.
+  - name: linear_issue_created
+    skill: fstack-status
+    from: [questions_open]
+    to: [awaiting_coverage_approval]
+    guard: create the issue only after a direct yes for that draft. No leaves the draft in Notion and creates nothing. Then open the coverage gate.
+  - name: approve_coverage
+    skill: fstack-status
+    from: [awaiting_coverage_approval]
+    to: [ready_to_plan, stopped]
+    guard: a direct yes sets Approved on the listed partial and missing rows and moves to ready_to_plan. stop sets stopped. Unapproved rows are not planned.
   - name: save_plan
     skill: split-into-chunks
     from: [ready_to_plan, awaiting_plan_approval]
@@ -311,7 +352,7 @@ events:
     guard: set waiting_on. Options are retry, accept, change_spec, and stop.
   - name: human_decision
     skill: fstack-status
-    from: [escalated, building]
+    from: [escalated, building, awaiting_coverage_approval, ready_to_plan]
     to: [building, stopped]
     chunk_from: [escalated, awaiting_verification_decision, failed]
     chunk_to: [planned, failed, accepted_by_human, escalated]
@@ -442,6 +483,7 @@ notion_schema:
     - {name: Confirmed, type: date}
     - {name: Chunks, type: relation}
     - {name: Memories, type: relation}
+    - {name: Existing functionality, type: relation}
   chunks:
     id: {name: Name, type: title}
     title: {name: Title, type: text}
@@ -468,9 +510,47 @@ notion_schema:
   chunk_extra:
     - {name: Feature, type: relation}
     - {name: Accepted unverified, type: checkbox}
+  coverage:
+    item: {name: Name, type: title}
+    base_sha: {name: Base SHA, type: text}
+    source: {name: Source, type: select}
+    in_design: {name: In design, type: text}
+    in_requirements: {name: In requirements, type: text}
+    in_app: {name: In app, type: text}
+    classification: {name: Classification, type: select}
+    next_action: {name: Next action, type: select}
+    decision: {name: Decision, type: select}
+    linear_draft: {name: Linear draft, type: text}
+    approved: {name: Approved, type: checkbox}
+  coverage_extra:
+    - {name: Feature, type: relation}
+
+coverage_fields:
+  - item
+  - base_sha
+  - source
+  - in_design
+  - in_requirements
+  - in_app
+  - classification
+  - next_action
+  - decision
+  - linear_draft
+  - approved
+
+coverage_classifications:
+  - done
+  - partial
+  - missing
+  - conflict
+  - unrequested_design
+  - undocumented_behaviour
 
 waiting_kinds:
   - questions
+  - coverage_questions
+  - linear_draft
+  - coverage_approval
   - plan
   - stack_review
   - release

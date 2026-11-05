@@ -12,7 +12,7 @@ Write a fresh prompt before the action. The prompt carries this feature's facts.
 
 ## When to use
 
-The action is `collect-requirements`, `gap-analysis`, `split-into-chunks`, `pick-next-task`, `implement-chunk`, `verify`, `verify-tiebreak`, `advisors`, `escalate`, `review-stack`, `release`, or `fstack-status`.
+The action is `collect-requirements`, `survey-product`, `gap-analysis`, `split-into-chunks`, `pick-next-task`, `implement-chunk`, `verify`, `verify-tiebreak`, `advisors`, `escalate`, `review-stack`, `release`, or `fstack-status`.
 
 ## Steps
 
@@ -20,7 +20,7 @@ The action is `collect-requirements`, `gap-analysis`, `split-into-chunks`, `pick
 
 2. Create or update the Notion child page named `prompt <action> a<attempt>` under the chunk, or under the feature when there is no chunk. Replace a missing token with `(none)`. If Notion is unreachable, show the unsaved prompt through `tldr` and stop.
 
-3. Tokens you may fill: `feature`, `chunk_id`, `chunk_title`, `attempt`, `spec`, `acceptance_criteria`, `out_of_scope`, `allowed_files`, `branch`, `stack_base`, `pr`, `diff`, `command_results`, `failure_summary`, `requirements`, `open_questions`, `plan`, `release_plan`, `pull_requests`, `shas`, `release_command`, `question_id`, `advisor_name`, `artifact`, `dispute_reason`.
+3. Tokens you may fill: `feature`, `chunk_id`, `chunk_title`, `attempt`, `spec`, `acceptance_criteria`, `out_of_scope`, `allowed_files`, `branch`, `stack_base`, `pr`, `diff`, `command_results`, `failure_summary`, `requirements`, `open_questions`, `plan`, `release_plan`, `pull_requests`, `shas`, `release_command`, `question_id`, `advisor_name`, `artifact`, `dispute_reason`. `shas` on a survey prompt is the pinned base commit.
 
 4. For `verify` and `verify-tiebreak`, build the prompt in the orchestrator session before the other agent starts.
 

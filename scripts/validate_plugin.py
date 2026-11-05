@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CORE_SKILLS = {
     "setup-project",
     "collect-requirements",
+    "survey-product",
     "gap-analysis",
     "split-into-chunks",
     "pick-next-task",
@@ -71,7 +72,10 @@ VERIFY_FORBIDDEN = {"feature_dir", "workspace", "pr", "diff_source"}
 REQUIRED_FEATURE_STATUSES = {
     "requirements_draft",
     "requirements_confirmed",
+    "surveying",
+    "surveyed",
     "questions_open",
+    "awaiting_coverage_approval",
     "ready_to_plan",
     "awaiting_plan_approval",
     "building",
@@ -123,6 +127,8 @@ REQUIRED_GATES = {
     "release": "require_approval",
     "outward_messages": "require_approval",
     "collect_requirements": "manual_only",
+    "coverage": "require_approval",
+    "linear_issues": "require_approval",
 }
 
 CLI_PHRASES = (
@@ -251,7 +257,7 @@ def main() -> int:
     check((ROOT / "templates" / "feature" / "feature.yaml").is_file(), "feature state template missing")
 
     orchestrator = (ROOT / "agents" / "orchestrator.md").read_text(encoding="utf-8")
-    for skill in ("setup-project", "gap-analysis", "split-into-chunks", "pick-next-task", "implement-chunk", "review-stack", "release", "fstack-status", "escalate"):
+    for skill in ("setup-project", "survey-product", "gap-analysis", "split-into-chunks", "pick-next-task", "implement-chunk", "review-stack", "release", "fstack-status", "escalate"):
         check(skill in orchestrator, f"orchestrator must name {skill}")
     check("You never start it." in orchestrator, "orchestrator must not start requirements collection")
     check("Do not try to switch" in orchestrator, "the launcher selects the orchestrator model")
@@ -316,7 +322,16 @@ def main() -> int:
     check("not_implemented" in {rule.get("id") for rule in table.get("next_rules") or []}, "the state table must wait on not_implemented")
     check("awaiting_verification_decision" in (by_name["apply_verdict"].get("chunk_to") or []), "apply_verdict must not treat not_implemented as verified")
     gap = skill_text["gap-analysis"]
-    check("Do not follow that skill yourself." in gap, "gap analysis must not start collection")
+    check("Do not start requirements collection." in gap, "gap analysis must not start collection")
+    for classification in table.get("coverage_classifications") or []:
+        check(classification in gap, f"gap analysis must name {classification}")
+    check("unrequested design" in gap.lower() and "never implemented automatically" in gap.lower(), "unrequested design and conflict stay out of the automatic plan")
+    check("Never create a Linear issue" in gap, "gap analysis must not create a Linear issue")
+    survey = skill_text["survey-product"]
+    check("read-only" in survey.lower() and "Existing functionality" in survey and "Base SHA" in survey, "survey-product must be a read-only map stamped with the base sha")
+    check("reuse" in survey.lower(), "the codebase map must be reused per commit")
+    check("partial" in skill_text["split-into-chunks"] and "missing" in skill_text["split-into-chunks"] and "approved" in skill_text["split-into-chunks"].lower(), "split-into-chunks plans only approved partial and missing rows")
+    check("survey" in rule_ids and rule_ids.index("survey") < rule_ids.index("gap"), "survey is ordered before gap analysis")
 
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     for heading in ("## Install", "## Quick start", "## Flow", "## Configuration", "## Workspace", "## Adding a bot or a skill"):
@@ -492,6 +507,7 @@ def notion_schema_errors(table: dict, design: str) -> list[str]:
     groups = (
         ("feature_fields", "features", "feature_extra"),
         ("chunk_fields", "chunks", "chunk_extra"),
+        ("coverage_fields", "coverage", "coverage_extra"),
     )
     for field_key, schema_key, extra_key in groups:
         fields = list(table.get(field_key) or [])
@@ -575,10 +591,16 @@ def bot_config_errors(root: Path, skill_names: set[str], role_names: set[str]) -
             errors.append(f"{label} connectors must be a list")
         else:
             for connector in connectors:
-                if not isinstance(connector, dict) or connector.get("id") not in {"notion", "github"}:
-                    errors.append(f"{label} has a connector other than notion or github")
+                allowed = {"notion", "github", "linear", "figma"}
+                optional_ids = {"linear", "figma"}
+                if not isinstance(connector, dict) or connector.get("id") not in allowed:
+                    errors.append(f"{label} has a connector other than notion, github, linear, or figma")
                 elif not str(connector.get("purpose") or "").strip():
                     errors.append(f"{label} connector {connector.get('id')} needs a purpose")
+                elif connector.get("id") in optional_ids and connector.get("optional") is not True:
+                    errors.append(f"{label} connector {connector.get('id')} must be optional")
+                elif connector.get("id") in {"notion", "github"} and connector.get("optional") is True:
+                    errors.append(f"{label} connector {connector.get('id')} is required")
         routines = data.get("routines")
         if not isinstance(routines, list) or not routines:
             errors.append(f"{label} needs at least one routine")
@@ -644,6 +666,12 @@ def bot_config_errors(root: Path, skill_names: set[str], role_names: set[str]) -
                     covered.update(routine["on"].get("events") or [])
             if not {"opened", "pushed", "merged", "commented"} <= covered:
                 errors.append("orchestrator.yaml must listen for opened, pushed, merged, and commented pull requests")
+            present = {item.get("id"): item for item in connectors if isinstance(item, dict)}
+            for required in ("notion", "github", "linear", "figma"):
+                if required not in present:
+                    errors.append(f"orchestrator.yaml must list the {required} connector")
+            if "survey-product" not in (data.get("skills") or []):
+                errors.append("orchestrator.yaml must include survey-product")
     return errors
 
 

@@ -2,7 +2,11 @@
 
 Feature: {{feature}}
 
-Follow the fstack skill `gap-analysis`. Requirements are confirmed. List only questions a wrong guess would change. An empty list is a finished result.
+Build one coverage row per item. Sources are the requirements, Linear issues and their acceptance criteria, the Figma frames, and the Existing functionality page. The app source is required. The others may be empty.
+
+Classifications: done, partial, missing, conflict, unrequested design, undocumented behaviour.
+
+Do not turn an unrequested design or a conflict into a chunk. Do not create a Linear issue.
 
 ## Requirements
 
@@ -11,3 +15,7 @@ Follow the fstack skill `gap-analysis`. Requirements are confirmed. List only qu
 ## Questions so far
 
 {{open_questions}}
+
+## Base
+
+{{shas}}

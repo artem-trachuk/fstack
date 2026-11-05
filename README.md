@@ -11,7 +11,7 @@ Create three bots from the configs in [`bots/`](bots/) and connect Notion and Gi
 1. In Grok Bot, choose New Bot. Name it **Fstack Orchestrator**. In the first message, paste the persona and instructions from [`bots/orchestrator.yaml`](bots/orchestrator.yaml) and ask it to remember them.
 2. Tell that bot: "Follow the sync-bot-config skill. The config file is bots/orchestrator.yaml." It copies the skills from this repository, sets its profile, and saves its routines. The first run is the bootstrap. The weekly routine keeps it current.
 3. Repeat for [`bots/verifier.yaml`](bots/verifier.yaml) and [`bots/advisor.yaml`](bots/advisor.yaml). Use the profile `name` in each file. Do not invent a platform id.
-4. Connect Notion and GitHub when the Orchestrator shows a connect card. The Verifier and Advisor do not need those connectors. Their inputs arrive as messages.
+4. Connect Notion and GitHub when the Orchestrator shows a connect card. Linear and Figma are optional. Connect them only if you want issues and frames in the coverage table. The Verifier and Advisor do not need those connectors. Their inputs arrive as messages.
 5. Schedules use the timezone in Grok Bot settings under Bot. The five cron fields do not name a zone.
 
 ## Quick start
@@ -20,12 +20,13 @@ Chat with the Orchestrator. Do not start a feature from another bot.
 
 1. Ask it to set up fstack for the product repository. It writes `fstack.yaml` if needed, ignores `.fstack/` for machine config, and connects Notion. You approve the project page and databases before any schema is created.
 2. Ask it to start a feature and describe what you want. That request is the only way requirements collection starts. Confirm the requirements page when the question card asks.
-3. Answer the gap-analysis card. If nothing is open, the Orchestrator says so and continues.
-4. It splits the feature into stacked chunks. Plan approval waits only when `plan_review` is `approve`. The shipped value is `notify`, so coding starts after the plan is shown.
-5. For each chunk it launches one Cursor cloud agent, stacked on the previous branch. When the run finishes, the Orchestrator is revived with the branch, the pull request, and the report. It messages the Verifier. Verification is a stub, so you get a card: accept the chunk unverified, or stop. That choice is saved in Notion. The stack does not continue until you answer.
-6. Review the stacked pull requests when the card asks. That card does not approve release.
-7. Answer the later release card. The stack is merged only after you approve the effect and the shas that card names.
-8. After release, the Orchestrator proposes lessons. They are written to Notion only if you approve. Then it can start the next feature, and only when you ask.
+3. It surveys the product at the current default-branch commit with a read-only cloud agent. The map is an Existing functionality page stamped with that SHA. A later feature at the same commit reuses the page.
+4. Gap analysis builds a coverage table from the requirements, Linear, Figma, and that map. Linear and Figma are optional. You answer one card for conflicts, unrequested design, and behaviour that no requirement mentions. The choices are implement, add to Linear, skip, or defer. A Linear issue is created only after you approve the draft.
+5. You approve the coverage table. Only approved rows that are partial or missing become chunks. Then it splits those rows. Plan approval waits only when `plan_review` is `approve`. The shipped value is `notify`, so coding starts after the plan is shown.
+6. For each chunk it launches one Cursor cloud agent, stacked on the previous branch. When the run finishes, the Orchestrator is revived with the branch, the pull request, and the report. It messages the Verifier. Verification is a stub, so you get a card: accept the chunk unverified, or stop. That choice is saved in Notion. The stack does not continue until you answer.
+7. Review the stacked pull requests when the card asks. That card does not approve release.
+8. Answer the later release card. The stack is merged only after you approve the effect and the shas that card names.
+9. After release, the Orchestrator proposes lessons. They are written to Notion only if you approve. Then it can start the next feature, and only when you ask.
 
 A later chat with the same Orchestrator resumes from Notion. Ask where the feature stands.
 
@@ -43,8 +44,9 @@ In Cursor, asking in chat is still how a feature starts. A slash command is only
 flowchart TD
   human([Human])
   collect[collect-requirements]
+  survey[survey-product]
   gap[gap-analysis]
-  questions[Question card]
+  questions[Coverage card]
   split[split-into-chunks]
   pick[pick-next-task]
   implement[implement-chunk]
@@ -55,11 +57,11 @@ flowchart TD
   done([Next feature])
 
   human -->|asks in chat| collect
-  collect --> gap
+  collect --> survey
+  survey --> gap
   gap --> questions
   questions --> human
-  human -->|answers| gap
-  gap --> split
+  human -->|approves rows| split
   split --> pick
   pick --> implement
   implement --> coding
@@ -131,7 +133,7 @@ Roles name an agent and a model. They do not list skills. The agent file is the 
 
 ## Where state lives
 
-`state.backend` and `memory.backend` are `notion`. The schema is in [DESIGN.md](DESIGN.md): a private project page, an Agent Operating Guide at version `0.0.6`, and Features, Chunks, and Memories databases. Feature documents are pages. Chunk specs are pages. Memories are one topic each.
+`state.backend` and `memory.backend` are `notion`. The schema is in [DESIGN.md](DESIGN.md): a private project page, an Agent Operating Guide at version `0.0.6`, and Features, Chunks, Memories, Coverage, and Codebase maps databases. Feature documents are pages. Chunk specs are pages. Coverage rows are the gap table. Codebase maps are one Existing functionality page per commit. Memories are one topic each.
 
 The Orchestrator is the only role that calls Notion. It copies the chunk spec into the coding agent's launch prompt, passes the verifier its prompt and patch, and passes advisors their input pages' text. Asking the Orchestrator where the feature stands reads the Features database.
 
@@ -153,8 +155,9 @@ A chunk id is `NN-slug`. Status values and the events that change them are only 
 | --- | --- | --- |
 | `setup-project` | Human, or the orchestrator when config is missing | Copies templates, resolves models, records runtime |
 | `collect-requirements` | Human, only after an explicit chat request | Writes the requirements page, then hands off to the orchestrator |
-| `gap-analysis` | Orchestrator | Sends a question card, or records that nothing is open |
-| `split-into-chunks` | Orchestrator | Writes the stack and follows `plan_review` |
+| `survey-product` | Orchestrator, after requirements are confirmed | Read-only map of the product at a pinned commit |
+| `gap-analysis` | Orchestrator, after the survey | Writes the coverage table and the exception card |
+| `split-into-chunks` | Orchestrator, after the coverage gate | Plans only approved partial and missing rows |
 | `pick-next-task` | Orchestrator | Applies the next-rule list once |
 | `implement-chunk` | Orchestrator | Hands off one chunk and records the agent id first |
 | `verify` | Verifier, at the same point in the flow | Returns `not_implemented` and does not judge the chunk |
@@ -185,7 +188,7 @@ Run `python3 scripts/validate_plugin.py` after the edit. It checks the manifest,
 
 Grok Bot is the primary host. Configs in `bots/` are version `0.1`. Each file has a profile (`name`, `title`, `description`, `persona`, `instructions`), skills copied from this repo, a `model_role` from `fstack.yaml`, connectors, teammates, a handoff message, and routines. A routine has a name, a prompt, and either a five-field cron schedule or a GitHub pull-request event. Cron uses the timezone in Grok Bot settings under Bot. The files name no host, user, or bot id. Address a teammate by the `name` in its config, which is the profile name you give it at creation.
 
-The Orchestrator connects to Notion and GitHub. It messages the Verifier and the Advisor. The message starts with `fstack-handoff` and includes the role, feature, chunk, ask (`verdict` or `critique`), and the prompt. The reply starts with `fstack-reply`. The Verifier and Advisor have no connectors. An Advisor can instead be the `claude` command on the bot computer when that teammate is unavailable. See `advisors.fallback` in `fstack.yaml`.
+The Orchestrator connects to Notion and GitHub. Linear and Figma are listed as optional connectors and are not connected until you approve them. It messages the Verifier and the Advisor. The message starts with `fstack-handoff` and includes the role, feature, chunk, ask (`verdict` or `critique`), and the prompt. The reply starts with `fstack-reply`. The Verifier and Advisor have no connectors. An Advisor can instead be the `claude` command on the bot computer when that teammate is unavailable. See `advisors.fallback` in `fstack.yaml`.
 
 The Orchestrator also has a routine for pull requests on chunk branches: opened, pushed, merged, and commented. Public docs confirm that a routine can start from a GitHub event. They do not publish the exact event-field names, so the bot maps those four words onto the host's GitHub trigger and narrows it to branches named `fstack/`.
 

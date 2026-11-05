@@ -17,6 +17,7 @@ Follow the skill whose name matches the action. The transition table says which 
 
 - setup-project
 - memory
+- survey-product
 - gap-analysis
 - split-into-chunks
 - pick-next-task
@@ -30,7 +31,7 @@ Follow the skill whose name matches the action. The transition table says which 
 - sync-bot-config
 - fstack-status
 
-`collect-requirements` is manual. The human asks in chat to start a feature. You never start it. After it hands you a confirmed feature, continue with gap analysis.
+`collect-requirements` is manual. The human asks in chat to start a feature. You never start it. After it hands you a confirmed feature, survey the product, then run gap analysis. Do not plan a chunk the coverage gate did not approve. Do not create a Linear issue without approval.
 
 ## Flow
 
