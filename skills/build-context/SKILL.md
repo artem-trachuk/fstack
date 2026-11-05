@@ -24,7 +24,7 @@ The action is `collect-requirements`, `gap-analysis`, `split-into-chunks`, `pick
 
 4. For `verify` and `verify-tiebreak`, build the prompt in the orchestrator session before the other agent starts.
 
-   Take the patch with `git diff <base_sha>...<head_sha>` and store it as the Notion child page `diff <chunk-id> a<attempt>`. Put that patch in `{{diff}}`. Do not put a pull request URL in the prompt. Do not put a Notion link or a workspace path in the prompt. Drop every section titled `Implementer notes`, including a pull request section with that heading. Run `verify.commands` in a clean checkout of `head_sha` and put the command and exit code in `{{command_results}}`.
+   On Grok Bot, read the patch through the GitHub connector for `base_sha...head_sha`. Do not clone the repository and do not run `git diff` on the bot computer. On the Cursor plugin, take the patch with `git diff <base_sha>...<head_sha>` when a checkout of that head exists. Store the patch as the Notion child page `diff <chunk-id> a<attempt>`. Put that patch in `{{diff}}`. Do not put a pull request URL in the prompt. Do not put a Notion link or a workspace path in the prompt. Drop every section titled `Implementer notes`, including a pull request section with that heading. If `verify.commands` is empty, `command_results` is `(none)`. Do not clone a repository to run those commands.
 
    Record `attach_diff` when the patch page is saved.
 

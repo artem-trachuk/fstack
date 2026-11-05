@@ -9,6 +9,7 @@ base:
 base_sha:
 head_sha:
 verified_sha:
+accepted_sha:
 pr:
 attempt: 0
 attempts_since_decision: 0

@@ -24,7 +24,7 @@ The feature folder exists and the orchestrator needs the next legal action.
 
    A filed verdict for the current attempt and `head_sha` is applied with `apply_verdict`. Do not launch another verifier.
 
-   When that verdict is `not_implemented`, set the chunk to `awaiting_verification_decision`. Do not set `verified`. Do not increment `attempts_since_decision`. Do not launch the next chunk, `review-stack`, or `release`. Set `waiting_on` kind `verification_unimplemented` and question id `Q-<slug>-<chunk-id>-unverified`. Relay this sentence through `tldr`, verbatim, with the chunk id and the options `accept_unverified` and `stop`:
+   When that verdict is `not_implemented`, set the chunk to `awaiting_verification_decision`. Do not set `verified`, `verified_sha`, or `accepted_sha`. Do not increment `attempts_since_decision`. Do not launch the next chunk, `review-stack`, or `release`. Set `waiting_on` kind `verification_unimplemented` and question id `Q-<slug>-<chunk-id>-unverified`. Relay this sentence through `tldr`, verbatim, with the chunk id and the options `accept_unverified` and `stop`:
 
    `Verification is not implemented yet, so these changes cannot be verified.`
 

@@ -20,7 +20,7 @@ A second opinion. The caller decides what to do with it.
 
 Review one artifact hash once. A duplicate returns `skipped: duplicate` and does not count.
 
-If the tie-break slug in `.fstack/resolved.yaml` equals the verifier model, including when both are `inherit`, do not launch it and do not use a local CLI. Record `tiebreak_skipped` with reason `same_model` and escalate. That rule is about independence, not about credits.
+If the resolved tie-break slug equals the verifier model, including when both are `inherit`, do not launch it and do not use a local CLI. On Grok Bot that slug is in the bot's persistent state. On the Cursor plugin it is in `.fstack/resolved.yaml`. Record `tiebreak_skipped` with reason `same_model` and escalate. That rule is about independence, not about credits.
 
 `verify_tiebreak.fallback` is a list of other Cursor short names to try in Cursor. `advisors.fallback` is the local CLI list.
 
@@ -28,7 +28,7 @@ If the tie-break slug in `.fstack/resolved.yaml` equals the verifier model, incl
 
 Use a local CLI only when the Cursor advisor cannot start because the account has no credits for that model, or the model is unavailable. A message such as "Buy credits or switch to a Grok model" is this case. A critique that started and then failed is a failed call, not a reason to start the CLI.
 
-Walk `advisors.fallback` in order. Use an entry only when `enabled` is true and `.fstack/resolved.yaml` `advisor_cli` says it is available and signed in. The `command` is a name on `PATH`. Do not build a filesystem path, a user name, or a machine name.
+Walk `advisors.fallback` in order. Use an entry only when `enabled` is true and the resolved `advisor_cli` says it is available and signed in. On Grok Bot that record is in the bot's persistent state. On the Cursor plugin it is in `.fstack/resolved.yaml`. The `command` is a name on `PATH`. Do not build a filesystem path, a user name, or a machine name.
 
 For `runtime: claude-cli`, run:
 
@@ -46,7 +46,7 @@ If Cursor cannot start and every fallback is disabled, unavailable, or not signe
 
 ## Steps
 
-1. Resolve the Cursor model from `.fstack/resolved.yaml`. You pass that model when you launch the `advisor` agent. The advisor does not switch itself.
+1. Resolve the Cursor model from the bot's persistent state on Grok Bot, or from `.fstack/resolved.yaml` on the Cursor plugin. You pass that model when you launch the advisor. The advisor does not switch itself.
 
 2. Follow `build-context`. A tie-break uses `verify-tiebreak`, with the same patch as verify and no fstack notes.
 

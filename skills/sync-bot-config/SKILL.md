@@ -18,7 +18,7 @@ A routine named in `bots/<name>.yaml` fires, or the human asks to sync. The rout
 
 1. Read the `repository` field in `plugin.json`. That is the fstack repo. Read the latest commit on its default branch. Do not hardcode a user or a machine.
 
-2. Read the last applied commit from gitignored `.fstack/resolved.yaml`, under `bot_sync` and this config's `name`. If it is missing, this bot has not applied a config yet.
+2. Read the last applied commit from this bot's persistent state. The record is the fstack repository URL and `applied_commit`. If it is missing, this bot has not applied a config yet. Do not read it from the product repository or from `.fstack/resolved.yaml`.
 
 3. Read `bots/<name>.yaml` at that remote commit. If the commit matches the last applied commit, report that nothing changed and stop.
 
@@ -32,7 +32,7 @@ A routine named in `bots/<name>.yaml` fires, or the human asks to sync. The rout
 
    A routine may be a five-field cron, which runs in the timezone under Grok Bot settings, Bot. Or it may be a GitHub pull-request event: opened, pushed, merged, or commented. Map those four words onto the host's GitHub trigger and narrow it to branches named `fstack/`. Do not invent extra event types.
 
-8. When the human approves a connector change, apply it, then continue. Record the applied commit in `.fstack/resolved.yaml` under `bot_sync`. Do not commit that file. If Notion is up, you may also record the commit as a memory of type Convention, one topic, with the date. If Notion is down, keep the commit only in `.fstack/resolved.yaml` and say the Notion note was not saved. Do not put the commit into the repository.
+8. When the human approves a connector change, apply it, then continue. Record the repository URL and `applied_commit` in this bot's persistent state. On Grok Bot that is the memory that survives between chats. Do not write that pair into the product repository, into `.fstack/resolved.yaml`, or onto a Notion feature or memory page. If the host has no persistent state, say the commit was not saved and do not invent a file in the product repo.
 
 9. Tell the human what changed: skills copied, profile fields, routines, and any connector still waiting.
 

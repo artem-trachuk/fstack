@@ -17,7 +17,7 @@ The human asked in chat to start a feature.
 
 ## Steps
 
-1. Read `fstack.yaml`. If it is missing, or `.fstack/resolved.yaml` has no Notion database ids, follow `setup-project`, then continue.
+1. Read `fstack.yaml`. If it is missing, or the Notion database ids are missing from this bot's persistent state (Grok Bot) or from `.fstack/resolved.yaml` (Cursor plugin), follow `setup-project`, then continue.
 
 2. Follow `memory` and search for memories about this project and the feature the human described. Pass the excerpts into the requirements. If Notion is unreachable, stop and show the unsaved requirements through `tldr`.
 

@@ -11,7 +11,10 @@ storage:
   backend: notion
   writer: orchestrator
   publish: pull-requests-and-notion
+  # Cursor checkout only: model slugs and Notion ids. Not the sync commit.
   local_config: .fstack/resolved.yaml
+  # Repository URL and last applied commit live in the bot's persistent state.
+  bot_state: persistent
   instructions_version: "0.0.6"
 
 feature_statuses:
@@ -64,7 +67,7 @@ dispute:
   decider: orchestrator
 
 approval:
-  accept: [yes, approve, approved]
+  accept: ["yes", approve, approved]
   direct_reply: true
   reject_examples: [lgtm, looks good, ship it, ok, sure, go ahead]
   hedges: [but, if, except, however]
@@ -169,7 +172,7 @@ next_rules:
   - id: range_diff
     when: a restacked chunk still needs reverify and range_diff is not recorded
     action: check_range_diff
-    detail: A clean range-diff keeps the verification and updates verified_sha to the new head. A real difference returns the chunk to needs_verify.
+    detail: A clean range-diff keeps the release sha and moves it to the new head. verified uses verified_sha. accepted_by_human uses accepted_sha. A real difference clears that sha. verified returns to needs_verify. accepted_by_human returns to awaiting_verification_decision.
   - id: implement_next
     when: the earliest planned chunk has every dependency verified, accepted_by_human, or merged
     action: launch_implementer
@@ -180,9 +183,9 @@ next_rules:
   - id: release_question
     when: feature_status is awaiting_release
     action: open_release
-    detail: The question lists every chunk id, pull request, and verified_sha, and the exact release.command.
+    detail: The question lists every chunk id, pull request, and release sha, and the exact release.command. The release sha is verified_sha, or accepted_sha when the chunk is accepted_by_human.
   - id: sha_mismatch
-    when: feature_status is merging and a pull request head differs from verified_sha
+    when: feature_status is merging and a pull request head differs from that chunk's release sha
     action: void_release
     detail: A changed sha voids the approval. Verify the new head. Do not merge it.
   - id: already_merged
@@ -197,7 +200,7 @@ next_rules:
     action: check_or_wait_or_escalate
     detail: pending waits. failing escalates. Do not roll back merges that already landed.
   - id: merge_one
-    when: feature_status is merging and the next unverified-merged chunk has matching sha, restack, range-diff, and ci
+    when: feature_status is merging and the next chunk that is not yet merged has a matching release sha, restack, range-diff, and ci
     action: merge_chunk
     detail: Merge only this pull request, then record merge_recorded.
   - id: release_command
@@ -260,7 +263,7 @@ events:
     skill: build-context
     chunk_from: [needs_verify]
     chunk_to: [needs_verify]
-    guard: store the patch from git diff base_sha...head_sha. Refuse a pull request URL.
+    guard: store the patch for base_sha...head_sha. On Grok Bot read it through the GitHub connector. On the Cursor plugin, git diff is enough when a checkout exists. Do not clone. Refuse a pull request URL.
   - name: verifier_launched
     skill: pick-next-task
     chunk_from: [needs_verify]
@@ -312,7 +315,7 @@ events:
     to: [building, stopped]
     chunk_from: [escalated, awaiting_verification_decision, failed]
     chunk_to: [planned, failed, accepted_by_human, escalated]
-    guard: quote required. For awaiting_verification_decision the choices are accept_unverified and stop. accept_unverified sets accepted_by_human, stores the quote and sha, and records that the chunk was not verified. It is not a pass. stop sets feature_status stopped. Other escalations still use retry, accept, change_spec, and stop.
+    guard: quote required. For awaiting_verification_decision the choices are accept_unverified and stop. accept_unverified sets accepted_by_human, sets accepted_sha to head_sha, and does not set verified_sha. It is not a pass. stop sets feature_status stopped. Other escalations still use retry, accept, change_spec, and stop.
   - name: open_review
     skill: review-stack
     from: [building]
@@ -349,7 +352,8 @@ events:
     guard: record the new head sha and clear needs_restack
   - name: range_diff_recorded
     skill: release
-    guard: clean updates verified_sha to the new head and the approval record. not clean clears verified_sha and sets needs_verify.
+    chunk_to: [needs_verify, awaiting_verification_decision]
+    guard: clean updates the release sha (verified_sha or accepted_sha) and the approval record. not clean clears that sha. verified sets needs_verify. accepted_by_human sets awaiting_verification_decision.
   - name: ci_recorded
     skill: release
     guard: pending waits. failing escalates the feature and leaves merged chunks merged. none means the project has no CI.
@@ -403,6 +407,7 @@ chunk_fields:
   - base_sha
   - head_sha
   - verified_sha
+  - accepted_sha
   - pr
   - attempt
   - attempts_since_decision
@@ -415,12 +420,62 @@ chunk_fields:
   - tiebreak_for_attempt
   - blocked_reason
 
+# Notion property names for feature_fields and chunk_fields.
+# DESIGN.md must use these names. Extras are display columns, not state fields.
+notion_schema:
+  features:
+    state_version: {name: State version, type: text}
+    slug: {name: Slug, type: text}
+    feature_status: {name: Status, type: select}
+    waiting_on: {name: Waiting on, type: text}
+    release_state: {name: Release state, type: select}
+    release_approval: {name: Release approval, type: text}
+    review_approval: {name: Review approval, type: text}
+    default_branch: {name: Default branch, type: text}
+    default_branch_sha: {name: Default branch SHA, type: text}
+    lease: {name: Lease, type: text}
+    handoff_failures: {name: Handoff failures, type: number}
+    requirements_status: {name: Requirements status, type: select}
+  feature_extra:
+    - {name: Name, type: title}
+    - {name: Summary, type: text}
+    - {name: Confirmed, type: date}
+    - {name: Chunks, type: relation}
+    - {name: Memories, type: relation}
+  chunks:
+    id: {name: Name, type: title}
+    title: {name: Title, type: text}
+    status: {name: Status, type: select}
+    depends_on: {name: Depends on, type: relation}
+    allowed_files: {name: Allowed files, type: text}
+    branch: {name: Branch, type: text}
+    base: {name: Base, type: text}
+    base_sha: {name: Base SHA, type: text}
+    head_sha: {name: Head SHA, type: text}
+    verified_sha: {name: Verified SHA, type: text}
+    accepted_sha: {name: Accepted SHA, type: text}
+    pr: {name: Pull request, type: url}
+    attempt: {name: Attempt, type: number}
+    attempts_since_decision: {name: Attempts since decision, type: number}
+    agent_id: {name: Agent, type: text}
+    launched_at: {name: Launched at, type: text}
+    verifier_agent_id: {name: Verifier, type: text}
+    needs_restack: {name: Needs restack, type: checkbox}
+    needs_reverify: {name: Needs reverify, type: checkbox}
+    marked_for_review: {name: Marked for review, type: checkbox}
+    tiebreak_for_attempt: {name: Tie-break attempt, type: number}
+    blocked_reason: {name: Blocked reason, type: text}
+  chunk_extra:
+    - {name: Feature, type: relation}
+    - {name: Accepted unverified, type: checkbox}
+
 waiting_kinds:
   - questions
   - plan
   - stack_review
   - release
   - escalation
+  - verification_unimplemented
   - ci
   - release_command
 

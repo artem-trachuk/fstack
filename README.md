@@ -135,7 +135,7 @@ Roles name an agent and a model. They do not list skills. The agent file is the 
 
 The Orchestrator is the only role that calls Notion. It copies the chunk spec into the coding agent's launch prompt, passes the verifier its prompt and patch, and passes advisors their input pages' text. Asking the Orchestrator where the feature stands reads the Features database.
 
-Gitignored `.fstack/resolved.yaml` holds resolved model slugs and Notion ids. It is not a copy of the feature. If Notion is unreachable, the Orchestrator stops and shows the unsaved content. It does not write that content to disk.
+On the Cursor plugin, gitignored `.fstack/resolved.yaml` holds resolved model slugs and Notion ids. On Grok Bot those same notes live in the bot's persistent state, because the bot does not clone the product repository. Neither place holds the sync commit, and neither is a copy of the feature. If Notion is unreachable, the Orchestrator stops and shows the unsaved content. It does not write that content to disk.
 
 The skill files stay in this git repository. They are not uploaded to Notion Skills.
 
@@ -198,7 +198,7 @@ The Orchestrator also has a routine for pull requests on chunk branches: opened,
 5. Repeat steps 1–3 for [`bots/verifier.yaml`](bots/verifier.yaml) (`fstack-verifier`) and [`bots/advisor.yaml`](bots/advisor.yaml) (`fstack-advisor`). They do not get Notion or GitHub.
 6. Tell the Orchestrator the product repository. Ask it to set up fstack. That is the first real task.
 
-The sync records the applied commit in gitignored `.fstack/resolved.yaml`. The weekly routine in each config runs the same skill later. Adding a connector still waits for you.
+The sync records the repository URL and the applied commit in the bot's persistent state, not in the product repository. The weekly routine in each config runs the same skill later. Adding a connector still waits for you.
 
 ## License
 

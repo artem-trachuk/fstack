@@ -56,7 +56,7 @@ routines:
   - name: Sync fstack bot config
     cron: "17 8 * * 1"
     prompt: |
-      Follow the sync-bot-config skill. The config file is bots/orchestrator.yaml. Read the latest default branch of the repository named in plugin.json. Compare it with the commit last applied in .fstack/resolved.yaml. Copy changed skills, update this profile, and update routines. Ask before adding a connector. Report what changed.
+      Follow the sync-bot-config skill. The config file is bots/orchestrator.yaml. Read the latest default branch of the repository named in plugin.json. Compare it with the repository URL and applied_commit in this bot's persistent state. Do not write that pair into the product repository. Copy changed skills, update this profile, and update routines. Ask before adding a connector. Report what changed.
   - name: Chunk pull request event
     # Quoted because an unquoted on is a YAML boolean.
     "on":

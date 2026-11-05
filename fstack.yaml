@@ -5,7 +5,9 @@ version: "0.1"
 state_version: 1
 
 # Feature state and memory live in the user's Notion workspace.
-# Machine-specific ids and model slugs stay in gitignored .fstack/resolved.yaml.
+# Machine-specific ids and model slugs stay out of this file.
+# Grok Bot keeps them in its persistent state. The Cursor plugin uses gitignored .fstack/resolved.yaml.
+# The sync commit is never stored in the product repository.
 state:
   backend: notion
 

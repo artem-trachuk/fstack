@@ -21,13 +21,13 @@ The git repository at `artem-trachuk/fstack` is the only source of skill files. 
 
 ## Notion calls
 
-On every Notion MCP tool call, pass `instructions_version` with the value from `memory.instructions_version` in `fstack.yaml` (shipped as `0.0.6`).
+`instructions_version` is a parameter on every Notion tool this skill calls. Pass the value from `memory.instructions_version` in `fstack.yaml` (shipped as `0.0.6`).
 
-Before the first memory write in a session, call `notion-fetch` with `notion://docs/memory` and follow that guide. If its property names differ from `DESIGN.md`, use the guide's names.
+Before the first memory write in a session, call `notion-fetch` with `notion://docs/memory` so you do not mix that store up with the project database. Do not copy its property names onto the project database.
 
-Before creating or editing page content, call `notion-fetch` with `notion://docs/notion-flavored-markdown` and write in that format.
+Before creating or editing page content, call `notion-fetch` with `notion://docs/notion-flavored-markdown-spec` and write in that format.
 
-Search existing pages with `notion-search`. Search memories with `notion-memory-search` before creating one. Create pages with `notion-create-pages`. Edit them with `notion-update-page`. Create a database with `notion-create-database`, using SQL `CREATE TABLE` or the typed database form that tool accepts. One topic per memory. Update an existing memory instead of adding a near-duplicate. Keep the source link, the date the fact was confirmed, and any uncertainty. The day you save it is not the confirmation date.
+Project memories live in the Memories database on the project page. Fetch that database, then query its `collection://` data source with `notion-query-data-sources` before creating a page. Do not call `notion-memory-search`. Do not create pages with parent `memory`. Search other project pages with `notion-search`. Create pages with `notion-create-pages` under the project Memories database. Edit them with `notion-update-page`. Create a database with `notion-create-database`, using SQL `CREATE TABLE` or the typed database form that tool accepts. One topic per memory. Update an existing memory instead of adding a near-duplicate. Keep the source link, the date the fact was confirmed, and any uncertainty. The day you save it is not the confirmation date.
 
 Do not save secrets, credentials, transcripts, copied code, or anything that can be recovered from the repository. Honor a forget request: mark the memory forgotten, do not recreate it, and say if Notion will not let you reach a copy.
 
@@ -41,7 +41,7 @@ Stop. Do not write the feature record or the memory onto the local disk. `.fstac
 
 ## Read
 
-Search memories for the project and the feature topic. Pass the short excerpts to the next skill. The coding agent, the verifier, and the advisors do not call Notion. The Orchestrator puts the excerpts in their prompts.
+Query the project Memories database for the project and the feature topic. Pass the short excerpts to the next skill. The coding agent, the verifier, and the advisors do not call Notion. The Orchestrator puts the excerpts in their prompts.
 
 ## Save a lesson
 

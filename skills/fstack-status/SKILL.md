@@ -31,7 +31,7 @@ The human names a feature, answers a question card, or asks where the work stand
 
    An escalation uses `human_decision` with `retry`, `accept`, `change_spec`, or `stop`.
 
-   A chunk in `awaiting_verification_decision` uses `human_decision` with `accept_unverified` or `stop` only. `accept_unverified` sets the chunk to `accepted_by_human`, stores the quote and the sha, and sets Accepted unverified. It is not a pass and it does not set Verified SHA. `stop` sets the feature Status to `stopped`. Write the decision on the feature page before changing any later chunk. Pull requests stay open when the feature stops.
+   A chunk in `awaiting_verification_decision` uses `human_decision` with `accept_unverified` or `stop` only. `accept_unverified` sets the chunk to `accepted_by_human`, sets `accepted_sha` to `head_sha`, stores the quote, and sets Accepted unverified. It is not a pass and it does not set Verified SHA. Release may merge `accepted_sha`. `stop` sets the feature Status to `stopped`. Write the decision on the feature page before changing any later chunk. Pull requests stay open when the feature stops.
 
    A contest of a failed chunk uses `contest` and includes the implementer's reason. That moves the chunk to `disputed` without adding another failure.
 

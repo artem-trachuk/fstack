@@ -16,17 +16,17 @@ The next rule is `release_question` or a merging rule. Stack review is already r
 
 ## Steps
 
-1. Follow `build-context` for `release`. Record `open_release` with the exact `release.command` and the map of chunk id to `verified_sha`. Set `waiting_on` kind `release`, question id `Q-<slug>-release`. Send a question card through `tldr`, keeping the command and the shas verbatim. The options are approve and stop. End the turn.
+1. Follow `build-context` for `release`. The release sha for a chunk is `verified_sha` when the chunk is verified, and `accepted_sha` when the chunk is `accepted_by_human`. A chunk with neither sha cannot be released. Record `open_release` with the exact `release.command` and the map of chunk id to release sha. Set `waiting_on` kind `release`, question id `Q-<slug>-release`. Send a question card through `tldr`, keeping the command and the shas verbatim. The options are approve and stop. End the turn.
 
-2. Accept only a direct reply of yes, approve, or approved to that question id. Vague praise is asked again. A hedge is asked again. If `release.command` or any `verified_sha` changed since the question, do not accept the old reply. Ask again.
+2. Accept only a direct reply of yes, approve, or approved to that question id. Vague praise is asked again. A hedge is asked again. If `release.command` or any release sha changed since the question, do not accept the old reply. Ask again.
 
 3. Record `approve_release`. Set the feature Status to `merging` and Release state to `merging` on the Notion feature page. Record the approval there, as described in `stubs/enforcement.md`. Do not commit it.
 
 4. For each chunk in order, by hand:
 
    - If the forge already merged it, record `merge_recorded` and continue.
-   - If the pull request head differs from `verified_sha`, record `void_release` and stop. Do not merge that sha.
-   - If its parent merged, rebase and retarget, record `restack_recorded`, then record `range_diff_recorded`. A clean diff updates `verified_sha` and the approval sha. A real difference sets `needs_verify` and you leave this skill.
+   - If the pull request head differs from the release sha, record `void_release` and stop. Do not merge that sha.
+   - If its parent merged, rebase and retarget, record `restack_recorded`, then record `range_diff_recorded`. A clean diff updates the release sha and the approval sha. A real difference on a verified chunk sets `needs_verify`. A real difference on an `accepted_by_human` chunk clears `accepted_sha` and sets `awaiting_verification_decision`. Leave this skill.
    - Record `ci_recorded`. `pending` waits. `failing` escalates and leaves already merged chunks merged. `none` means there is no CI. Do not roll back.
    - Merge that one pull request. Record `merge_recorded` with the head sha. Mark later chunks `needs_restack`.
 

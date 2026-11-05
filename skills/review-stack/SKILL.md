@@ -16,7 +16,7 @@ The next rule is `stack_review`.
 
 ## Steps
 
-1. Follow `build-context` for `review-stack`. The prompt lists every pull request and `verified_sha`.
+1. Follow `build-context` for `review-stack`. The prompt lists every pull request and its release sha: `verified_sha`, or `accepted_sha` when the chunk is `accepted_by_human`.
 
 2. Record `open_review`. Set `feature_status: awaiting_review` and `waiting_on` kind `stack_review`, question id `Q-<slug>-review`.
 

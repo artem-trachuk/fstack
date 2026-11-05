@@ -1,6 +1,6 @@
 # Resolved models
 
-setup-project writes this file to `.fstack/resolved.yaml`. It is gitignored. It holds resolved model slugs and Notion page and database ids. It is not a copy of feature state. Do not commit it. Do not copy these values into `fstack.yaml`.
+On the Cursor plugin, setup-project writes this file to `.fstack/resolved.yaml`. It is gitignored. It holds resolved model slugs and Notion page and database ids. It is not a copy of feature state. Do not put the fstack repository URL or `applied_commit` here. On Grok Bot, keep the same notes in the bot's persistent state and do not create this file in the product repository. Do not commit it. Do not copy these values into `fstack.yaml`.
 
 ```yaml
 resolved_at:

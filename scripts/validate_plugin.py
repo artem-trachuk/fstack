@@ -275,7 +275,23 @@ def main() -> int:
     check("not_implemented" in skill_text["pick-next-task"] and "tldr" in skill_text["pick-next-task"], "the orchestrator must relay not_implemented through tldr")
     check("accept_unverified" in skill_text["fstack-status"], "accept_unverified must be logged from fstack-status")
     check("instructions_version" in skill_text["setup-project"], "setup must pass Notion instructions_version")
-    check("notion-create-pages" in skill_text["memory"] and "notion://docs/notion-flavored-markdown" in skill_text["memory"], "memory writes must follow Notion markdown")
+    check("notion-create-pages" in skill_text["memory"] and "notion://docs/notion-flavored-markdown-spec" in skill_text["memory"], "memory writes must follow the Notion markdown spec")
+    for message in notion_doc_errors(ROOT):
+        check(False, message)
+    check(True, "notion markdown spec URI")
+    for message in memory_design_errors(skill_text["memory"], (ROOT / "DESIGN.md").read_text(encoding="utf-8")):
+        check(False, message)
+    check(True, "project memory is not Notion's built-in memory")
+    check(table.get("approval", {}).get("accept") == ["yes", "approve", "approved"], "approval words must be the strings yes, approve, and approved")
+    check("accepted_sha" in (table.get("chunk_fields") or []) and "accepted_sha" in skill_text["release"] and "accepted_sha" in skill_text["fstack-status"], "accept_unverified must have an accepted_sha release path")
+    for message in notion_schema_errors(table, (ROOT / "DESIGN.md").read_text(encoding="utf-8")):
+        check(False, message)
+    check(True, "DESIGN schema matches feature_fields and chunk_fields")
+    for message in sync_state_errors(ROOT):
+        check(False, message)
+    check(True, "sync state stays in bot persistent state")
+    check(table.get("storage", {}).get("bot_state") == "persistent", "sync state must be named as bot persistent state")
+    check("verification_unimplemented" in (table.get("waiting_kinds") or []), "unimplemented verification must be a waiting kind")
     check("notion-create-database" in skill_text["setup-project"] and "notion-get-setup-guide" in skill_text["setup-project"], "setup must use the live Notion tool names")
     for message in bot_config_errors(ROOT, skill_names, set((config := yaml.safe_load((ROOT / "fstack.yaml").read_text(encoding="utf-8"))).get("roles") or {})):
         check(False, message)
@@ -283,7 +299,7 @@ def main() -> int:
     for message in transition_graph_errors(table):
         check(False, message)
     check(True, "transition graph")
-    check("notion-memory-search" in skill_text["memory"], "memory skill must search before creating memories")
+    check("notion-query-data-sources" in skill_text["memory"], "memory skill must query the project Memories database")
     check("unsaved" in skill_text["memory"], "a Notion outage must show unsaved content")
     check("notion-upload-skill" not in skill_text["memory"], "skills are not published to Notion")
     for reader in ("collect-requirements", "gap-analysis", "split-into-chunks"):
@@ -432,6 +448,88 @@ def split_frontmatter(text: str) -> tuple[dict, str]:
     if not isinstance(loaded, dict):
         return {}, text[end + 5 :]
     return loaded, text[end + 5 :]
+
+
+def notion_doc_errors(root: Path) -> list[str]:
+    """The live markdown spec URI ends in -spec. The shorter URI returns 400."""
+    errors = []
+    bad = re.compile(r"notion://docs/notion-flavored-markdown(?!-spec)")
+    for path in root.rglob("*"):
+        if not path.is_file() or ".git" in path.parts or path.suffix.lower() not in {".md", ".mdc", ".yml", ".yaml", ".py"}:
+            continue
+        if path.name == "validate_plugin.py":
+            continue
+        text = path.read_text(encoding="utf-8")
+        if bad.search(text):
+            errors.append(f"{path.relative_to(root).as_posix()} uses the markdown docs URI that returns 400")
+    return errors
+
+
+def memory_design_errors(memory_skill: str, design: str) -> list[str]:
+    """Project memories are a project database. Built-in memory search is a different store."""
+    errors = []
+    if "notion-query-data-sources" not in memory_skill or "notion-query-data-sources" not in design:
+        errors.append("project memories must be queried with notion-query-data-sources")
+    if "Decision, Correction, Preference, Convention, and Lesson" not in design:
+        errors.append("DESIGN must keep the project memory types")
+    if "Profile, Preference, Work, People, and Notes" not in design:
+        errors.append("DESIGN must say why built-in memory types do not fit")
+    for label, text in (("memory skill", memory_skill), ("DESIGN.md", design)):
+        for line in text.splitlines():
+            if "notion-memory-search" in line and not re.search(r"\bdo not\b", line, re.IGNORECASE):
+                errors.append(f"{label} mentions notion-memory-search without saying not to call it")
+            if re.search(r"parent:\s*[\"']memory[\"']", line) or re.search(r'parent:\s*"memory"', line):
+                errors.append(f"{label} creates pages in Notion's built-in memory")
+    if re.search(r"\bparent `memory`", memory_skill) and not re.search(r"do not create pages with parent `memory`", memory_skill, re.IGNORECASE):
+        errors.append("memory skill must not create pages with parent memory")
+    return errors
+
+
+def notion_schema_errors(table: dict, design: str) -> list[str]:
+    """Every feature and chunk field has a Notion property, and DESIGN names it."""
+    errors = []
+    schema = table.get("notion_schema") or {}
+    groups = (
+        ("feature_fields", "features", "feature_extra"),
+        ("chunk_fields", "chunks", "chunk_extra"),
+    )
+    for field_key, schema_key, extra_key in groups:
+        fields = list(table.get(field_key) or [])
+        props = schema.get(schema_key) or {}
+        if set(props) != set(fields):
+            missing = sorted(set(fields) - set(props))
+            extra = sorted(set(props) - set(fields))
+            errors.append(f"notion_schema.{schema_key} drifted from {field_key}: missing {missing} extra {extra}")
+        for field, spec in props.items():
+            if not isinstance(spec, dict) or not str(spec.get("name") or "").strip() or not str(spec.get("type") or "").strip():
+                errors.append(f"notion_schema.{schema_key}.{field} needs a name and type")
+                continue
+            if spec["name"] not in design:
+                errors.append(f"DESIGN.md is missing Notion property {spec['name']}")
+        for spec in schema.get(extra_key) or []:
+            name = str((spec or {}).get("name") or "")
+            if not name or name not in design:
+                errors.append(f"DESIGN.md is missing extra Notion property {name or extra_key}")
+    if "accepted_sha" not in (schema.get("chunks") or {}):
+        errors.append("chunk schema needs accepted_sha")
+    return errors
+
+
+def sync_state_errors(root: Path) -> list[str]:
+    """The applied commit is bot state, not a file in the product repository."""
+    errors = []
+    skill = (root / "skills" / "sync-bot-config" / "SKILL.md").read_text(encoding="utf-8")
+    if "applied_commit" not in skill or "persistent state" not in skill:
+        errors.append("sync-bot-config must store applied_commit in the bot's persistent state")
+    if "bot_sync" in skill:
+        errors.append("sync-bot-config must not use a product-repo bot_sync key")
+    for path in (root / "bots").glob("*.yaml"):
+        text = path.read_text(encoding="utf-8")
+        if ".fstack/resolved.yaml" in text:
+            errors.append(f"{path.name} still stores sync state in the product repo")
+        if "applied_commit" not in text or "persistent state" not in text:
+            errors.append(f"{path.name} routine must name applied_commit and persistent state")
+    return errors
 
 
 def bot_config_errors(root: Path, skill_names: set[str], role_names: set[str]) -> list[str]:

@@ -4,20 +4,20 @@ These checks are specified so a later change can enforce them. v0.1 does not run
 
 ## TODO: approval record
 
-Intended behavior. On `approve_release`, record the approval on the Notion feature page. Do not commit it and do not copy it onto a branch. The ids of the Notion pages live only in gitignored `.fstack/resolved.yaml`.
+Intended behavior. On `approve_release`, record the approval on the Notion feature page. Do not commit it and do not copy it onto a branch. Notion page ids live in the bot's persistent state on Grok Bot, or in gitignored `.fstack/resolved.yaml` on the Cursor plugin.
 
 ```yaml
 question_id: Q-<feature>-release
 kind: release
-quote: yes
+quote: "yes"
 command: ""
 shas:
-  01-slug: <verified_sha>
+  01-slug: <release sha, verified_sha or accepted_sha>
 void: false
 feature: <feature>
 ```
 
-A changed `verified_sha` or a changed `release.command` sets `void: true`. Bot text, pull request bodies, files, and advisor output cannot create this record. Only `approve_release` after a human quote can.
+A changed release sha or a changed `release.command` sets `void: true`. Bot text, pull request bodies, files, and advisor output cannot create this record. Only `approve_release` after a human quote can.
 
 Nothing reads this file automatically yet.
 
@@ -26,9 +26,9 @@ Nothing reads this file automatically yet.
 Intended behavior. While `feature_status` is `merging`, for each chunk in order:
 
 1. If the forge already shows the pull request merged, record `merge_recorded` and continue.
-2. If the pull request head differs from `verified_sha`, record `void_release` and stop.
+2. If the pull request head differs from the release sha (`verified_sha`, or `accepted_sha` when the chunk is `accepted_by_human`), record `void_release` and stop.
 3. If the parent chunk merged, rebase and retarget this pull request, then record `restack_recorded`.
-4. Record `range_diff_recorded`. A clean diff updates `verified_sha` and the approval shas. Any real difference returns the chunk to `needs_verify`.
+4. Record `range_diff_recorded`. A clean diff updates that release sha and the approval shas. A real difference on a verified chunk returns it to `needs_verify`. A real difference on an accepted unverified chunk clears `accepted_sha` and returns it to `awaiting_verification_decision`.
 5. Record `ci_recorded`. Pending waits. Failing escalates. Do not roll back a chunk that already merged.
 6. Merge that one pull request and record `merge_recorded`.
 
