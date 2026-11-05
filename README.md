@@ -92,7 +92,7 @@ The prompt shape the stub will someday use is unchanged: the orchestrator builds
 | Key | Shipped value | Meaning |
 | --- | --- | --- |
 | `state.backend` | `notion` | Feature records live in the user's Notion workspace |
-| `memory.backend` | `notion` | Decisions, corrections, preferences, conventions, and lessons |
+| `memory.backend` | `notion` | Notion Memory. Lessons are Type Work. Working style is Type Preference |
 | `memory.instructions_version` | `0.0.6` | Sent on every Notion MCP call |
 | `plan_review` | `notify` | Show the plan and continue. `approve` waits for a yes |
 | `review.mode` | `end_of_stack` | One human review for the stack, then one release question |
@@ -141,7 +141,7 @@ Roles name an agent and a model. They do not list skills. The agent file is the 
 
 ## Where state lives
 
-`state.backend` and `memory.backend` are `notion`. The schema is in [DESIGN.md](DESIGN.md): a private product page, an Agent Operating Guide at version `0.0.6`, and Features, Chunks, Memories, Coverage, Graph nodes, Graph edges, and Workflow config. The graph holds durable product facts. Memory holds preferences and lessons. A feature page holds links to Decision pages, the plan, and status. Coverage rows point at graph nodes.
+`state.backend` and `memory.backend` are `notion`. The schema is in [DESIGN.md](DESIGN.md): a private product page, the user's Agent Operating Guide at version `0.0.6`, and Features, Chunks, Coverage, Graph nodes, Graph edges, and Workflow config. The graph holds durable product facts. Preferences and lessons use Notion Memory, fetched with id `"memory"`. fstack does not create a Memories database. A feature page holds links to Decision pages, the plan, and status, and mentions related memories. Coverage rows point at graph nodes. Skills stay in the git repository named by `plugin.json`. They are not saved as Notion Skills.
 
 The Orchestrator is the only role that calls Notion. It copies the chunk spec into the coding agent's launch prompt, passes the verifier its prompt and patch, and passes advisors their input pages' text. Asking the Orchestrator where the feature stands reads the Features database.
 
@@ -178,7 +178,7 @@ A chunk id is `NN-slug`. Status values and the events that change them are only 
 | `release` | Orchestrator, after review | Asks, then merges only the approved shas, then proposes memories |
 | `update-graph` | After merge, unless the feature stopped | Promotes confirmed changes into the product graph |
 | `fstack-status` | Human or a fresh session | Reads Notion, routes a reply, and reports orphaned or unlinked pages when asked |
-| `memory` | Orchestrator | Reads and writes Notion memories. Does not publish skills |
+| `memory` | Orchestrator | Reads and writes Notion Memory. Does not publish skills |
 
 ## What is not enforced yet
 

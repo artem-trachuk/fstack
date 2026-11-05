@@ -42,7 +42,7 @@ The next rule is `release_question` or a merging rule. Stack review is already r
 
 5. When every chunk is `merged`, run `release.command` only if it is non-empty and still equals the approved string. Record `release_command_recorded`. Exit 0 sets `feature_status: awaiting_graph_update`. Any other exit sets `release_state: command_failed`, escalates, and does not roll back. An empty command finishes the same way with exit 0 and no command. Do not promote the graph in this skill.
 
-6. Follow `memory` and propose lessons: decisions, corrections, preferences, conventions. These are memory, not product facts. On Grok Bot, send that proposal as a question card. Write the lessons to Notion only after the human chooses yes. If Notion is unreachable, show the unsaved lessons and stop. Then follow `update-graph`. A stopped feature is not promoted.
+6. Follow `memory` and propose lessons. A lesson is Type Work: name the product in the body and link the product or feature page. Working style is Type Preference. These are memory, not product facts. Do not add custom properties. On Grok Bot, send that proposal as a question card. Write the lessons to Notion only after the human chooses yes, then mention each new memory from the feature page. If Notion is unreachable, show the unsaved lessons and stop. Then follow `update-graph`. A stopped feature is not promoted.
 
 A human can record `retry_release` with a quote after a CI or command failure. Merged chunks stay merged.
 

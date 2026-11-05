@@ -2,7 +2,7 @@
 
 Grok Bot is the primary host. The human chats with the Orchestrator. It asks with question cards, keeps state in Notion, launches Cursor cloud agents for code, and messages the Verifier and Advisor. The Cursor plugin is a secondary host for the same skills.
 
-Skills live only in the git repository `artem-trachuk/fstack`. Bots copy them from that repo. They are not published to Notion Skills.
+This is the one deviation from Notion's official agent setup. The git repository named by the `repository` field in `plugin.json` is the single source of skill files, and bots copy them from that repo. Skills are not saved as Notion Skills, even when the human picks the Shared context layer, which covers memory and artifacts only. The Agent Operating Guide lists that repository, with its link, under Skills, and adds this line under User preferences and exclusions: Skills are kept in GitHub only. Do not save them to Notion Skills.
 
 Feature state and cross-feature memory live in the user's Notion workspace. The Orchestrator is the only role that reads or writes Notion. Coding agents, the verifier, and advisors receive excerpts in the prompts the Orchestrator writes. If Notion is unreachable, the Orchestrator stops, shows the unsaved content, and does not store it anywhere else.
 
@@ -16,10 +16,10 @@ Version of the Agent Operating Guide: `0.0.6`, published `2026-10-30`, from [Not
 
 ### Product page
 
-One private page named for the product. A product owns features, the workflow config, memory, sources, and zero or more repos. Each repo is a code location with a name, a role, an optional subpath, and a default branch. The product does not have one base commit or one pull request. Features, chunks, coverage rows, memories, and workflow pages point back with a Product relation.
+One private page named for the product. A product owns features, the workflow config, sources, and zero or more repos. Preferences and lessons live in Notion Memory, not in a database this product creates. Each repo is a code location with a name, a role, an optional subpath, and a default branch. The product does not have one base commit or one pull request. Features, chunks, coverage rows, and workflow pages point back with a Product relation.
 
-- Child page: Agent Operating Guide. It records the workspace, the database links, preferences, exclusions, and the setup version. Unconfirmed fields stay "Not set up yet".
-- Linked databases: Features, Chunks, Memories, Coverage, Graph nodes, Graph edges, Workflow config, Survey, Decision, Verification, and Debug log.
+- The Agent Operating Guide is the user's private page in a Documents database. Setup keeps an existing guide and suggests additions. A new guide uses version `0.0.6`, published `2026-10-30`, and the official sections. fstack records its product home and databases under destinations only after the human approves those additions. Skills records the repository from `plugin.json`. Other unconfirmed fields stay "Not set up yet".
+- Linked databases: Features, Chunks, Coverage, Graph nodes, Graph edges, Workflow config, Survey, Decision, Verification, and Debug log. Do not create a Memories database.
 
 ### Features
 
@@ -53,7 +53,6 @@ Property names and types come from `notion_schema.features` and `notion_schema.f
 | Nodes removed | relation | `nodes_removed`. Graph nodes this feature proposes to remove |
 | Confirmed | date | Extra. When the human confirmed the requirements page |
 | Chunks | relation | Extra |
-| Memories | relation | Extra |
 | Product | relation | Extra. The product this feature belongs to |
 
 The page body has three transient sections: Requirements, Questions, and Plan. Decisions are their own pages, related to the feature and the product. The feature page links to those pages and does not copy the entries into its body. Durable product facts are graph nodes, not sections of this page. The feature stores node relations only. Child pages hold prompts and diffs. Verification is its own page, related to the chunk. Title prompt and diff pages `prompt <action> a<attempt>` and `diff <chunk-id> a<attempt>`. Title a verification page `verification <chunk-id> a<attempt>`. The Orchestrator creates that verification page when the verifier reply arrives.
@@ -204,7 +203,7 @@ Property names come from `notion_schema.workflow` and `notion_schema.workflow_ex
 | Old | text | `old` |
 | New | text | `new` |
 
-The product page body holds code locations, sources, authoritative kinds, release policy, graph kind lists, `graph.promote`, `debug`, and standing preferences. A preference may override `plan_review`, `notify`, `graph.promote`, or `debug`. It must not override human gates or who writes Notion. Memory holds preferences and lessons. The graph holds product facts. Do not store the same fact in both.
+The product page body holds code locations, sources, authoritative kinds, release policy, graph kind lists, `graph.promote`, `debug`, and standing preferences. A preference may override `plan_review`, `notify`, `graph.promote`, or `debug`. It must not override human gates or who writes Notion. Notion Memory holds preferences and lessons. The graph holds product facts. Do not store the same fact in both.
 
 ### Debug log
 
@@ -225,46 +224,42 @@ A change row records who, when, old, and new. The Orchestrator writes it in the 
 
 The shipped verify slot binds the skill `verify`.
 
-### Memories
+### Notion Memory
 
-One topic per page in the product Memories database. These are product records, not the user's personal Notion memory.
+Preferences and lessons use Notion Memory. Fetch with id `"memory"` returns the About page and the built-in Memories database. Do not create a Memories database. Do not add Product, Source, Uncertainty, Forgotten, or Confirmed to it.
 
-Notion's built-in memory is a different database. Its types are Profile, Preference, Work, People, and Notes, and it follows the user across every agent. fstack memories are scoped to one product, point at a feature, and use Decision, Correction, Preference, Convention, and Lesson. Do not call `notion-memory-search` for fstack. Do not create fstack pages with parent `memory`.
+Recall fetches id `"memory"` first, then calls `notion-memory-search`. When the About page and a memory disagree, trust the more recent, more specific one. Link a memory inline when it informs an answer.
 
-Fetch the product database, read its `collection://` URL, and query it with `notion-query-data-sources`. Update a near-duplicate instead of adding another.
+A save uses `notion-create-pages` with `parent: "memory"`, no creation_mode, and Type set to exactly one of Profile, Preference, Work, People, or Notes. Search first and update the existing topic. A product decision or lesson is Type Work. The body names the product and links the product or feature page. Working style is Type Preference. Title the topic, not the fact. The body is short standalone sentences, refers to the human by name, says why and when it applies, and marks an untested idea as untested. A full date is a Notion date mention.
 
-| Property | Type | Use |
-| --- | --- | --- |
-| Name | title | One topic |
-| Type | select | Decision, Correction, Preference, Convention, Lesson |
-| Feature | relation | Empty when the memory is for the whole product |
-| Product | relation | The product this memory belongs to |
-| Confirmed | date | When the fact was confirmed, not merely when it was saved |
-| Source | url | Where it came from |
-| Uncertainty | text | What is still unsure |
-| Forgotten | checkbox | A forget request |
+The About page stays under about 300 words, with the sections Role, Current work, and Working preferences. Edit it when the overall picture changes, and keep what the human wrote.
 
-The body is a few sentences. It is not a transcript, a secret, copied code, or a restatement of the repository.
+To list or audit, fetch id `"memory"` for the data source URL, then run `notion-query-data-sources` in SQL mode and page through the results. To forget, delete a page that is entirely about the topic with `notion-delete-pages`, or remove only that information. Remove it from the About page too. Leave no note that restates it.
+
+A feature page mentions the memory in its body. Memory pages are not in `required_relations`.
+
+Do not save temporary progress, copied code, a repository fact, a guess, generic advice, a secret, a transcript, or instructions for agents. A reusable procedure belongs in a skill. Product facts belong in the product graph.
 
 ## Links
 
-Pages are separate. They stay connected. `required_relations` in `state/transitions.yaml` names the relation each page type must set. The product page is the root. Every other page is reachable from it by those relations. A feature page relates to its chunks and to the graph nodes it read, added, changed, or removed. A chunk relates to that feature and to the nodes it touches. A survey page relates to the product and to the nodes it refreshed. Coverage relates to its feature and its node. A decision relates to its feature. A verification relates to its chunk. A memory relates to its product. An empty required relation is an unlinked page. A page that no path from the product page reaches is an orphan. `fstack-status` reports both when asked. It does not delete them.
+Pages are separate. They stay connected. `required_relations` in `state/transitions.yaml` names the relation each page type must set. The product page is the root. Every other fstack page is reachable from it by those relations. A feature page relates to its chunks and to the graph nodes it read, added, changed, or removed. A chunk relates to that feature and to the nodes it touches. A survey page relates to the product and to the nodes it refreshed. Coverage relates to its feature and its node. A decision relates to its feature. A verification relates to its chunk. Notion Memory is linked from a feature page by a mention in the body, not by a required relation. An empty required relation is an unlinked page. A page that no path from the product page reaches is an orphan. `fstack-status` reports both when asked. It does not delete them, and it does not report a memory as unlinked.
 
 ## Notion MCP
 
 These names were checked against the live Notion MCP. Docs and skills use them with no prefix.
 
-- `notion-fetch`, including `notion://docs/memory` and `notion://docs/notion-flavored-markdown-spec`. Read the markdown spec before `notion-create-pages` or `notion-update-page`. The docs URI without `-spec` returns 400.
+- `notion-fetch`, including id `"memory"`, `notion://docs/memory`, and `notion://docs/notion-flavored-markdown-spec`. Read the markdown spec before `notion-create-pages` or `notion-update-page`. The docs URI without `-spec` returns 400.
+- `notion-memory-search` after that fetch, for a specific memory.
 - `notion-search` to find existing pages and databases.
-- `notion-query-data-sources` to read the product Memories database.
-- `notion-create-pages` and `notion-update-page` to write pages.
+- `notion-query-data-sources` in SQL mode to list Notion Memory. Page through the results.
+- `notion-create-pages` with `parent: "memory"` and no creation_mode for a memory. Type is exactly one of Profile, Preference, Work, People, or Notes. Other fstack pages are not created with that parent.
+- `notion-update-page` to edit a page and keep unrelated content.
+- `notion-delete-pages` when a memory is entirely about a forgotten topic.
 - `notion-create-database` to create a database from SQL `CREATE TABLE` or a typed database definition.
 - `notion-get-setup-guide` during setup.
 - `instructions_version` (`0.0.6`) is a parameter on every Notion tool fstack calls.
 
-`notion-complete-mcp-setup` exists and is for Notion's own skill setup. fstack does not call it. Skill files stay in git.
-
-Do not call `notion-memory-search` for product memories. If a Notion call fails, stop and show the unsaved content. Do not guess a different tool name.
+If a Notion call fails, stop and show the unsaved content. Do not guess a different tool name.
 
 ## Bots
 
