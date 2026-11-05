@@ -1,10 +1,10 @@
 # Prompt: survey-product
 
-Feature: {{feature}}
+Repository: {{feature}}
 
-Read the product at the pinned base commit. Do not edit files. Do not open a pull request. Do not write Notion.
+Read the product at one pinned commit. Do not modify it. Do not open a pull request.
 
-Map how the product works today:
+Describe current behaviour:
 
 - Features and screens
 - Routes and APIs
@@ -13,4 +13,4 @@ Map how the product works today:
 
 Every claim names a file and a line. Skip a claim you cannot point at.
 
-Base commit: {{shas}}
+Pinned commit: {{shas}}

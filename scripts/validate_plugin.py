@@ -128,8 +128,23 @@ REQUIRED_GATES = {
     "outward_messages": "require_approval",
     "collect_requirements": "manual_only",
     "coverage": "require_approval",
-    "linear_issues": "require_approval",
+    "source_write": "require_approval",
 }
+
+# Source vendors. Skills and config name roles, not products. The host fills ref and reader.
+VENDOR_NAMES = (
+    "figma",
+    "linear",
+    "jira",
+    "asana",
+    "slack",
+    "trello",
+    "clickup",
+    "miro",
+    "zeplin",
+    "confluence",
+    "productboard",
+)
 
 CLI_PHRASES = (
     "fstack next",
@@ -325,11 +340,17 @@ def main() -> int:
     check("Do not start requirements collection." in gap, "gap analysis must not start collection")
     for classification in table.get("coverage_classifications") or []:
         check(classification in gap, f"gap analysis must name {classification}")
-    check("unrequested design" in gap.lower() and "never implemented automatically" in gap.lower(), "unrequested design and conflict stay out of the automatic plan")
-    check("Never create a Linear issue" in gap, "gap analysis must not create a Linear issue")
+    check("buildable" in gap and "authoritative" in gap and "needs_decision" in gap, "gap analysis must classify from source roles")
+    check("Do not write to a source unless the human approves that write." in gap, "a source write stays behind approval")
+    check("## Inputs" in gap and "## Outputs" in gap, "gap analysis must be callable on its own")
     survey = skill_text["survey-product"]
     check("read-only" in survey.lower() and "Existing functionality" in survey and "Base SHA" in survey, "survey-product must be a read-only map stamped with the base sha")
+    check("does not prescribe" in survey.lower(), "survey-product must not prescribe a runtime")
+    check("## Inputs" in survey and "## Outputs" in survey, "survey-product must be callable on its own")
     check("reuse" in survey.lower(), "the codebase map must be reused per commit")
+    for message in vendor_name_errors(ROOT):
+        check(False, message)
+    check(True, "skills and config do not name source vendors")
     check("partial" in skill_text["split-into-chunks"] and "missing" in skill_text["split-into-chunks"] and "approved" in skill_text["split-into-chunks"].lower(), "split-into-chunks plans only approved partial and missing rows")
     check("survey" in rule_ids and rule_ids.index("survey") < rule_ids.index("gap"), "survey is ordered before gap analysis")
 
@@ -450,6 +471,31 @@ def validate_config(data: dict) -> list[str]:
             errors.append(f"roles.{name} needs an agent")
     if roles.get("implementer", {}).get("runtime") != "cloud":
         errors.append("implementer runtime must ship as cloud")
+    if data.get("authoritative_kinds") != ["requirements"]:
+        errors.append("authoritative_kinds must default to requirements")
+    sources = data.get("sources")
+    if not isinstance(sources, list) or not sources:
+        errors.append("sources must list kind, ref, and reader")
+    else:
+        kinds = []
+        for source in sources:
+            if not isinstance(source, dict):
+                errors.append("each source must be a mapping")
+                continue
+            for key in ("kind", "ref", "reader"):
+                if key not in source:
+                    errors.append(f"source {source.get('kind')} needs {key}")
+            kind = str(source.get("kind") or "")
+            if not re.fullmatch(r"[a-z][a-z0-9_]*", kind):
+                errors.append(f"source kind {kind!r} must be a role name")
+            if kind.lower() in VENDOR_NAMES:
+                errors.append(f"source kind {kind} is a vendor name")
+            kinds.append(kind)
+        if "current_product" not in kinds or "requirements" not in kinds:
+            errors.append("shipped sources must include requirements and current_product")
+        product = next((source for source in sources if isinstance(source, dict) and source.get("kind") == "current_product"), {})
+        if product.get("reader") != "survey-product":
+            errors.append("current_product reader must be the survey-product skill")
     return errors
 
 
@@ -463,6 +509,26 @@ def split_frontmatter(text: str) -> tuple[dict, str]:
     if not isinstance(loaded, dict):
         return {}, text[end + 5 :]
     return loaded, text[end + 5 :]
+
+
+def vendor_name_errors(root: Path) -> list[str]:
+    """Skills and config name source roles. Product names belong in the host's ref, not here."""
+    errors = []
+    paths = [root / "fstack.yaml", root / "DESIGN.md", root / "README.md", root / "state" / "transitions.yaml"]
+    paths += list((root / "skills").glob("*/SKILL.md"))
+    paths += list((root / "bots").glob("*.yaml"))
+    paths += list((root / "templates").rglob("*.md"))
+    paths += list((root / "rules").glob("*.mdc"))
+    paths += list((root / "agents").glob("*.md"))
+    pattern = re.compile(r"\b(" + "|".join(VENDOR_NAMES) + r")\b", re.IGNORECASE)
+    for path in paths:
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        found = sorted({match.group(0).lower() for match in pattern.finditer(text)})
+        if found:
+            errors.append(f"{path.relative_to(root).as_posix()} names a source vendor: {', '.join(found)}")
+    return errors
 
 
 def notion_doc_errors(root: Path) -> list[str]:
@@ -591,16 +657,10 @@ def bot_config_errors(root: Path, skill_names: set[str], role_names: set[str]) -
             errors.append(f"{label} connectors must be a list")
         else:
             for connector in connectors:
-                allowed = {"notion", "github", "linear", "figma"}
-                optional_ids = {"linear", "figma"}
-                if not isinstance(connector, dict) or connector.get("id") not in allowed:
-                    errors.append(f"{label} has a connector other than notion, github, linear, or figma")
+                if not isinstance(connector, dict) or connector.get("id") not in {"notion", "github"}:
+                    errors.append(f"{label} has a connector other than notion or github")
                 elif not str(connector.get("purpose") or "").strip():
                     errors.append(f"{label} connector {connector.get('id')} needs a purpose")
-                elif connector.get("id") in optional_ids and connector.get("optional") is not True:
-                    errors.append(f"{label} connector {connector.get('id')} must be optional")
-                elif connector.get("id") in {"notion", "github"} and connector.get("optional") is True:
-                    errors.append(f"{label} connector {connector.get('id')} is required")
         routines = data.get("routines")
         if not isinstance(routines, list) or not routines:
             errors.append(f"{label} needs at least one routine")
@@ -667,7 +727,7 @@ def bot_config_errors(root: Path, skill_names: set[str], role_names: set[str]) -
             if not {"opened", "pushed", "merged", "commented"} <= covered:
                 errors.append("orchestrator.yaml must listen for opened, pushed, merged, and commented pull requests")
             present = {item.get("id"): item for item in connectors if isinstance(item, dict)}
-            for required in ("notion", "github", "linear", "figma"):
+            for required in ("notion", "github"):
                 if required not in present:
                     errors.append(f"orchestrator.yaml must list the {required} connector")
             if "survey-product" not in (data.get("skills") or []):

@@ -2,11 +2,11 @@
 
 Feature: {{feature}}
 
-Build one coverage row per item. Sources are the requirements, Linear issues and their acceptance criteria, the Figma frames, and the Existing functionality page. The app source is required. The others may be empty.
+Compare the sources you were given. Each source has a kind and text. Some kinds are authoritative. Do not assume a product name for a kind.
 
-Classifications: done, partial, missing, conflict, unrequested design, undocumented behaviour.
+One coverage row per item. For each source, record whether the item is present, partial, or absent, and the evidence.
 
-Do not turn an unrequested design or a conflict into a chunk. Do not create a Linear issue.
+Classify from the roles: done, partial, missing, conflict, needs_decision, undocumented. Only partial and missing are buildable. A conflict or a needs_decision row waits for a human. Do not write to a source.
 
 ## Requirements
 
@@ -16,6 +16,6 @@ Do not turn an unrequested design or a conflict into a chunk. Do not create a Li
 
 {{open_questions}}
 
-## Base
+## Commit
 
 {{shas}}

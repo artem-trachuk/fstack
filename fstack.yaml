@@ -87,7 +87,26 @@ human_gates:
   outward_messages: require_approval
   collect_requirements: manual_only
   coverage: require_approval
-  linear_issues: require_approval
+  source_write: require_approval
+
+# Which source kinds count as authoritative. Others are inputs, not orders to build.
+authoritative_kinds: [requirements]
+
+# A source is a kind plus how this host reads it. ref and reader may be empty.
+# writer is optional. Kind is a role name, not a product name.
+sources:
+  - kind: requirements
+    ref: ""
+    reader: ""
+    writer: ""
+  - kind: design
+    ref: ""
+    reader: ""
+    writer: ""
+  - kind: current_product
+    ref: ""
+    reader: survey-product
+    writer: ""
 
 verify:
   max_failures_before_escalation: 2

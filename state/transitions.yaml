@@ -104,21 +104,25 @@ next_rules:
     action: collect_requirements
     detail: The human already asked in chat to start this feature. Do not open that skill yourself.
   - id: survey
-    when: feature_status is requirements_confirmed
+    when: feature_status is requirements_confirmed and a product repository exists
     action: survey_product
-    detail: Pin the default branch SHA. Reuse a Codebase maps page for that commit when one exists. Otherwise launch one read-only cloud agent.
+    detail: Pin the commit. Reuse the stored map for that commit when one exists. Otherwise perform one read-only survey. Do not prescribe the mechanism.
+  - id: survey_skip
+    when: feature_status is requirements_confirmed and no product repository exists
+    action: skip_survey
+    detail: Leave current_product absent. Gap analysis compares the other sources.
   - id: survey_wait
     when: feature_status is surveying
     action: resume_survey
-    detail: Resume that agent. Do not launch a second survey. File the map only from its report.
+    detail: Resume that read-only survey. Do not start a second one. File the map only from its result.
   - id: gap
     when: feature_status is surveyed
     action: gap_analysis
-    detail: Build the coverage table from the requirements, Linear, Figma, and the survey. The survey is required. The other sources may be empty.
+    detail: Compare the sources that are present. Classifications come from authoritative_kinds, not from source names. current_product is the stored survey when a repository exists.
   - id: coverage_gate
     when: feature_status is awaiting_coverage_approval
     action: wait_for_coverage_approval
-    detail: The human approves which rows may become chunks. Only approved partial and missing rows are planned. Unrequested design and conflict are not planned unless the human already chose implement and this gate approves that row.
+    detail: The human approves which rows may become chunks. Only approved partial and missing rows are planned. needs_decision, conflict, and undocumented rows are not planned unless the human chose implement and this gate approves that row.
   - id: split
     when: feature_status is ready_to_plan and there are no chunks
     action: split_into_chunks
@@ -243,32 +247,37 @@ events:
     skill: survey-product
     from: [requirements_confirmed]
     to: [surveying]
-    guard: record the agent id and the pinned base sha before waiting. The agent is read-only and does not write Notion.
+    guard: record the pinned commit before waiting. The read is read-only. Only the orchestrator writes Notion.
   - name: survey_filed
     skill: survey-product
     from: [requirements_confirmed, surveying]
     to: [surveyed]
-    guard: write or reuse the Existing functionality page for this base sha. Only the orchestrator writes Notion.
+    guard: write or reuse the Existing functionality page for this commit. Only the orchestrator writes Notion.
+  - name: survey_skipped
+    skill: survey-product
+    from: [requirements_confirmed]
+    to: [surveyed]
+    guard: no repository. current_product stays absent.
   - name: record_coverage
     skill: gap-analysis
     from: [surveyed]
     to: [questions_open, awaiting_coverage_approval]
-    guard: one Coverage row per item. conflict, unrequested design, and undocumented behaviour open one question card. Otherwise open the coverage gate. Do not plan chunks here.
+    guard: one Coverage row per item, with a presence entry per source. needs_decision, conflict, and undocumented open one question card. Otherwise open the coverage gate. Do not plan chunks here.
   - name: answer_coverage_questions
     skill: fstack-status
     from: [questions_open]
     to: [questions_open, awaiting_coverage_approval]
-    guard: options are implement, add_to_linear, skip, and defer. implement makes the row missing. skip and defer are not chunks. A pending Linear draft stays on questions_open.
-  - name: linear_draft_proposed
+    guard: options are implement, write_back, skip, and defer. implement makes the row buildable. skip and defer are not chunks. A pending source write stays on questions_open.
+  - name: source_write_proposed
     skill: fstack-status
     from: [questions_open]
     to: [questions_open]
-    guard: save the draft text on the row. Do not create a Linear issue in this event.
-  - name: linear_issue_created
+    guard: save the proposed text on the row. Do not call the source writer in this event.
+  - name: source_write_applied
     skill: fstack-status
     from: [questions_open]
     to: [awaiting_coverage_approval]
-    guard: create the issue only after a direct yes for that draft. No leaves the draft in Notion and creates nothing. Then open the coverage gate.
+    guard: call the source writer only after a direct yes, and only when that source has a writer. No, or no writer, leaves the text on the row. Then open the coverage gate.
   - name: approve_coverage
     skill: fstack-status
     from: [awaiting_coverage_approval]
@@ -513,14 +522,11 @@ notion_schema:
   coverage:
     item: {name: Name, type: title}
     base_sha: {name: Base SHA, type: text}
-    source: {name: Source, type: select}
-    in_design: {name: In design, type: text}
-    in_requirements: {name: In requirements, type: text}
-    in_app: {name: In app, type: text}
+    presences: {name: Presences, type: text}
     classification: {name: Classification, type: select}
     next_action: {name: Next action, type: select}
     decision: {name: Decision, type: select}
-    linear_draft: {name: Linear draft, type: text}
+    write_back: {name: Write-back, type: text}
     approved: {name: Approved, type: checkbox}
   coverage_extra:
     - {name: Feature, type: relation}
@@ -528,28 +534,25 @@ notion_schema:
 coverage_fields:
   - item
   - base_sha
-  - source
-  - in_design
-  - in_requirements
-  - in_app
+  - presences
   - classification
   - next_action
   - decision
-  - linear_draft
+  - write_back
   - approved
 
 coverage_classifications:
   - done
   - partial
   - missing
+  - needs_decision
   - conflict
-  - unrequested_design
-  - undocumented_behaviour
+  - undocumented
 
 waiting_kinds:
   - questions
   - coverage_questions
-  - linear_draft
+  - source_write
   - coverage_approval
   - plan
   - stack_review

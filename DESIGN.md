@@ -87,7 +87,7 @@ The page body has Spec, Acceptance criteria, and Out of scope. The coding agent 
 
 ### Codebase maps
 
-One page per pinned base commit, shared by later features. The title starts with `Existing functionality`. Base SHA is the commit. The body is the survey: features and screens, routes and APIs, the data model, and flags, each with a file and a line. Only the Orchestrator writes this page. The read-only cloud agent does not.
+One page per pinned commit, shared by later calls. The title starts with `Existing functionality`. Base SHA is the commit. The body is the survey: features and screens, routes and APIs, the data model, and flags, each with a file and a line. The read is read-only. The survey skill does not prescribe how the read runs. Only the caller that owns the page writes it.
 
 ### Coverage
 
@@ -97,18 +97,15 @@ One page per item, in the Coverage database. Property names come from `notion_sc
 | --- | --- | --- |
 | Name | title | `item` |
 | Feature | relation | Extra. The feature this row belongs to |
-| Base SHA | text | `base_sha`. The survey commit |
-| Source | select | `source`. requirements, linear, figma, or app |
-| In design | text | `in_design`. Evidence, or empty |
-| In requirements | text | `in_requirements`. Evidence from the requirements page or Linear, or empty |
-| In app | text | `in_app`. File and line from the survey, or empty |
-| Classification | select | `classification`. done, partial, missing, conflict, unrequested_design, undocumented_behaviour |
+| Base SHA | text | `base_sha`. The survey commit, or empty when there was no survey |
+| Presences | text | `presences`. One entry per source kind that was compared: present, partial, or absent, plus evidence |
+| Classification | select | `classification`. done, partial, missing, needs_decision, conflict, undocumented |
 | Next action | select | `next_action`. plan, question, or none |
-| Decision | select | `decision`. pending, implement, add_to_linear, skip, defer, approved, or dropped |
-| Linear draft | text | `linear_draft`. Empty until a draft is proposed |
+| Decision | select | `decision`. pending, implement, write_back, skip, defer, approved, or dropped |
+| Write-back | text | `write_back`. Proposed text for a source writer. Empty until a human asks for one |
 | Approved | checkbox | `approved`. Set only by the coverage gate |
 
-A chunk is planned only from an approved row whose classification is partial or missing. An unrequested design and a conflict are not planned unless the human chose implement and the gate then approved that row.
+A chunk is planned only from an approved buildable row, `partial` or `missing`. `needs_decision`, `conflict`, and `undocumented` are not planned unless the human chose implement and the gate then approved that row. Writing the decision back to a source uses that source's writer, and only after approval.
 
 ### Memories
 
@@ -150,7 +147,7 @@ Do not call `notion-memory-search` for project memories. If a Notion call fails,
 
 Grok Bot is the primary host. `bots/<role>.yaml` is the config. Version `0.1`. The repository stays the source of the skill files. A bot runs `sync-bot-config` on demand and on the cron in its config. It compares the default-branch commit with the repository URL and applied commit in its own persistent state, then copies skills into its library as `<slug>/SKILL.md` folders, updates its profile, and adds, updates, or removes routines. That pair is not written into the product repository. It asks before adding a connector.
 
-The Orchestrator lists Linear and Figma as optional connectors. They are not connected until the human approves. It messages teammates by the profile `name` in their config. The handoff text starts with `fstack-handoff`. The reply starts with `fstack-reply`. The Verifier answers `ask: verdict`. The Advisor answers `ask: critique`. Neither has Notion or GitHub connectors.
+The Orchestrator reads sources through whatever reader the project config names. It messages teammates by the profile `name` in their config. The handoff text starts with `fstack-handoff`. The reply starts with `fstack-reply`. The Verifier answers `ask: verdict`. The Advisor answers `ask: critique`. Neither has Notion or GitHub connectors.
 
 A pull-request routine on the Orchestrator listens for opened, pushed, merged, and commented events on `fstack/` branches. The yaml key is quoted `"on"` because an unquoted `on` is a YAML boolean. The public routine docs confirm GitHub events and that the schedule uses Settings, Bot, Timezone. They do not publish the event payload fields, so the bot maps those four words onto the host trigger.
 

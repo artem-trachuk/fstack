@@ -1,75 +1,66 @@
 ---
 name: gap-analysis
 description: >
-  Build a coverage table from the requirements, Linear, Figma, and the product survey.
-  Use when feature_status is surveyed, or when the human is answering a coverage question.
-  Only requirement-backed partial and missing rows can become chunks, and only after the human approves them.
-  Do not start requirements collection. Do not implement unrequested design or a conflict.
+  Compare whatever sources are present and classify each item from those roles.
+  Use when two or more sources should be compared, or when a feature status is surveyed.
+  Only buildable items can become chunks, and only after the human approves them.
+  Do not start requirements collection. Do not write to a source without approval.
 ---
 
 # Gap analysis
 
-Compare three sources. The codebase is required. The others are optional.
+This skill stands alone. Give it the sources that are present. It returns a coverage table. It does not read a repository and it does not start `survey-product`.
 
-## Sources
+## Inputs
 
-- Requirements written by `collect-requirements`. Optional. An empty page means this source has no rows.
-- Linear, through the Linear connector: the project, its issues, and their acceptance criteria. Optional. If the connector is not connected, say so and continue. Do not block.
-- Design from Figma, through the Figma connector: frames and components. Optional. If Figma is not connected, ask the human for a link or a short description, then continue. A missing design is an empty column, not a stop.
-- The current app, from the Existing functionality page for this base SHA. Required. If that page is missing, stop and follow `survey-product`. Do not describe the app from memory.
+- `sources` from config. Each entry has `kind`, `ref`, and `reader`. `writer` is optional. A source is present when its reader returns content. Empty `ref` and `reader` mean the host may still pass pasted content. If nothing was read, the source is absent.
+- `authoritative_kinds` from config. The shipped default is `requirements`. A kind not in that list is not authoritative.
+- Kinds are names such as `requirements`, `design`, and `current_product`. Others are allowed. The kind is not a product name, and this skill does not care which connector, link, or paste produced the text.
 
-## When to use
+`current_product` is the stored survey for one commit. If a repository exists and that survey is missing, stop and tell the caller to run `survey-product`. Do not describe the product from memory. If no repository exists, `current_product` is absent and the comparison uses the other sources.
 
-Status is `surveyed`. If it is still `requirements_confirmed` or `surveying`, stop. The survey has not been filed.
+## Outputs
 
-## Coverage row
+One coverage row per item. The same item from two sources is one row. Base SHA is the survey commit, or empty when there was no survey.
 
-One row per item from any source. The same item from two sources is one row.
+Each row has one presence entry per source that was compared: the kind, whether the item is present, partial, or absent, and the evidence. Presence entries live in the row body. They are not fixed columns.
 
-| Column | Meaning |
-| --- | --- |
-| Item | The short name |
-| In design | Evidence from Figma, or empty |
-| In requirements | Evidence from the requirements page or from Linear, or empty |
-| In app | Evidence from the survey, with file and line, or empty |
-| Classification | One of the six names below |
-| Next action | `plan`, `question`, or `none` |
+Then a classification, from the rules below, and a next action: `plan`, `question`, or `none`.
 
-Classifications:
+## Rules
 
-- `done`. The app matches the requirement.
-- `partial`. The requirement is only partly in the app.
-- `missing`. It is required and designed, and it is not built.
-- `conflict`. The app or the design contradicts a requirement.
-- `unrequested_design`. It is in Figma and not in Linear or the requirements. A new button is this.
-- `undocumented_behaviour`. It is in the app and in no requirement.
+Apply these in order. Do not special-case a source name.
 
-Next action:
+1. Present in `current_product` and matching an authoritative source: `done`. Next action `none`.
+2. Backed by an authoritative source and absent from `current_product`: `missing`. Partly present in `current_product`: `partial`. Both are buildable. Next action `plan`.
+3. Two present sources contradict each other: `conflict`. Next action `question`.
+4. Present only in a non-authoritative source, with no authoritative backing: `needs_decision`. Next action `question`.
+5. Present in `current_product` and in no authoritative source: `undocumented`. Next action `question`.
 
-- `done` is `none`. It does not become a chunk.
-- `partial` and `missing` are `plan`. They are the only requirement-backed rows that can become chunks, and only after `approve_coverage`.
-- `conflict`, `unrequested_design`, and `undocumented_behaviour` are `question`. An unrequested design and a conflict are never implemented automatically. Undocumented behaviour is not a chunk either.
+If `current_product` is absent, do not use rules 1, 2, or 5. An authoritative item is then not buildable, because the product was not surveyed. Say that on the row.
+
+`done` is not a chunk. `needs_decision`, `conflict`, and `undocumented` are not chunks until the human accepts one as a requirement and the coverage gate approves it. A conflict is never implemented from the table alone.
 
 ## Steps
 
-1. Follow `memory`. Then follow `build-context` for `gap-analysis`. If Notion is unreachable, show the unsaved table and stop.
+1. Follow `memory` when a feature is in progress. Follow `build-context` for `gap-analysis` when a feature page exists. If this call has no feature, compare the inputs and return the table. Do not write a feature status.
 
-2. Read the four sources. Write one Coverage row per item, with Base SHA set to the survey commit. Record `record_coverage`.
+2. Read every present source. Write one Coverage row per item. Record `record_coverage` when a feature is in progress.
 
-3. Follow `advisors` for `planner_review` once for this table. Fold in a critique that names a real missing row or a wrong classification. A failed call does not stop you.
+3. Follow `advisors` for `planner_review` once when a feature is in progress. A failed call does not stop you. Skip the advisor when this call has no feature.
 
-4. If any row is `conflict`, `unrequested_design`, or `undocumented_behaviour`, set Status to `questions_open` and `waiting_on` kind `coverage_questions`, question id `Q-<slug>-coverage`. Send one question card through `tldr` for all of those rows. The options on every row are `implement`, `add_to_linear`, `skip`, and `defer`. End the turn. Do not plan chunks in this turn.
+4. Batch every `question` row into one card for the human. Options for each row: `implement`, `write_back`, `skip`, and `defer`. `implement` makes the row authoritative and buildable: set the classification to `missing` or `partial`. `skip` and `defer` are not chunks. `write_back` stores proposed text on the row and does not send it. End the turn when a feature is waiting. Do not plan chunks in this turn.
 
-   If there are no such rows, set Status to `awaiting_coverage_approval` and send the coverage gate in the next step. Do not skip the gate.
+5. The coverage gate lists the buildable rows, `partial` and `missing`, including rows the human marked `implement`. The options are approve and stop. `approve_coverage` is recorded by the caller that owns the feature. When this skill is used alone, return the table and the proposed questions. Do not approve them yourself.
 
-5. The coverage gate lists every row whose classification is `partial` or `missing`, including a row the human marked `implement` (that answer makes it requirement-backed, so set its classification to `missing` if it was not already). Set `waiting_on` kind `coverage_approval`, question id `Q-<slug>-coverage-approve`. The options are approve and stop. End the turn. `approve_coverage` is recorded by `fstack-status`.
-
-`skip` and `defer` do not become chunks. `add_to_linear` does not become a chunk by itself. It saves a Linear draft on the row. Creating that issue waits for a separate yes. Never create a Linear issue without that approval.
+A `write_back` is sent only by the source's `writer`, and only after the human approves that text. If the source has no writer, keep the text on the row and do not invent a destination. Do not write to a source unless the human approves that write.
 
 ## Events
+
+Record these only when a feature is in progress.
 
 - `record_coverage`
 
 ## Next
 
-Stop while a question is open. `split-into-chunks` runs only after Status is `ready_to_plan`.
+Return the table to the caller. Stop while a feature question is open. `split-into-chunks` is a separate skill. Call it only with approved buildable rows.

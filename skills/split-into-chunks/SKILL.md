@@ -25,7 +25,7 @@ Allowed files are concrete paths or globs. They must not include `.fstack/`. One
 
 1. Follow `memory` and search for memories that bear on the plan. Then follow `build-context` for `split-into-chunks`. If Notion is unreachable, show the unsaved plan and stop.
 
-2. Read Coverage rows for this feature. Plan a chunk only when Approved is set and the classification is `partial` or `missing`. Skip `done`, `conflict`, `unrequested_design`, `undocumented_behaviour`, `skip`, and `defer`. An unrequested design is not a chunk unless the human chose `implement` and the coverage gate then approved that row as `missing`. If no row qualifies, tell the human there is nothing to build. Set `waiting_on` kind `plan`, question id `Q-<slug>-empty-plan`, options stop or describe a change. Do not record `save_plan` and do not set `building`. Do not launch an implementer.
+2. Read the approved buildable rows you were given. Inside a feature, that is Coverage rows whose Approved flag is set and whose classification is `partial` or `missing`. Skip `done`, `conflict`, `needs_decision`, `undocumented`, `skip`, and `defer`. A decision row becomes buildable only after the human chose `implement` and the coverage gate approved it. If no row qualifies, tell the human there is nothing to build. Set `waiting_on` kind `plan`, question id `Q-<slug>-empty-plan`, options stop or describe a change. Do not record `save_plan` and do not set `building`. Do not launch an implementer. When this skill is called alone, split the rows you were given and return the plan. Do not look for a feature status.
 
    Write the Plan section and one Chunks page per planned row, as in `DESIGN.md`. Record `default_branch` and `default_branch_sha` on the feature. The base SHA is the survey commit.
 

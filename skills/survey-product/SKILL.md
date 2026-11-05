@@ -1,46 +1,52 @@
 ---
 name: survey-product
 description: >
-  Map how the product works today and save that map on a Notion page stamped with the base SHA.
-  Use when feature_status is requirements_confirmed or surveying.
-  Read-only. The cloud agent does not write Notion, edit the product, or open a pull request.
+  Describe how a product behaves at one pinned commit and store that description with the commit.
+  Use when a repository should be surveyed, on its own or before comparing sources.
+  Read-only. The skill does not prescribe which mechanism performs the read.
 ---
 
 # Survey the product
 
-Look at the product before gap analysis. Requirements alone are not enough.
+This skill stands alone. A feature workflow can call it. Another workflow can call it and ignore the rest of fstack.
 
-## When to use
+## Inputs
 
-The next rule is `survey_product` or `resume_survey`. Do not start this from gap analysis. Do not start it before the human has confirmed requirements.
+- A repository ref. If there is no repository, return "no product source" and stop. Do not invent a map.
+- A pinned commit. Do not survey a moving branch tip.
 
-## What the map contains
+## Outputs
 
-Features and screens, routes and APIs, the data model, and flags. Every claim has a file and a line. A claim without a file and a line is not written down.
+- A stored description of current behaviour: features and screens, routes and APIs, the data model, and flags.
+- Every claim has a file and a line. A claim without both is left out.
+- The store is keyed by the commit. A later call for the same commit returns the stored page and does not read the repository again.
+
+## Read-only
+
+The read does not modify the product and does not open a pull request. This skill does not prescribe a runtime, a connector, or a product. The host decides how the read happens. Only the caller that owns Notion writes the page.
 
 ## Steps
 
-1. Read the default branch SHA. That is the pinned base commit. Record it as `default_branch_sha` on the feature if it is empty. Do not survey a moving branch tip.
+1. If this call has no repository, return "no product source".
 
-2. Search the Codebase maps database for a page whose Base SHA is that commit. If one exists, link it to this feature as Existing functionality, record `survey_filed` with reused set, set Status to `surveyed`, and stop. Do not launch another agent. Later features reuse the same page.
+2. Resolve the pinned commit. Search the stored maps for that commit. If one exists, reuse it and return it. When a feature is in progress, link that page to the feature, record `survey_filed` with reused set, set Status to `surveyed`, and stop.
 
-3. If no page exists, follow `build-context` for `survey-product`. Record `survey_launched` with the agent id before you wait. Set Status to `surveying`. Launch one read-only Cursor cloud agent on the product repository at that pinned commit.
+3. When a feature is in progress and no stored map exists, record `survey_launched` and the pinned commit, set Status to `surveying`, and hand the read to the host. End the turn. Do not start a second read for the same commit.
 
-   On Grok Bot, launch the cloud agent. Do not clone the repository. Do not write product code on the bot computer. The agent reads files through the GitHub connector. It does not open a pull request and it does not push. When the run finishes you are revived with its report. To change a running survey, send a follow-up. Do not start a second agent.
+4. When the read returns, write one Codebase maps page titled `Existing functionality` plus the short commit. Set Base SHA to that commit. The body is the description. If a feature is in progress, link the page and record `survey_filed`, then set Status to `surveyed`. If this call had no feature, return the page and do not change a feature status.
 
-   On the Cursor plugin, start a read-only cloud agent at the same commit when the session can. It must not edit files.
+5. If the read fails, do not invent a map. Show the failure and stop.
 
-   The agent does not open Notion. You are the only writer.
-
-4. On resume, if the agent is still running, end the turn. If it failed and there is no report, record that and stop. Show the human the failure through `tldr`. Do not invent a map.
-
-5. Write one Codebase maps page titled `Existing functionality` plus the short SHA. Set Base SHA to the pinned commit. The body is the report: features and screens, routes and APIs, data model, and flags, each with file and line. Link that page to the feature. Record `survey_filed`. Set Status to `surveyed`.
+When the feature flow has no repository, record `survey_skipped`, set Status to `surveyed`, and leave current_product absent.
 
 ## Events
 
+Record these only when a feature is in progress.
+
 - `survey_launched`
 - `survey_filed`
+- `survey_skipped`
 
 ## Next
 
-Return to `pick-next-task`. Gap analysis runs only after Status is `surveyed`.
+Return the stored page to the caller. Do not start gap analysis yourself.

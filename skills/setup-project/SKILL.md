@@ -23,7 +23,7 @@ The fstack repository is the `repository` field in `plugin.json`. On Grok Bot, r
 
 1. If `fstack.yaml` is missing, copy the plugin's `fstack.yaml` into the project root. If it exists, leave it. Do not rewrite it to store resolved slugs.
 
-2. Read `fstack.yaml`. Stop if `version` is not `0.1` or `state_version` is not `1`, and say the project must be migrated. Stop if `state.backend` or `memory.backend` is not `notion`. Stop if `human_gates` differs from merge, release, outward_messages, coverage, and linear_issues `require_approval`, or `collect_requirements` `manual_only`. Do not silently change those keys.
+2. Read `fstack.yaml`. Stop if `version` is not `0.1` or `state_version` is not `1`, and say the project must be migrated. Stop if `state.backend` or `memory.backend` is not `notion`. Stop if `human_gates` differs from merge, release, outward_messages, coverage, and source_write `require_approval`, or `collect_requirements` `manual_only`. Do not silently change those keys. `sources` entries have `kind`, `ref`, and `reader`. Do not put a product name in `kind`.
 
 3. On the Cursor plugin, ensure `.gitignore` contains a `.fstack/` line. Append that line when it is missing. That line is a guard for machine-specific config. It is the only fstack edit that belongs in the repository. Do not commit feature files. Feature state is not written under `.fstack/`. On Grok Bot, do not clone the product repository to edit that file. The same guard still belongs in the product repository when a human has a checkout.
 

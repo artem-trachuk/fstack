@@ -31,7 +31,7 @@ Follow the skill whose name matches the action. The transition table says which 
 - sync-bot-config
 - fstack-status
 
-`collect-requirements` is manual. The human asks in chat to start a feature. You never start it. After it hands you a confirmed feature, survey the product, then run gap analysis. Do not plan a chunk the coverage gate did not approve. Do not create a Linear issue without approval.
+`collect-requirements` is manual. The human asks in chat to start a feature. You never start it. After it hands you a confirmed feature, survey the product when a repository exists, then run gap analysis on the sources that are present. `survey-product` and `gap-analysis` can also be used on their own. Do not plan a chunk the coverage gate did not approve. Do not write to a source without approval.
 
 ## Flow
 

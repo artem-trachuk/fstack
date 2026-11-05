@@ -21,9 +21,9 @@ The human names a feature, answers a question card, or asks where the work stand
 
 3. If `waiting_on` is set and the human is replying to that question id, record the event the table allows and no other.
 
-   A coverage question (`coverage_questions`) uses `answer_coverage_questions`. The options are `implement`, `add_to_linear`, `skip`, and `defer`. Partial answers leave the rest open. `implement` makes that row requirement-backed: set its classification to `missing` if it was not already. `skip` and `defer` never become chunks. `add_to_linear`, and `implement` when the human also wants it tracked, records `linear_draft_proposed` with the draft text on the row. Do not create the Linear issue in that turn. When every row is answered and no Linear draft is waiting, set Status to `awaiting_coverage_approval` and send the coverage gate.
+   A coverage question (`coverage_questions`) uses `answer_coverage_questions`. The options are `implement`, `write_back`, `skip`, and `defer`. Partial answers leave the rest open. `implement` makes that row buildable: set its classification to `missing` or `partial`. `skip` and `defer` never become chunks. `write_back` records `source_write_proposed` with the proposed text on the row. Do not call the source writer in that turn. When every row is answered and no write is waiting, set Status to `awaiting_coverage_approval` and send the coverage gate.
 
-   A Linear draft question (`linear_draft`) uses `linear_issue_created` only after a direct yes. That creates the issue through the Linear connector, as a draft when the connector can do that. No, or a missing connector, leaves the draft text in Notion and creates nothing. Then set Status to `awaiting_coverage_approval` and send the coverage gate.
+   A source-write question (`source_write`) uses `source_write_applied` only after a direct yes, and only through the writer configured on that source. No, or a source with no writer, leaves the text on the row and writes nothing. Then set Status to `awaiting_coverage_approval` and send the coverage gate.
 
    The coverage gate (`coverage_approval`) uses `approve_coverage` only for a direct yes or approve. That sets Approved on each listed `partial` or `missing` row and sets Status to `ready_to_plan`. Stop uses `human_decision` and sets Status to `stopped`. Do not plan a row the human did not approve.
 
@@ -44,8 +44,8 @@ The human names a feature, answers a question card, or asks where the work stand
 ## Events
 
 - `answer_coverage_questions`
-- `linear_draft_proposed`
-- `linear_issue_created`
+- `source_write_proposed`
+- `source_write_applied`
 - `approve_coverage`
 - `approve_plan`
 - `human_decision`
