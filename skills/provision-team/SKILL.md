@@ -8,6 +8,8 @@ description: >
 
 # Provision the team
 
+Follow the debug-log contract.
+
 The human creates only the Orchestrator. This skill provisions the other roles. It uses host capabilities by name: create teammate, update teammate profile, message teammate, and this bot's persistent state. It stores no bot id in the repo and no path on a machine.
 
 ## When to use

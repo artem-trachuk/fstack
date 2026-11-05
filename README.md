@@ -101,6 +101,7 @@ The prompt shape the stub will someday use is unchanged: the orchestrator builds
 | `authoritative_kinds` | `requirements` | Source kinds that can make an item buildable |
 | `sources` | kind, ref, reader | Inputs. `ref` and `reader` are how this host reads that kind. `writer` is optional |
 | `workflow.slots` | skill per slot | Repo default. A Notion product page overrides it, and a feature page overrides the product |
+| `debug` | `false` | Trace in the product Debug log. A product page or a feature override may turn it on |
 
 `setup-product` creates a Workflow config database and seeds it from those repo defaults. At session start the Orchestrator reads the feature override, then the product page, then `fstack.yaml`, and records the binding and config version it used. You can say "use skill X for verification" or "for this feature only, skip survey". It checks that the skill is in the library and that its contract matches the slot, confirms in one line, and writes a change log entry. Human gates stay in the repo. The verify slot ships bound to `verify`.
 

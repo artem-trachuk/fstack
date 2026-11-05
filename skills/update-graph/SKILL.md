@@ -9,6 +9,8 @@ description: >
 
 # Update the graph
 
+Follow the debug-log contract.
+
 The graph is the product's accumulating knowledge. This skill writes that knowledge. A feature page keeps only links to Decision pages, the plan, and status.
 
 ## Contract

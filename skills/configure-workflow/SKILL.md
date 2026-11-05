@@ -8,11 +8,13 @@ description: >
 
 # Configure workflow
 
+Follow the debug-log contract.
+
 Slots choose skills. They do not choose policy.
 
 ## Inputs
 
-- The repo defaults in `fstack.yaml` wherever that file lives, or the Notion copy when the product has no file: `workflow.slots`, `code_locations`, `release_policy`, `sources`, and `authoritative_kinds`.
+- The repo defaults in `fstack.yaml` wherever that file lives, or the Notion copy when the product has no file: `workflow.slots`, `code_locations`, `release_policy`, `sources`, `authoritative_kinds`, and `debug`.
 - The product Workflow config page in Notion.
 - The feature override page, when a feature is in progress.
 - The human's request, when they are changing a binding.
@@ -53,12 +55,15 @@ When the human asks what is configured, list each slot, the effective skill, the
 
 Parameters are an optional map the skill reads, such as `{env: staging}`. Notes are optional text. Neither can carry a human gate.
 
-Standing preferences may set `plan_review`, `notify`, or `graph.promote` on the product page. The same precedence applies. They are not gates. `graph.promote` decides whether `update-graph` waits for a yes. It does not change merge, release, or who writes Notion.
+Standing preferences may set `plan_review`, `notify`, `graph.promote`, or `debug` on the product page, or on a feature override. The same precedence applies. They are not gates. `graph.promote` decides whether `update-graph` waits for a yes. It does not change merge, release, or who writes Notion.
+
+`debug` ships false. "Turn debug on" or "turn debug off" sets that flag for the product, or for this feature only when the human says so. Record `debug_toggled` in the workflow change log with the old value and the new value. Then follow `debug-log`. Turning debug on writes that toggle as the first entry. Turning it off writes that one entry and then stops.
 
 ## Events
 
 - `workflow_loaded`
 - `workflow_changed`
+- `debug_toggled`
 
 ## Next
 

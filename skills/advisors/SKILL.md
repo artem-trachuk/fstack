@@ -8,6 +8,8 @@ description: >
 
 # Advisors
 
+Follow the debug-log contract.
+
 A second opinion. The caller decides what to do with it.
 
 ## When to use

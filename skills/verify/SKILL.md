@@ -8,6 +8,8 @@ description: >
 
 # Verify
 
+Follow the debug-log contract.
+
 ## Contract
 
 Inputs: the verify prompt and the patch for this attempt, plus any slot parameters.

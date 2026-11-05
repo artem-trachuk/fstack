@@ -8,6 +8,8 @@ description: >
 
 # Pick the next task
 
+Follow the debug-log contract.
+
 Apply `next_rules` in `state/transitions.yaml` from top to bottom. The first rule whose `when` matches is the only action. Do not skip ahead to release while review is still open.
 
 ## When to use

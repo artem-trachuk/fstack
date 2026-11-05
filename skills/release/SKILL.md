@@ -9,6 +9,8 @@ description: >
 
 # Release
 
+Follow the debug-log contract.
+
 ## Contract
 
 Inputs: the approved review, the release command, and the release shas, plus any slot parameters.

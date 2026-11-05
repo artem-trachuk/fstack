@@ -100,6 +100,9 @@ release_policy:
   mode: all_or_none
   order: []
 
+# Off by default. A product page or a feature override may turn it on.
+debug: false
+
 # Product graph. Kinds are open; a product page may add more. promote is a preference, not a fixed gate.
 graph:
   promote: require_approval

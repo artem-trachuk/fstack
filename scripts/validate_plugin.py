@@ -33,6 +33,7 @@ CORE_SKILLS = {
     "configure-workflow",
     "update-graph",
     "provision-team",
+    "debug-log",
 }
 
 TOKENS = {
@@ -428,6 +429,11 @@ def main() -> int:
     check("\n- advisors\n" not in advisor_agent, "the Cursor advisor agent must not list the advisors skill")
     facing = (ROOT / "rules" / "human-facing.mdc").read_text(encoding="utf-8")
     check("unsaved Notion payload" in facing, "human-facing must exempt unsaved payloads")
+    check(yaml.safe_load((ROOT / "fstack.yaml").read_text(encoding="utf-8")).get("debug") is False, "debug must ship off")
+    for skill_path in (ROOT / "skills").glob("*/SKILL.md"):
+        check("Follow the debug-log contract." in skill_path.read_text(encoding="utf-8"), f"{skill_path.parent.name} must follow the debug-log contract")
+    check("debug_toggled" in skill_text["configure-workflow"], "turning debug on or off is a change-log event")
+    check("export the debug log" in skill_text["fstack-status"], "fstack-status must export a debug trace")
 
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     for heading in ("## Install", "## Quick start", "## Flow", "## Configuration", "## Workspace", "## Adding a bot or a skill"):
@@ -633,6 +639,7 @@ def relation_declaration_errors(table: dict, design: str) -> list[str]:
         "verification",
         "memory",
         "workflow",
+        "debug_log",
     }
     if set(required) != expected:
         errors.append(f"required_relations must name {sorted(expected)}")
@@ -650,6 +657,7 @@ def relation_declaration_errors(table: dict, design: str) -> list[str]:
         "verification": ("verification", "verification_extra"),
         "memory": ("memory", "memory_extra"),
         "workflow": ("workflow", "workflow_extra"),
+        "debug_log": ("debug_log", "debug_log_extra"),
     }
     optional = table.get("optional_relations") or {}
     for entity, names in optional.items():
@@ -877,6 +885,7 @@ def notion_schema_errors(table: dict, design: str) -> list[str]:
         ("decision_fields", "decision", "decision_extra"),
         ("verification_fields", "verification", "verification_extra"),
         ("memory_fields", "memory", "memory_extra"),
+        ("debug_log_fields", "debug_log", "debug_log_extra"),
         ("workflow_fields", "workflow", "workflow_extra"),
     )
     for field_key, schema_key, extra_key in groups:

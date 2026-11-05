@@ -8,6 +8,8 @@ description: >
 
 # Escalate
 
+Follow the debug-log contract.
+
 The chunk stops. The human chooses. Record `waiting_on` before you end the turn.
 
 ## When to use

@@ -9,6 +9,8 @@ description: >
 
 # Review the stack
 
+Follow the debug-log contract.
+
 ## Contract
 
 Inputs: the stack of pull requests and release shas, plus any slot parameters.

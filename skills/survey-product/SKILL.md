@@ -9,6 +9,8 @@ description: >
 
 # Survey the product
 
+Follow the debug-log contract.
+
 This skill stands alone. A feature workflow can call it. Another workflow can call it and ignore the rest of fstack.
 
 ## Inputs

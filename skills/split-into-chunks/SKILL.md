@@ -10,6 +10,8 @@ description: >
 
 # Split into chunks
 
+Follow the debug-log contract.
+
 ## Contract
 
 Inputs: approved buildable coverage rows, the base commit, and any slot parameters.

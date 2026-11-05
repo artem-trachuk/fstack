@@ -10,6 +10,8 @@ description: >
 
 # Gap analysis
 
+Follow the debug-log contract.
+
 This skill stands alone. Give it the sources that are present. It returns a coverage table. It does not read a repository and it does not start `survey-product`.
 
 ## Inputs

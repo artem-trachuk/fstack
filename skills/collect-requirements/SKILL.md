@@ -9,6 +9,8 @@ disable-model-invocation: true
 
 # Collect requirements
 
+Follow the debug-log contract.
+
 This skill runs only when the human asks in chat to start a feature or to collect requirements. On Grok Bot that is a normal message to the Orchestrator. On Cursor, a slash command is one way to ask, not the only way. Another skill must not start this one.
 
 ## When to use

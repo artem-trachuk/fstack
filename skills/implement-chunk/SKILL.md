@@ -9,6 +9,8 @@ description: >
 
 # Implement a chunk
 
+Follow the debug-log contract.
+
 ## Contract
 
 Inputs: one chunk spec, the base branch, and any slot parameters.

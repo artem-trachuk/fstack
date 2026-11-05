@@ -438,6 +438,12 @@ events:
   - name: take_lease
     skill: fstack-status
     guard: human quote and the new owner. Default lease is 30 minutes.
+  - name: debug_toggled
+    skill: configure-workflow
+    guard: record the old and new debug flag in the workflow change log. When the new value is on, also append a debug entry. When it turns off, append that one entry and then write nothing further.
+  - name: debug_entry
+    skill: debug-log
+    guard: append one redacted entry when debug is on. Never block the workflow. If Notion is down, buffer the entry and show it with the unsaved content.
   - name: team_provisioned
     skill: provision-team
     guard: record the team map of role to bot id in the Orchestrator's persistent state. Create and rename only after the first human approval for that role. Never delete a bot. A removed role is marked retired.
@@ -645,6 +651,12 @@ notion_schema:
     - {name: Name, type: title}
     - {name: Product, type: relation}
     - {name: Feature, type: relation}
+  debug_log:
+    opened: {name: Opened, type: date}
+  debug_log_extra:
+    - {name: Name, type: title}
+    - {name: Product, type: relation}
+    - {name: Previous, type: relation}
   workflow_extra:
     - {name: Name, type: title}
     - {name: Feature, type: relation}
@@ -690,6 +702,9 @@ memory_fields:
   - forgotten
   - confirmed
 
+debug_log_fields:
+  - opened
+
 # Every page type names the relations that keep it connected.
 # product is the root and has no required outgoing relation.
 # A page is reachable when a path of these relations leads to it from the product page.
@@ -705,6 +720,7 @@ required_relations:
   verification: [Product, Chunk]
   memory: [Product]
   workflow: [Product]
+  debug_log: [Product]
 
 # Empty is allowed. fstack-status must not call these unlinked.
 optional_relations:
@@ -714,6 +730,7 @@ optional_relations:
   survey: [Feature]
   memory: [Feature]
   workflow: [Feature]
+  debug_log: [Previous]
 
 workflow_fields:
   - scope

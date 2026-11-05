@@ -19,7 +19,7 @@ Version of the Agent Operating Guide: `0.0.6`, published `2026-10-30`, from [Not
 One private page named for the product. A product owns features, the workflow config, memory, sources, and zero or more repos. Each repo is a code location with a name, a role, an optional subpath, and a default branch. The product does not have one base commit or one pull request. Features, chunks, coverage rows, memories, and workflow pages point back with a Product relation.
 
 - Child page: Agent Operating Guide. It records the workspace, the database links, preferences, exclusions, and the setup version. Unconfirmed fields stay "Not set up yet".
-- Linked databases: Features, Chunks, Memories, Coverage, Graph nodes, Graph edges, Workflow config, Survey, Decision, and Verification.
+- Linked databases: Features, Chunks, Memories, Coverage, Graph nodes, Graph edges, Workflow config, Survey, Decision, Verification, and Debug log.
 
 ### Features
 
@@ -204,7 +204,20 @@ Property names come from `notion_schema.workflow` and `notion_schema.workflow_ex
 | Old | text | `old` |
 | New | text | `new` |
 
-The product page body holds code locations, sources, authoritative kinds, release policy, graph kind lists, `graph.promote`, and standing preferences. A preference may override `plan_review`, `notify`, or `graph.promote`. It must not override human gates or who writes Notion. Memory holds preferences and lessons. The graph holds product facts. Do not store the same fact in both.
+The product page body holds code locations, sources, authoritative kinds, release policy, graph kind lists, `graph.promote`, `debug`, and standing preferences. A preference may override `plan_review`, `notify`, `graph.promote`, or `debug`. It must not override human gates or who writes Notion. Memory holds preferences and lessons. The graph holds product facts. Do not store the same fact in both.
+
+### Debug log
+
+One log per product. The first page is titled Debug log. Entries are appended in order under a heading for each session. When the page is too large, add a continuation page and set its Previous relation to the page it continues. Property names come from `notion_schema.debug_log`.
+
+| Property | Type | Field |
+| --- | --- | --- |
+| Name | title | Extra |
+| Opened | date | `opened` |
+| Product | relation | Extra. Required |
+| Previous | relation | Extra. Empty on the first page |
+
+Only the Orchestrator appends. Teammates and implementers return trace entries in their replies. When `debug` is off, the page is not written. A secret, token, or credential value is stored as the word redacted. The log holds references and short summaries, not file bodies or full prompts.
 
 A feature override is a page with Scope `feature` and only the slots that differ. Precedence is feature override, then the product page, then `fstack.yaml`.
 

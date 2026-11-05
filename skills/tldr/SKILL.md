@@ -7,6 +7,8 @@ description: >
 
 # TLDR
 
+Follow the debug-log contract.
+
 The message rules live in `rules/human-facing.mdc`. This skill is how you apply them.
 
 ## When to use
