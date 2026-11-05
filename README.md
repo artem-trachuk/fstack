@@ -11,7 +11,7 @@ Create three bots from the configs in [`bots/`](bots/) and connect Notion and Gi
 1. In Grok Bot, choose New Bot. Name it **Fstack Orchestrator**. In the first message, paste the persona and instructions from [`bots/orchestrator.yaml`](bots/orchestrator.yaml) and ask it to remember them.
 2. Tell that bot: "Follow the sync-bot-config skill. The config file is bots/orchestrator.yaml." It copies the skills from this repository, sets its profile, and saves its routines. The first run is the bootstrap. The weekly routine keeps it current.
 3. Repeat for [`bots/verifier.yaml`](bots/verifier.yaml) and [`bots/advisor.yaml`](bots/advisor.yaml). Use the profile `name` in each file. Do not invent a platform id.
-4. Connect Notion and GitHub when the Orchestrator shows a connect card. Other inputs are sources in the product config: a kind plus a reader. The Verifier and Advisor do not need connectors. Their inputs arrive as messages.
+4. Connect Notion and GitHub when the Orchestrator shows a connect card. Other inputs are sources in the product config: a kind plus a reader. The Verifier and Advisor get a read-only reader for the skill repository so they can sync. Their feature inputs still arrive as messages. If that reader is absent, sync fetches the public default branch of the skill repository.
 5. Schedules use the timezone in Grok Bot settings under Bot. The five cron fields do not name a zone.
 
 ## Quick start
@@ -32,9 +32,9 @@ A later chat with the same Orchestrator resumes from Notion. Ask where the featu
 
 ## Cursor plugin
 
-The same skills also load as a Cursor plugin. This is not required for Grok Bot.
+Grok Bot does not read the Cursor rule files. The skills are the instructions on the primary path. The files under `rules/` are a secondary Cursor install only, and `alwaysApply` is false so they do not attach to unrelated chats.
 
-The Cursor manifest is `.cursor-plugin/plugin.json`. The root `plugin.json` is the Agent Plugins manifest. To try it inside Cursor, copy this repository to `~/.cursor/plugins/local/fstack`, reload the window, and confirm the skills in Customize. A team marketplace install is a separate step. Cursor skips a symlink that points outside that folder, so copy the files.
+The Cursor manifest is `.cursor-plugin/plugin.json`. The root `plugin.json` is the Agent Plugins manifest. To try the same skills inside Cursor, copy this repository to `~/.cursor/plugins/local/fstack`, reload the window, and confirm the skills in Customize. A team marketplace install is a separate step. Cursor skips a symlink that points outside that folder, so copy the files.
 
 In Cursor, asking in chat is still how a feature starts. A slash command is only one way to ask.
 
@@ -195,7 +195,7 @@ Run `python3 scripts/validate_plugin.py` after the edit. It checks the manifest,
 
 Grok Bot is the primary host. Configs in `bots/` are version `0.1`. Each file has a profile (`name`, `title`, `description`, `persona`, `instructions`), skills copied from this repo, a `model_role` from `fstack.yaml`, connectors, teammates, a handoff message, and routines. A routine has a name, a prompt, and either a five-field cron schedule or a GitHub pull-request event. Cron uses the timezone in Grok Bot settings under Bot. The files name no host, user, or bot id. Address a teammate by the `name` in its config, which is the profile name you give it at creation.
 
-The Orchestrator connects to Notion and GitHub. It reads other inputs through the `sources` list in the product config. It messages the Verifier and the Advisor. The message starts with `fstack-handoff` and includes the role, feature, chunk, ask (`verdict` or `critique`), and the prompt. The reply starts with `fstack-reply`. The Verifier and Advisor have no connectors. An Advisor can instead be the `claude` command on the bot computer when that teammate is unavailable. See `advisors.fallback` in `fstack.yaml`.
+The Orchestrator connects to Notion and GitHub. It reads other inputs through the `sources` list in the product config. It messages the Verifier and the Advisor. The message starts with `fstack-handoff` and includes the role, feature, chunk, ask (`verdict` or `critique`), and the prompt. The reply starts with `fstack-reply`. The Verifier and Advisor each have one read-only reader for the skill repository, used only by sync. An Advisor can instead be the `claude` command on the bot computer when that teammate is unavailable. See `advisors.fallback` in `fstack.yaml`.
 
 The Orchestrator also has a routine for pull requests on chunk branches: opened, pushed, merged, and commented. Public docs confirm that a routine can start from a GitHub event. They do not publish the exact event-field names, so the bot maps those four words onto the host's GitHub trigger and narrows it to branches named `fstack/`.
 

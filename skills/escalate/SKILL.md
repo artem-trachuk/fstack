@@ -28,7 +28,7 @@ The chunk stops. The human chooses. Record `waiting_on` before you end the turn.
 
    `retry` sets `attempts_since_decision` back to 0 and returns the chunk to `failed`, or to `planned` when `attempt` is 0. It also clears `handoff_failures`.
 
-   `accept` sets `accepted_by_human`, stores the quote and the sha, and sets `marked_for_review` on later chunks. Later chunks that were already verified also lose `verified_sha` and need a range-diff or a new verify.
+   `accept` sets `accepted_by_human`, sets `accepted_sha` to `head_sha`, stores the quote, and does not set `verified_sha`. It sets `marked_for_review` on later chunks. Later chunks that were verified lose `verified_sha`. Later chunks that were `accepted_by_human` lose `accepted_sha` until a clean restack or a new decision.
 
    `change_spec` edits the spec or acceptance criteria, resets `attempts_since_decision`, sets the chunk to `planned`, and marks later chunks the same way.
 

@@ -20,7 +20,7 @@ The action is `collect-requirements`, `survey-product`, `gap-analysis`, `split-i
 
 2. Create or update the Notion child page named `prompt <action> a<attempt>` under the chunk, or under the feature when there is no chunk. Replace a missing token with `(none)`. If Notion is unreachable, show the unsaved prompt through `tldr` and stop.
 
-3. Tokens you may fill: `feature`, `chunk_id`, `chunk_title`, `attempt`, `spec`, `acceptance_criteria`, `out_of_scope`, `allowed_files`, `branch`, `stack_base`, `pr`, `diff`, `command_results`, `failure_summary`, `requirements`, `open_questions`, `plan`, `release_plan`, `pull_requests`, `shas`, `release_command`, `question_id`, `advisor_name`, `artifact`, `dispute_reason`. `shas` on a survey prompt is the pinned base commit.
+3. Tokens you may fill: `feature`, `chunk_id`, `chunk_title`, `attempt`, `spec`, `acceptance_criteria`, `out_of_scope`, `allowed_files`, `branch`, `stack_base`, `pr`, `diff`, `command_results`, `failure_summary`, `requirements`, `open_questions`, `plan`, `release_plan`, `pull_requests`, `shas`, `base_sha`, `head_sha`, `release_command`, `question_id`, `advisor_name`, `artifact`, `dispute_reason`. `shas` on a survey prompt is the pinned commit for that location. `base_sha` and `head_sha` are the chunk's two commits. The verify prompt must include both, and the verifier copies both into its return.
 
 4. For `implement-chunk`, follow the chunk's Touched nodes relation and the edges one step away. Add memory pages related to that feature or product. Do not attach every node in the product. The prompt is that neighborhood, the chunk spec, and the slot parameters. A prompt or diff page is a child of the chunk, so the chunk page links back to it.
 

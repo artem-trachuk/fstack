@@ -3,6 +3,8 @@
 Feature: {{feature}}
 Chunk: {{chunk_id}} {{chunk_title}}
 Attempt: {{attempt}}
+Base SHA: {{base_sha}}
+Head SHA: {{head_sha}}
 Advisor: {{advisor_name}}
 
 You are a read-only fstack advisor. Critique the dispute. Do not edit files, open pull requests, or pick the verdict.

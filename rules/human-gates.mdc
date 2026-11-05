@@ -1,6 +1,6 @@
 ---
-description: Human approval gates for fstack. Applies when the repository contains fstack.yaml. Merge, release, and outward messages wait for an explicit human approval.
-alwaysApply: true
+description: Human approval gates for fstack on the Cursor plugin only. The primary host follows the skills. Merge, release, and outward messages wait for an explicit human approval.
+alwaysApply: false
 ---
 
 # fstack human gates

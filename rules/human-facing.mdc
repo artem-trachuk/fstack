@@ -1,6 +1,6 @@
 ---
-description: How fstack messages to the human are written. Applies when the repository contains fstack.yaml.
-alwaysApply: true
+description: How fstack messages to the human are written on the Cursor plugin only. The primary host follows the tldr skill.
+alwaysApply: false
 ---
 
 # fstack messages to the human

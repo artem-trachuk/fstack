@@ -19,7 +19,7 @@ Version of the Agent Operating Guide: `0.0.6`, published `2026-10-30`, from [Not
 One private page named for the product. A product owns features, the workflow config, memory, sources, and zero or more repos. Each repo is a code location with a name, a role, an optional subpath, and a default branch. The product does not have one base commit or one pull request. Features, chunks, coverage rows, memories, and workflow pages point back with a Product relation.
 
 - Child page: Agent Operating Guide. It records the workspace, the database links, preferences, exclusions, and the setup version. Unconfirmed fields stay "Not set up yet".
-- Linked databases: Features, Chunks, Memories, Coverage, Graph nodes, Graph edges, and Workflow config.
+- Linked databases: Features, Chunks, Memories, Coverage, Graph nodes, Graph edges, Workflow config, Survey, Decision, and Verification.
 
 ### Features
 
@@ -257,7 +257,7 @@ Do not call `notion-memory-search` for product memories. If a Notion call fails,
 
 Grok Bot is the primary host. `bots/<role>.yaml` is the config. Version `0.1`. The repository stays the source of the skill files. A bot runs `sync-bot-config` on demand and on the cron in its config. It compares the default-branch commit with the repository URL and applied commit in its own persistent state, then copies skills into its library as `<slug>/SKILL.md` folders, updates its profile, and adds, updates, or removes routines. That pair is not written into the product repository. It asks before adding a connector.
 
-The Orchestrator reads sources through whatever reader the product config names. It messages teammates by the profile `name` in their config. The handoff text starts with `fstack-handoff`. The reply starts with `fstack-reply`. The Verifier answers `ask: verdict`. The Advisor answers `ask: critique`. Neither has Notion or GitHub connectors.
+The Orchestrator reads sources through whatever reader the product config names. It messages teammates by the profile `name` in their config. The handoff text starts with `fstack-handoff`. The reply starts with `fstack-reply`. The Verifier answers `ask: verdict`. The Advisor answers `ask: critique`. Each has one read-only repo reader so sync can copy skills, or sync fetches the public default branch when that reader is absent. They do not write Notion and they do not open pull requests.
 
 A pull-request routine on the Orchestrator listens for opened, pushed, merged, and commented events on `fstack/` branches. The yaml key is quoted `"on"` because an unquoted `on` is a YAML boolean. The public routine docs confirm GitHub events and that the schedule uses Settings, Bot, Timezone. They do not publish the event payload fields, so the bot maps those four words onto the host trigger.
 

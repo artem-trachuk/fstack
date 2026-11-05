@@ -55,6 +55,8 @@ TOKENS = {
     "release_plan",
     "pull_requests",
     "shas",
+    "base_sha",
+    "head_sha",
     "release_command",
     "question_id",
     "advisor_name",
@@ -371,6 +373,40 @@ def main() -> int:
     check(True, "every page type declares its relations")
     check("partial" in skill_text["split-into-chunks"] and "missing" in skill_text["split-into-chunks"] and "approved" in skill_text["split-into-chunks"].lower(), "split-into-chunks plans only approved partial and missing rows")
     check("survey" in rule_ids and rule_ids.index("survey") < rule_ids.index("gap"), "survey is ordered before gap analysis")
+    check("coverage_questions" in rule_ids, "questions_open needs a next rule")
+    collect = skill_text["collect-requirements"]
+    check("Do not jump to gap analysis" in collect, "requirements confirmation must not skip survey")
+    split_body = skill_text["split-into-chunks"]
+    check(split_body.find("planner_review") < split_body.find("Record `save_plan`"), "planner_review must run before save_plan")
+    verify_prompt = (ROOT / "templates" / "prompts" / "verify.md").read_text(encoding="utf-8")
+    check("{{base_sha}}" in verify_prompt and "{{head_sha}}" in verify_prompt, "the verify prompt must carry base and head shas")
+    check("base_sha:" in skill_text["verify"] and "head_sha:" in skill_text["verify"], "the verify return must name base and head shas")
+    for action in (
+        "collect-requirements",
+        "survey-product",
+        "gap-analysis",
+        "split-into-chunks",
+        "pick-next-task",
+        "implement-chunk",
+        "verify",
+        "verify-tiebreak",
+        "advisors",
+        "escalate",
+        "review-stack",
+        "release",
+        "update-graph",
+        "fstack-status",
+    ):
+        check((ROOT / "templates" / "prompts" / f"{action}.md").is_file(), f"missing prompt template {action}")
+    for rule_path in (ROOT / "rules").glob("*.mdc"):
+        rule_meta, _rule_body = split_frontmatter(rule_path.read_text(encoding="utf-8"))
+        check(rule_meta.get("alwaysApply") is False, f"{rule_path.name} must not always apply on the primary path")
+    setup_text = skill_text["setup-product"]
+    for database in ("Survey", "Decision", "Verification"):
+        check(database in setup_text, f"setup-product must create the {database} database")
+    check("accepted_by_human" in (by_name["restack_recorded"].get("chunk_to") or []), "restack must be able to keep an accepted chunk")
+    check("accepted_sha" in (by_name["restack_recorded"].get("guard") or ""), "restack must update or clear accepted_sha")
+    check("accepted_sha" in (by_name["escalate_chunk"].get("guard") or ""), "escalate must handle accepted_sha")
 
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     for heading in ("## Install", "## Quick start", "## Flow", "## Configuration", "## Workspace", "## Adding a bot or a skill"):
@@ -609,7 +645,8 @@ def relation_declaration_errors(table: dict, design: str) -> list[str]:
         for name in names:
             if props.get(name) != "relation":
                 errors.append(f"{entity} relation {name} is not declared as a relation")
-            if name not in design:
+            # Match the table cell, not a longer name that merely contains this one.
+            if f"| {name} |" not in design:
                 errors.append(f"DESIGN.md is missing relation {name} for {entity}")
     status = (Path(__file__).resolve().parents[1] / "skills" / "fstack-status" / "SKILL.md").read_text(encoding="utf-8")
     if "orphan" not in status.lower() or "unlinked" not in status.lower():
@@ -932,6 +969,15 @@ def bot_config_errors(root: Path, skill_names: set[str], role_names: set[str]) -
                     errors.append(f"orchestrator.yaml must list the {required} connector")
             if "survey-product" not in (data.get("skills") or []):
                 errors.append("orchestrator.yaml must include survey-product")
+        if label in {"verifier.yaml", "advisor.yaml"}:
+            readers = [
+                item for item in connectors
+                if isinstance(item, dict) and item.get("id") == "github" and item.get("access") == "read"
+            ]
+            if len(readers) != 1:
+                errors.append(f"{label} needs one read-only github reader so sync can fetch the skill repository")
+            if any(isinstance(item, dict) and item.get("access") not in {None, "read"} for item in connectors):
+                errors.append(f"{label} must not have a write connector")
     return errors
 
 

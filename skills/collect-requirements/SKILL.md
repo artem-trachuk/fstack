@@ -38,4 +38,4 @@ The human asked in chat to start a feature.
 
 ## Next
 
-Hand the feature slug to a new orchestrator agent and stop. Do not implement product code in this chat. Tell that agent to read `state/transitions.yaml` and run gap analysis. Do not start a second feature.
+Stop this skill. Do not implement product code in this chat. The next rule is survey when the feature lists code locations, then gap analysis. Do not jump to gap analysis and do not start a second feature.

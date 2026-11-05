@@ -3,6 +3,8 @@
 Feature: {{feature}}
 Chunk: {{chunk_id}} {{chunk_title}}
 Attempt: {{attempt}}
+Base SHA: {{base_sha}}
+Head SHA: {{head_sha}}
 
 Follow the fstack skill `verify`. Judge this chunk from the spec, the acceptance criteria, the out-of-scope section, and the patch below.
 

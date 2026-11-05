@@ -34,7 +34,7 @@ The next rule is `release_question` or a merging rule. Stack review is already r
 
    - If the forge already merged it, record `merge_recorded` and continue.
    - If the pull request head differs from the release sha, record `void_release` and stop. Do not merge that sha.
-   - If its parent merged, rebase and retarget, record `restack_recorded`, then record `range_diff_recorded`. A clean diff updates the release sha and the approval sha. A real difference on a verified chunk sets `needs_verify`. A real difference on an `accepted_by_human` chunk clears `accepted_sha` and sets `awaiting_verification_decision`. Leave this skill.
+   - If its parent merged, rebase and retarget, then record `restack_recorded`. A clean restack of an `accepted_by_human` chunk updates `accepted_sha` to the new head and leaves the chunk `accepted_by_human`. A real difference clears `accepted_sha` and sets `awaiting_verification_decision`. Do not copy `accepted_sha` into `verified_sha`. Then record `range_diff_recorded` for a chunk that was verified. A clean diff updates `verified_sha` and the approval sha. A real difference on a verified chunk sets `needs_verify`. Leave this skill when the restack is not clean.
    - Record `ci_recorded`. `pending` waits. `failing` escalates and leaves already merged chunks merged. `none` means there is no CI. Do not roll back.
    - Merge that one pull request. Record `merge_recorded` with the head sha. Mark later chunks in the same location `needs_restack`. Do not restack another location unless a cross-location dependency says so.
 

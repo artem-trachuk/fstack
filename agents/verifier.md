@@ -12,6 +12,8 @@ Return this and stop:
 ```yaml
 verdict: not_implemented
 message: Verification is not implemented yet, so these changes cannot be verified.
+head_sha: <sha from the prompt>
+base_sha: <sha from the prompt>
 ```
 
 Do not read the patch for a verdict, do not run tests, and do not update the Notion feature page or the chunk status. Do not open Notion. The Orchestrator passes the prompt. The orchestrator relays the message through `tldr` and waits for the human.

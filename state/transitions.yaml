@@ -120,6 +120,10 @@ next_rules:
     when: feature_status is surveyed
     action: gap_analysis
     detail: Compare sources per code location, then one coverage view. Every evidence row names its location. Classifications come from authoritative_kinds, not from source names.
+  - id: coverage_questions
+    when: feature_status is questions_open
+    action: wait_for_coverage_answers
+    detail: The exception card is still open. Do not run gap analysis again and do not split. If waiting_on is empty, restore question Q-<slug>-coverage and end the turn.
   - id: coverage_gate
     when: feature_status is awaiting_coverage_approval
     action: wait_for_coverage_approval
@@ -363,7 +367,7 @@ events:
     skill: escalate
     chunk_to: [escalated]
     to: [escalated]
-    guard: set waiting_on. Options are retry, accept, change_spec, and stop.
+    guard: set waiting_on. Options are retry, accept, change_spec, and stop. accept stores accepted_sha and does not set verified_sha. Later chunks that were accepted_by_human lose accepted_sha until a clean restack or a new decision.
   - name: human_decision
     skill: fstack-status
     from: [escalated, building, awaiting_coverage_approval, ready_to_plan, awaiting_graph_update]
@@ -403,8 +407,8 @@ events:
     guard: skip a pull request the forge already merged. Record head_sha. Mark later chunks needs_restack. Do not roll back.
   - name: restack_recorded
     skill: release
-    chunk_to: [verified, needs_verify, planned, changes_requested]
-    guard: record the new head sha and clear needs_restack
+    chunk_to: [verified, needs_verify, planned, changes_requested, accepted_by_human, awaiting_verification_decision]
+    guard: record the new head sha and clear needs_restack. A clean restack of accepted_by_human updates accepted_sha to the new head and stays accepted_by_human. A real difference clears accepted_sha and sets awaiting_verification_decision. Do not copy accepted_sha into verified_sha.
   - name: range_diff_recorded
     skill: release
     chunk_to: [needs_verify, awaiting_verification_decision]
@@ -626,6 +630,10 @@ notion_schema:
     - {name: Feature, type: relation}
     - {name: Chunk, type: relation}
   memory:
+    type: {name: Type, type: select}
+    source: {name: Source, type: url}
+    uncertainty: {name: Uncertainty, type: text}
+    forgotten: {name: Forgotten, type: checkbox}
     confirmed: {name: Confirmed, type: date}
   memory_extra:
     - {name: Name, type: title}
@@ -670,6 +678,10 @@ verification_fields:
   - verdict
 
 memory_fields:
+  - type
+  - source
+  - uncertainty
+  - forgotten
   - confirmed
 
 # Every page type names the relations that keep it connected.
