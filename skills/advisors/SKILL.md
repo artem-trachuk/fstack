@@ -36,7 +36,7 @@ For `runtime: claude-cli`, run from the feature workspace:
 
 Use the configured `command` and `model` alias. `--tools` leaves only Read, Grep, and Glob available. Do not allow Edit, Write, or Bash. Do not add a flag that skips permissions. A local CLI runs under the user's own subscription terms.
 
-Write the prompt to `advisors/inputs/<n>-<advisor>.md` inside the feature directory on the Orchestrator's machine before the command. Run the command with that directory as its working directory, and pass the prompt from that file. Save stdout to `advisors/outputs/<n>-<advisor>.md`. That file is the critique. The Orchestrator writes both files. The advisor agent does not. Do not commit those files, do not push them, and do not paste them into a pull request. Do not put tokens, credential paths, or environment secrets in the prompt or on the command line.
+Write the prompt onto the Notion page `advisor input <n>` under the feature before the command. Run the command with the product repository as its working directory, not a fstack state folder, and pass the prompt text. Save stdout onto the Notion page `advisor output <n>`. That page is the critique. The Orchestrator writes both pages. The advisor agent does not. Do not paste them into a pull request. Do not put tokens, credential paths, or environment secrets in the prompt or on the command line.
 
 If the cap would be exceeded by this call, do not start it.
 
@@ -48,7 +48,7 @@ If Cursor cannot start and every fallback is disabled, unavailable, or not signe
 
 1. Resolve the Cursor model from `.fstack/resolved.yaml`. You pass that model when you launch the `advisor` agent. The advisor does not switch itself.
 
-2. Follow `build-context`. A tie-break uses `verify-tiebreak`, with the same patch as verify and no feature directory.
+2. Follow `build-context`. A tie-break uses `verify-tiebreak`, with the same patch as verify and no fstack notes.
 
 3. Record `advisor_launched` or `tiebreak_launched`, then start the Cursor advisor. On a credit or unavailable-model failure, mark that row `failed` and try the local CLI list above. Record a new launched row before the CLI runs.
 

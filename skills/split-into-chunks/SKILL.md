@@ -18,7 +18,7 @@ Write the stack. Chunk ids look like `01-slug`, in order. The first chunk's base
 
 Copy `templates/feature/chunks/chunk.md` from the plugin into the chunk page body. The Notion properties are the only place for status, branch, base, shas, allowed files, and attempt counts. The page body has spec, acceptance criteria, and out of scope. Do not add an implementer-notes section.
 
-Allowed files are concrete paths or globs. They must not include `.fstack/` or the Orchestrator's state path. One chunk at a time is the v0.1 rule.
+Allowed files are concrete paths or globs. They must not include `.fstack/`. One chunk at a time is the v0.1 rule.
 
 ## Steps
 

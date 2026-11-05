@@ -47,15 +47,15 @@ The plugin root is the directory that contains `.cursor-plugin/plugin.json` whos
 
 9. Connect Notion. This step is required. There is no local feature store.
 
-   Ask the human to authenticate the Notion MCP. Confirm the connection by telling them their name and workspace name. Pass `instructions_version` from `memory.instructions_version` (`0.0.6`) on every Notion MCP call.
+   Ask the human to authenticate the Notion MCP. Confirm the connection by telling them their name and workspace name. Read the current setup notes with `notion-get-setup-guide`. Pass `instructions_version` from `memory.instructions_version` (`0.0.6`) on every Notion MCP call.
 
-   Follow `memory` and `DESIGN.md`. Fetch `notion://docs/memory` before creating a Memories database. Search for an existing project page and for Features, Chunks, and Memories databases. Show the human one yes-or-no question before creating any schema. Private is the default. Do not create pages until they approve. Ask again before anything is written to a shared or team space.
+   Follow `memory` and `DESIGN.md`. Call `notion-fetch` on `notion://docs/memory` before creating a Memories database, and on `notion://docs/notion-flavored-markdown` before writing any page body. Search with `notion-search` for an existing project page and for Features, Chunks, and Memories databases. Show the human one yes-or-no question before creating any schema. Private is the default. Do not create pages until they approve. Ask again before anything is written to a shared or team space.
 
-   After approval, create or reuse a private project page, the three databases, and a private Agent Operating Guide page. Set the guide version to `0.0.6` and the published date to `2026-10-30`. Fill the guide's destinations with the real links. Leave anything you did not create as "Not set up yet". Record the page and database ids in `.fstack/resolved.yaml` only.
+   After approval, create or reuse a private project page with `notion-create-pages`, the three databases with `notion-create-database`, and a private Agent Operating Guide page. Set the guide version to `0.0.6` and the published date to `2026-10-30`. Fill the guide's destinations with the real links. Leave anything you did not create as "Not set up yet". Record the page and database ids in `.fstack/resolved.yaml` only. Update later text with `notion-update-page`.
 
-   Do not upload skills to Notion. Do not create the daily loop unless the human asks for it in a separate yes.
+   Do not upload skills to Notion. Do not call `notion-complete-mcp-setup`. Do not create the daily loop unless the human asks for it in a separate yes.
 
-   If Notion is unreachable, stop and say what you could not save. Do not write feature content under `.fstack/` or `~/.fstack`.
+   If Notion is unreachable, stop and show what you could not save. Do not write feature content under `.fstack/`.
 
 10. Branch protection is not checked. Say that the check was not run. See `stubs/enforcement.md`.
 

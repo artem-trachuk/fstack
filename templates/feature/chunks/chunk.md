@@ -24,7 +24,7 @@ blocked_reason:
 
 # {{chunk_id}} {{chunk_title}}
 
-The frontmatter is the source of truth for status, shas, branch, and allowed files. Do not repeat them in this body.
+The page properties are the source of truth for status, shas, branch, and allowed files. Do not repeat them in the page body.
 
 ## Spec
 

@@ -6,7 +6,7 @@
 
 The first chunk is based on the repository default branch. Each later chunk is based on the previous chunk's branch. The stack is implemented one chunk at a time.
 
-Chunk id, status, branch, and allowed files live in the chunk frontmatter.
+Chunk id, status, branch, and allowed files live in the chunk page properties.
 
 ## Release
 

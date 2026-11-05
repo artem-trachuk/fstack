@@ -12,7 +12,7 @@ Read the confirmed requirements and list what is still open.
 
 ## When to use
 
-`feature.yaml` says `requirements_status: confirmed`. If the requirements are still a draft, or the file is only the template, stop and tell the human to invoke `/collect-requirements`. Do not follow that skill yourself.
+`feature` Status is `requirements_confirmed`. If the requirements are still a draft, stop and tell the human to invoke `/collect-requirements`. Do not follow that skill yourself.
 
 ## Steps
 

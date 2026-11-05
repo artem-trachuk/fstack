@@ -122,7 +122,7 @@ next_rules:
   - id: prepare_verify
     when: the earliest unfinished chunk is needs_verify and the diff for this attempt is not attached
     action: build_verify_prompt
-    detail: The orchestrator builds prompts/<chunk-id>/a<attempt>/verify.md from the patch, not from a pull request URL.
+    detail: The orchestrator builds the verify prompt on the chunk page from the patch, not from a pull request URL.
   - id: launch_verifier
     when: the earliest unfinished chunk is needs_verify and the diff is attached and verifier_agent_id is empty
     action: launch_verifier
@@ -214,7 +214,7 @@ events:
     skill: collect-requirements
     from: [requirements_draft]
     to: [requirements_draft]
-    writes: [requirements.md, feature.yaml]
+    writes: [feature page Requirements, feature page properties]
   - name: confirm_requirements
     skill: collect-requirements
     from: [requirements_draft]
@@ -255,7 +255,7 @@ events:
     skill: implement-chunk
     chunk_from: [implementing]
     chunk_to: [needs_verify, blocked]
-    guard: FSTACK_BLOCKED or a change outside allowed_files sets blocked and decrements attempt. A change under .fstack or the Orchestrator's state path is also blocked. Otherwise record pr, base_sha, and head_sha. Do not commit or push feature state.
+    guard: FSTACK_BLOCKED or a change outside allowed_files sets blocked and decrements attempt. A change under .fstack is also blocked. Otherwise record pr, base_sha, and head_sha. Do not commit or push feature state.
   - name: attach_diff
     skill: build-context
     chunk_from: [needs_verify]
@@ -265,7 +265,7 @@ events:
     skill: pick-next-task
     chunk_from: [needs_verify]
     chunk_to: [in_review]
-    guard: record verifier_agent_id before waiting. The verifier checkout is the head sha and has no feature directory.
+    guard: record verifier_agent_id before waiting. The verifier receives the prompt and the patch from the Orchestrator. The checkout is the head sha and does not include fstack notes.
   - name: verdict_filed
     skill: verify
     chunk_from: [in_review, needs_verify]
@@ -310,6 +310,8 @@ events:
     skill: fstack-status
     from: [escalated, building]
     to: [building, stopped]
+    chunk_from: [escalated, awaiting_verification_decision, failed]
+    chunk_to: [planned, failed, accepted_by_human, escalated]
     guard: quote required. For awaiting_verification_decision the choices are accept_unverified and stop. accept_unverified sets accepted_by_human, stores the quote and sha, and records that the chunk was not verified. It is not a pass. stop sets feature_status stopped. Other escalations still use retry, accept, change_spec, and stop.
   - name: open_review
     skill: review-stack
@@ -374,8 +376,8 @@ events:
     skill: fstack-status
     guard: human quote and the new owner. Default lease is 30 minutes.
 
-# Fields the orchestrator keeps. Chunk frontmatter is the source of truth for a chunk.
-# Feature fields live in feature.yaml. Event files are the log, one file per event.
+# Fields the orchestrator keeps on the Notion feature page and chunk pages.
+# Decisions are entries on the feature page. One entry per event.
 feature_fields:
   - state_version
   - slug
@@ -422,7 +424,7 @@ waiting_kinds:
   - ci
   - release_command
 
-prompt_path: prompts/<chunk-id>/a<attempt>/<action>.md
-verdict_path: verification/<chunk-id>/a<attempt>.yaml
-event_path: events/<nnnn>-<event>.yaml
+prompt_page: prompt <action> a<attempt>
+verdict_page: verification <chunk-id> a<attempt>
+decision_log: feature page Decisions section
 chunk_id: NN-slug

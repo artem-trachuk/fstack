@@ -42,6 +42,10 @@ roles:
     agent: cursor-coding-agent
     model: inherit
     runtime: cloud
+  advisor:
+    description: Read-only critique. Does not edit the project or decide a verdict.
+    agent: advisor
+    model: opus
 
 # Preference order is the list order. The first detected effort wins.
 # opus is Claude Opus in Cursor. argon is Gemini Argon in Cursor.

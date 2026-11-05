@@ -1,6 +1,6 @@
-# Decisions: {{feature}}
+# Decisions
 
-Generated view of `events/`. The event files are the log. One file per event, so two chunks do not share a row.
+Append-only entries on the Notion feature page. One entry per event.
 
 | event | when | who | result | approval |
 | --- | --- | --- | --- | --- |

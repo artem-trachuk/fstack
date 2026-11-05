@@ -25,15 +25,19 @@ On every Notion MCP tool call, pass `instructions_version` with the value from `
 
 Before the first memory write in a session, call `notion-fetch` with `notion://docs/memory` and follow that guide. If its property names differ from `DESIGN.md`, use the guide's names.
 
-Search with `notion-memory-search` before creating a memory. One topic per memory. Update an existing memory instead of adding a near-duplicate. Keep the source link, the date the fact was confirmed, and any uncertainty. The day you save it is not the confirmation date.
+Before creating or editing page content, call `notion-fetch` with `notion://docs/notion-flavored-markdown` and write in that format.
+
+Search existing pages with `notion-search`. Search memories with `notion-memory-search` before creating one. Create pages with `notion-create-pages`. Edit them with `notion-update-page`. Create a database with `notion-create-database`, using SQL `CREATE TABLE` or the typed database form that tool accepts. One topic per memory. Update an existing memory instead of adding a near-duplicate. Keep the source link, the date the fact was confirmed, and any uncertainty. The day you save it is not the confirmation date.
 
 Do not save secrets, credentials, transcripts, copied code, or anything that can be recovered from the repository. Honor a forget request: mark the memory forgotten, do not recreate it, and say if Notion will not let you reach a copy.
 
 Ask before creating a database or writing into a shared or team space. Private pages are the default.
 
+Do not call `notion-complete-mcp-setup`. fstack does not publish skills to Notion.
+
 ## If Notion is unreachable
 
-Stop. Do not write the feature record or the memory to disk, to `~/.fstack`, or to `.fstack`. Show the unsaved content in the chat through `tldr` and say that it has not been saved. Wait for the human. That is a human gate, not a fallback store.
+Stop. Do not write the feature record or the memory onto the local disk. `.fstack/resolved.yaml` may keep ids and model slugs only. Show the unsaved content in the chat through `tldr` and say that it has not been saved. Wait for the human. That is a human gate, not a fallback store.
 
 ## Read
 
@@ -45,4 +49,4 @@ At the end of a feature, propose the lessons in a question card. Write them only
 
 ## Events
 
-This skill does not change chunk status. Feature writes still use the events in `state/transitions.yaml`, stored as Notion pages rather than local files.
+This skill does not change chunk status. Feature writes still use the events in `state/transitions.yaml`, stored on Notion pages.

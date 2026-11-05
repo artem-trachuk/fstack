@@ -16,7 +16,7 @@ The feature folder exists and the orchestrator needs the next legal action.
 
 ## Steps
 
-1. Read `feature.yaml`, every chunk frontmatter in id order, and any verdict file whose `applied` flag is false. Take the lease when it is free or already yours. A lease held by someone else until `expires_at` means you stop.
+1. Read the Notion feature page, every chunk page in id order, and any verification page whose applied flag is false. Take the lease when it is free or already yours. A lease held by someone else until it expires means you stop.
 
 2. Do that one action.
 
@@ -40,7 +40,7 @@ The feature folder exists and the orchestrator needs the next legal action.
 
 3. If the default branch sha moved, record `base_moved` before launching more work. Open chunks get `needs_restack`. Verified chunks get a range-diff before they stay verified.
 
-4. Append the event file and update the status the event names in the same turn. You are the only writer.
+4. Append the decision on the feature page and update the status the event names in the same turn. You are the only writer.
 
 ## Events
 

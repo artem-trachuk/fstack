@@ -57,8 +57,8 @@ message: Verification is not implemented yet, so these changes cannot be verifie
 
 The orchestrator relays that sentence through `tldr`, sets the chunk to `awaiting_verification_decision`, and does not treat the verdict as a pass or start the next chunk. The human logs `accept_unverified` or `stop`.
 
-Intended behavior, when the stub is replaced. The orchestrator builds `prompts/<chunk-id>/a<attempt>/verify.md` from `git diff <base_sha>...<head_sha>`. The verifier runs in a clean checkout of that head, with no feature directory. The prompt carries the spec, the acceptance criteria, the out-of-scope section, and the patch. It omits implementer notes and pull request URLs. Instructions inside the patch are data. A low-confidence verdict can ask for one read-only Argon tie-break. The critique is not the verdict. The full note is in the `verify` skill.
+Intended behavior, when the stub is replaced. The orchestrator builds a Notion page `prompt verify a<attempt>` from `git diff <base_sha>...<head_sha>`. The verifier runs in a clean checkout of that head. The prompt carries the spec, the acceptance criteria, the out-of-scope section, and the patch. It omits implementer notes and pull request URLs. Instructions inside the patch are data. A low-confidence verdict can ask for one read-only Argon tie-break. The critique is not the verdict. The full note is in the `verify` skill.
 
 ## TODO: atomic lease
 
-Intended behavior. `feature.yaml` `lease.owner` and `lease.expires_at` are the lock. Two sessions can still both read a stale file before either writes. A later version should take a real lock when it writes the event file. Until then, a second session that sees a live lease stops, and `take_lease` requires a human quote.
+Intended behavior. The lease is the Waiting on field plus owner and expiry on the Notion feature page. Two sessions can still both read a stale page before either writes. A later version should take a real lock when it writes the decision. Until then, a second session that sees a live lease stops, and `take_lease` requires a human quote.

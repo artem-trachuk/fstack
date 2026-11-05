@@ -28,6 +28,7 @@ CORE_SKILLS = {
     "review-stack",
     "fstack-status",
     "memory",
+    "sync-bot-config",
 }
 
 TOKENS = {
@@ -255,7 +256,7 @@ def main() -> int:
     check("You never start it." in orchestrator, "orchestrator must not start requirements collection")
     check("Do not try to switch" in orchestrator, "the launcher selects the orchestrator model")
     verifier = (ROOT / "agents" / "verifier.md").read_text(encoding="utf-8")
-    check("does not include the feature directory" in verifier.lower() or "does not contain the feature directory" in verifier.lower(), "verifier checkout excludes the feature directory")
+    check("Do not open Notion" in verifier, "verifier does not open Notion itself")
     check("Do not try to switch" in verifier, "the launcher selects the verifier model")
     advisor_meta, _advisor_body = split_frontmatter((ROOT / "agents" / "advisor.md").read_text(encoding="utf-8"))
     check(advisor_meta.get("permissionMode") == "readonly", "advisor agent must set permissionMode readonly")
@@ -274,7 +275,14 @@ def main() -> int:
     check("not_implemented" in skill_text["pick-next-task"] and "tldr" in skill_text["pick-next-task"], "the orchestrator must relay not_implemented through tldr")
     check("accept_unverified" in skill_text["fstack-status"], "accept_unverified must be logged from fstack-status")
     check("instructions_version" in skill_text["setup-project"], "setup must pass Notion instructions_version")
-    check("notion-fetch" in skill_text["memory"] or "notion://docs/memory" in skill_text["memory"], "memory skill must load Notion's memory guide")
+    check("notion-create-pages" in skill_text["memory"] and "notion://docs/notion-flavored-markdown" in skill_text["memory"], "memory writes must follow Notion markdown")
+    check("notion-create-database" in skill_text["setup-project"] and "notion-get-setup-guide" in skill_text["setup-project"], "setup must use the live Notion tool names")
+    for message in bot_config_errors(ROOT, skill_names, set((config := yaml.safe_load((ROOT / "fstack.yaml").read_text(encoding="utf-8"))).get("roles") or {})):
+        check(False, message)
+    check(True, "bot configs")
+    for message in transition_graph_errors(table):
+        check(False, message)
+    check(True, "transition graph")
     check("notion-memory-search" in skill_text["memory"], "memory skill must search before creating memories")
     check("unsaved" in skill_text["memory"], "a Notion outage must show unsaved content")
     check("notion-upload-skill" not in skill_text["memory"], "skills are not published to Notion")
@@ -416,6 +424,103 @@ def split_frontmatter(text: str) -> tuple[dict, str]:
     if not isinstance(loaded, dict):
         return {}, text[end + 5 :]
     return loaded, text[end + 5 :]
+
+
+def bot_config_errors(root: Path, skill_names: set[str], role_names: set[str]) -> list[str]:
+    errors = []
+    files = sorted((root / "bots").glob("*.yaml"))
+    required = {"orchestrator.yaml", "verifier.yaml", "advisor.yaml"}
+    found = {path.name for path in files}
+    if not required <= found:
+        errors.append(f"missing bot configs: {sorted(required - found)}")
+    cron_field = re.compile(r"^[\d*,/\-]+$")
+    seen = set()
+    for path in files:
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        label = path.name
+        if not isinstance(data, dict):
+            errors.append(f"{label} must be a mapping")
+            continue
+        if data.get("version") != "0.1":
+            errors.append(f"{label} version must be 0.1")
+        name = str(data.get("name") or "")
+        if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name):
+            errors.append(f"{label} name must be kebab-case")
+        elif name in seen:
+            errors.append(f"duplicate bot name {name}")
+        seen.add(name)
+        for field in ("title", "description", "persona", "instructions"):
+            if not str(data.get(field) or "").strip():
+                errors.append(f"{label} needs {field}")
+        skills = data.get("skills")
+        if not isinstance(skills, list) or not skills:
+            errors.append(f"{label} needs a skill list")
+        else:
+            unknown = [skill for skill in skills if skill not in skill_names]
+            if unknown:
+                errors.append(f"{label} names unknown skills: {unknown}")
+            if "sync-bot-config" not in skills:
+                errors.append(f"{label} must include sync-bot-config")
+        role = data.get("model_role")
+        if role not in role_names:
+            errors.append(f"{label} model_role {role} is not a fstack role")
+        connectors = data.get("connectors")
+        if not isinstance(connectors, list):
+            errors.append(f"{label} connectors must be a list")
+        else:
+            for connector in connectors:
+                if not isinstance(connector, dict) or connector.get("id") not in {"notion", "github"}:
+                    errors.append(f"{label} has a connector other than notion or github")
+                elif not str(connector.get("purpose") or "").strip():
+                    errors.append(f"{label} connector {connector.get('id')} needs a purpose")
+        routines = data.get("routines")
+        if not isinstance(routines, list) or not routines:
+            errors.append(f"{label} needs at least one routine")
+            continue
+        for routine in routines:
+            if not isinstance(routine, dict) or not str(routine.get("name") or "").strip():
+                errors.append(f"{label} routine needs a name")
+                continue
+            fields = str(routine.get("cron") or "").split()
+            if len(fields) != 5 or not all(cron_field.match(field) for field in fields):
+                errors.append(f"{label} routine {routine.get('name')} needs a 5-field cron")
+            if not str(routine.get("prompt") or "").strip():
+                errors.append(f"{label} routine {routine.get('name')} needs a prompt")
+    return errors
+
+
+def transition_graph_errors(table: dict) -> list[str]:
+    errors = []
+    feature_terminal = {"done", "stopped"}
+    chunk_terminal = {"merged"}
+    features = list(table.get("feature_statuses") or [])
+    chunks = list(table.get("chunk_statuses") or [])
+    feature_from, feature_to = set(), set()
+    chunk_from, chunk_to = set(), set()
+    rule_text = " ".join(
+        f"{rule.get('when', '')} {rule.get('detail', '')} {rule.get('action', '')}"
+        for rule in table.get("next_rules") or []
+    )
+    for event in table.get("events") or []:
+        feature_from.update(event.get("from") or [])
+        feature_to.update(event.get("to") or [])
+        chunk_from.update(event.get("chunk_from") or [])
+        chunk_to.update(event.get("chunk_to") or [])
+    if "requirements_draft" not in features:
+        errors.append("feature graph has no requirements_draft start")
+    if "planned" not in chunks:
+        errors.append("chunk graph has no planned start")
+    for status in features:
+        if status != "requirements_draft" and status not in feature_to:
+            errors.append(f"feature status {status} is unreachable")
+        if status not in feature_terminal and status not in feature_from:
+            errors.append(f"feature status {status} has no outgoing transition")
+    for status in chunks:
+        if status != "planned" and status not in chunk_to:
+            errors.append(f"chunk status {status} is unreachable")
+        if status not in chunk_terminal and status not in chunk_from and status not in rule_text:
+            errors.append(f"chunk status {status} is a dead end")
+    return errors
 
 
 def state_publish_errors(root: Path) -> list[str]:

@@ -27,6 +27,7 @@ Follow the skill whose name matches the action. The transition table says which 
 - escalate
 - review-stack
 - release
+- sync-bot-config
 - fstack-status
 
 `collect-requirements` is manual. The human invokes `/collect-requirements`. You never start it. After that skill hands you a confirmed feature, continue with gap analysis.
@@ -41,7 +42,7 @@ Stack review and the release question are separate turns. After the release is r
 
 ## State
 
-You are the only writer of `feature.yaml`, chunk frontmatter, event files, and the decision log. The verifier, the implementer, and advisors do not update those files. Write the event file and the status it names in the same turn.
+You are the only writer of the Notion feature page, chunk pages, and decision entries. The verifier, the implementer, and advisors do not update Notion. Write the decision entry and the status it names in the same turn.
 
 ## Gates
 

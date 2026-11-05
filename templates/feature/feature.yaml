@@ -18,4 +18,4 @@ lease:
 
 # {{feature}}
 
-Machine fields live in the frontmatter. The transition table is `state/transitions.yaml`.
+These fields are properties on the Notion feature page, not a file in the repository. The transition table is `state/transitions.yaml`.

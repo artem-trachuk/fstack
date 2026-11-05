@@ -34,7 +34,7 @@ Each feature is a page in the Features database.
 | Waiting on | text | Question id, or empty |
 | Release state | select | `approved`, `merging`, `command_failed`, `done` |
 | Handoff failures | number | Implementer handoff count |
-| Confirmed | date | When the human confirmed the requirements file |
+| Confirmed | date | When the human confirmed the requirements page |
 | Chunks | relation | Chunks in this feature |
 | Memories | relation | Memories tied to this feature |
 
@@ -81,14 +81,26 @@ The body is a few sentences. It is not a transcript, a secret, copied code, or a
 
 Search with `notion-memory-search` before creating a page. Update a near-duplicate instead of adding another.
 
-## Notion MCP assumptions
+## Notion MCP
 
-These names come from Notion's setup guide, version 0.0.6. This repo does not ship a Notion MCP server, and the parameter lists were not verified against a live server.
+These names were checked against the live Notion MCP. Docs and skills use them with no prefix.
 
-- Every Notion MCP call takes `instructions_version` (`0.0.6`).
-- `notion-fetch("notion://docs/memory")` loads the memory rules.
-- `notion-memory-search` looks up memories.
-- `notion-get-enabled-skills`, `notion-upload-skill`, and `notion-download-skill` exist in the guide for Notion Skills. fstack does not call the upload or download tools. Skill files stay in git.
-- `notion-complete-mcp-setup` is for Notion's own skill setup. fstack does not call it.
+- `notion-fetch`, including `notion://docs/memory` and `notion://docs/notion-flavored-markdown`. Read the markdown guide before `notion-create-pages` or `notion-update-page`.
+- `notion-search` to find existing pages and databases.
+- `notion-memory-search` to look up memories.
+- `notion-create-pages` and `notion-update-page` to write pages.
+- `notion-create-database` to create a database from SQL `CREATE TABLE` or a typed database definition.
+- `notion-get-setup-guide` during setup.
+- Every call takes `instructions_version` (`0.0.6`).
 
-If a tool is missing or rejects `instructions_version`, stop, show the unsaved content, and tell the human. Do not guess a different API.
+`notion-complete-mcp-setup` exists and is for Notion's own skill setup. fstack does not call it. Skill files stay in git.
+
+The parameter lists for these tools were not re-checked field by field in this change. If a call rejects `instructions_version` or a required field, stop and show the unsaved content. Do not guess a different tool name.
+
+## Bots
+
+`bots/<role>.yaml` is the host-neutral config for a bot that plays that role. Version `0.1`. The repository stays the source of the skill files. A bot runs `sync-bot-config` on demand and on the cron in its config. It compares the default-branch commit with `bot_sync` in gitignored `.fstack/resolved.yaml`, then copies skills, updates its profile, and adds, updates, or removes routines. It asks before adding a connector.
+
+The Orchestrator config lists Notion and GitHub. The Verifier and Advisor configs list no connectors. None of the files contains a bot id, a home directory, or a person.
+
+Bootstrap: create the bot in the host, tell it to follow `sync-bot-config` for its yaml file, and let it apply the first commit. After that, the weekly routine keeps it current.

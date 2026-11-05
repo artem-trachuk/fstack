@@ -1,7 +1,7 @@
 ---
 name: collect-requirements
 description: >
-  Write one feature's requirements and ask the human to confirm the file.
+  Write one feature's requirements on a Notion page and ask the human to confirm that page.
   Use only when the human explicitly invokes /collect-requirements.
   Never start this skill from another skill, a schedule, or a guess that a feature needs requirements.
 disable-model-invocation: true

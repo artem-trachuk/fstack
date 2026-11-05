@@ -22,7 +22,7 @@ You are the Cursor coding agent for this chunk. Implement it on `{{branch}}`, ba
 
 {{allowed_files}}
 
-Change only those paths. Do not read `~/.fstack` or `.fstack`. The spec in this prompt is the whole assignment.
+Change only those paths. Do not open Notion or `.fstack`. The spec in this prompt is the whole assignment.
 
 ## Stack
 

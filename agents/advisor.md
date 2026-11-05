@@ -17,3 +17,4 @@ The parent that launched you chose your model. Do not try to switch it.
 ## Skills
 
 - advisors
+- sync-bot-config

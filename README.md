@@ -21,7 +21,7 @@ From a team marketplace, install **fstack** from Customize after an admin import
 In the product repository, with the plugin installed:
 
 1. Invoke `/setup-project`. This writes `fstack.yaml` when it is missing, ignores `.fstack/` for machine-specific config, and connects Notion. You approve the project page and databases before any schema is created.
-2. Invoke `/collect-requirements` and describe the feature. Confirm the requirements file when asked. This is the only way requirements collection starts.
+2. Invoke `/collect-requirements` and describe the feature. Confirm the requirements page when asked. This is the only way requirements collection starts.
 3. Answer the question card from gap analysis. If nothing is open, the orchestrator says so and continues.
 4. The orchestrator splits the feature into stacked chunks. Plan approval waits only when `plan_review` is `approve`. The shipped value is `notify`, so coding starts after the plan is shown.
 5. Each chunk is implemented by a Cursor coding agent. The flow then calls `verify`. That skill is a stub: it returns `not_implemented` and does not check the patch. You choose `accept_unverified` or `stop`. The choice is logged. The stack does not continue until you do.
@@ -67,9 +67,9 @@ flowchart TD
   human -->|explicit approval| done
 ```
 
-`build-context` still writes `prompts/<chunk-id>/a<attempt>/verify.md` before `verify` is called. The skill does not use that prompt to judge the chunk. It returns `verdict: not_implemented` and the message `Verification is not implemented yet, so these changes cannot be verified.` The orchestrator sends that sentence through `tldr` and leaves the chunk in `awaiting_verification_decision`. `accept_unverified` is logged and is not a pass. `stop` ends the feature and leaves pull requests open.
+`build-context` writes a Notion child page named `prompt verify a<attempt>` on the chunk before `verify` is called. The skill does not use that page to judge the chunk. It returns `verdict: not_implemented` and the message `Verification is not implemented yet, so these changes cannot be verified.` The orchestrator sends that sentence through `tldr` and leaves the chunk in `awaiting_verification_decision`. `accept_unverified` is logged and is not a pass. `stop` ends the feature and leaves pull requests open.
 
-The prompt shape the stub will someday use is unchanged: the orchestrator builds it from `git diff <base_sha>...<head_sha>`, with the spec, the acceptance criteria, the out-of-scope section, and the patch. It does not include the feature directory, a pull request URL, or implementer notes. The intended verifier runs in a clean checkout of that head. That design is the TODO in the `verify` skill and in [stubs/enforcement.md](stubs/enforcement.md).
+The prompt shape the stub will someday use is unchanged: the orchestrator builds it from `git diff <base_sha>...<head_sha>`, with the spec, the acceptance criteria, the out-of-scope section, and the patch. It does not include a Notion workspace link, a pull request URL, or implementer notes. The intended verifier runs in a clean checkout of that head. That design is the TODO in the `verify` skill and in [stubs/enforcement.md](stubs/enforcement.md).
 
 `tldr` rewrites messages to the human. Question ids, options, the release command, shas, and pull request URLs stay verbatim.
 
@@ -146,13 +146,13 @@ A chunk id is `NN-slug`. Status values and the events that change them are only 
 | Skill | Who invokes it | What it does |
 | --- | --- | --- |
 | `setup-project` | Human, or the orchestrator when config is missing | Copies templates, resolves models, records runtime |
-| `collect-requirements` | Human, `/collect-requirements` only | Writes the requirements file, then hands off to the orchestrator |
+| `collect-requirements` | Human, `/collect-requirements` only | Writes the requirements page, then hands off to the orchestrator |
 | `gap-analysis` | Orchestrator | Sends a question card, or records that nothing is open |
 | `split-into-chunks` | Orchestrator | Writes the stack and follows `plan_review` |
 | `pick-next-task` | Orchestrator | Applies the next-rule list once |
 | `implement-chunk` | Orchestrator | Hands off one chunk and records the agent id first |
 | `verify` | Verifier, at the same point in the flow | Returns `not_implemented` and does not judge the chunk |
-| `build-context` | Orchestrator, before an action | Writes the per-attempt prompt |
+| `build-context` | Orchestrator, before an action | Writes the prompt onto a Notion page |
 | `tldr` | Before a human-facing message | Short prose, verbatim decisions |
 | `advisors` | Gap analysis, split, one dispute per attempt | Read-only critique. A local CLI fallback counts toward the same cap |
 | `escalate` | Orchestrator | Stops for retry, accept, a spec change, or stop |
@@ -169,9 +169,19 @@ A chunk id is `NN-slug`. Status values and the events that change them are only 
 
 Add a skill by creating `skills/<name>/SKILL.md`. The frontmatter `name` matches the folder. `description` says what it does and when to use it. Set `disable-model-invocation: true` when it must run only from an explicit `/` invocation.
 
-Add a bot by creating `agents/<name>.md` with `name` and `description`, then a `roles` entry in `fstack.yaml` with `agent` and `model`. Put the skills it follows in the agent file. A read-only plugin agent sets `permissionMode: readonly`. When the bot needs a prompt, add `templates/prompts/<action>.md` and name the action in `build-context`. New statuses and events go in `state/transitions.yaml` first.
+Add a Cursor agent by creating `agents/<name>.md` with `name` and `description`, then a `roles` entry in `fstack.yaml` with `agent` and `model`. Put the skills it follows in the agent file. A read-only plugin agent sets `permissionMode: readonly`. When the bot needs a prompt, add `templates/prompts/<action>.md` and name the action in `build-context`. New statuses and events go in `state/transitions.yaml` first.
 
-Run `python3 scripts/validate_plugin.py` after the edit. It checks the manifest, the transition table, the config, the template tokens, and that each event is named by its skill.
+Add a hosted bot by creating `bots/<role>.yaml` as described under Bots. Include `sync-bot-config` in its skill list.
+
+Run `python3 scripts/validate_plugin.py` after the edit. It checks the manifest, the transition table, the config, the template tokens, the bot configs, and that each event is named by its skill.
+
+## Bots
+
+The Orchestrator, Verifier, and Advisor also have host-neutral configs in `bots/`. Each file is version `0.1` and has a profile (`name`, `title`, `description`, `persona`, `instructions`), the skills to copy from this repo, a `model_role` from `fstack.yaml`, connectors, and routines. A routine has a name, a prompt, and a five-field cron schedule.
+
+The Orchestrator connects to Notion and GitHub. The Verifier and Advisor list no connectors, because the Orchestrator passes their inputs.
+
+Bootstrap: create the bot in the host, then tell it to follow `sync-bot-config` for its file, for example `bots/orchestrator.yaml`. The bot reads the latest default branch of the repository in `plugin.json`, copies the listed skills as `<slug>/SKILL.md` folders, and sets its profile and routines. The commit it applied is stored in gitignored `.fstack/resolved.yaml`. The weekly routine in the config runs the same skill. Adding a connector waits for the human. The files name no host, user, or bot id.
 
 ## License
 
