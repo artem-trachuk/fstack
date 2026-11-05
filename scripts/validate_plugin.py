@@ -34,6 +34,7 @@ CORE_SKILLS = {
     "update-graph",
     "provision-team",
     "debug-log",
+    "upgrade-fstack",
 }
 
 TOKENS = {
@@ -179,7 +180,9 @@ def main() -> int:
     cursor_manifest = json.loads((ROOT / ".cursor-plugin" / "plugin.json").read_text(encoding="utf-8"))
     check(root_manifest.get("name") == "fstack", "root plugin name must be fstack")
     check(cursor_manifest.get("name") == "fstack", "Cursor plugin name must be fstack")
-    check(root_manifest.get("version") == cursor_manifest.get("version") == "0.1.0", "manifest versions must both be 0.1.0")
+    manifest_version = str(root_manifest.get("version") or "")
+    check(bool(manifest_version) and manifest_version == cursor_manifest.get("version"), "manifest versions must match")
+    check(f"## {manifest_version}" in (ROOT / "CHANGELOG.md").read_text(encoding="utf-8"), "CHANGELOG must have an entry for the current version")
     check("displayName" not in cursor_manifest, "displayName duplicates name and is omitted")
     for field in ("skills", "agents", "rules", "logo"):
         value = cursor_manifest.get(field, "")
@@ -438,6 +441,14 @@ def main() -> int:
         check("Follow the decision-policy contract." in skill_body, f"{skill_path.parent.name} must follow the decision-policy contract")
     check("debug_toggled" in skill_text["configure-workflow"], "turning debug on or off is a change-log event")
     check("export the debug log" in skill_text["fstack-status"], "fstack-status must export a debug trace")
+    upgrade = skill_text["upgrade-fstack"]
+    orchestrator_bot = (ROOT / "bots" / "orchestrator.yaml").read_text(encoding="utf-8")
+    check("upgrade-fstack" in (yaml.safe_load(orchestrator_bot).get("skills") or []), "the Orchestrator must list upgrade-fstack")
+    for phrase in ("update fstack", "upgrade fstack", "sync fstack"):
+        check(phrase in orchestrator_bot, f"the Orchestrator must trigger on {phrase}")
+    check("is not the fstack version" in upgrade and "0.0.6" in upgrade, "the Notion setup guide version stays separate from the fstack version")
+    check("changes nothing" in upgrade and "sync-bot-config" in upgrade and "provision-team" in upgrade, "upgrade-fstack must be idempotent and refresh the team")
+    check("fstack-status" in upgrade and "workflow_changed" in upgrade, "upgrade-fstack must migrate config and report status")
     for message in fix_intake_errors(table, skill_text):
         check(False, message)
     check(True, "a fix stays on the existing feature")

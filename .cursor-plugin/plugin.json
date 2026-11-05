@@ -1,6 +1,6 @@
 {
   "name": "fstack",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A shareable feature stack. A small team of agents takes a feature from requirements through gap analysis, stacked chunks, Cursor coding agents, independent verification, and a human release approval.",
   "author": {
     "name": "Artem Trachuk"
