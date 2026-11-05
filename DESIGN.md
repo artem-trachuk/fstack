@@ -56,7 +56,7 @@ Property names and types come from `notion_schema.features` and `notion_schema.f
 | Memories | relation | Extra |
 | Product | relation | Extra. The product this feature belongs to |
 
-The page body has four sections, and they are transient: Requirements, Questions, Plan, Decisions. Durable product facts are graph nodes, not sections of this page. The feature stores node ids only. Child pages hold prompts, diffs, verification results, advisor inputs, and advisor outputs. Title them `prompt <action> a<attempt>`, `diff <chunk-id> a<attempt>`, `verification <chunk-id> a<attempt>`, `advisor input <n>`, and `advisor output <n>`.
+The page body has three transient sections: Requirements, Questions, and Plan. Decisions are their own pages, related to the feature and the product. The feature page links to those pages and does not copy the entries into its body. Durable product facts are graph nodes, not sections of this page. The feature stores node relations only. Child pages hold prompts and diffs. Verification is its own page, related to the chunk. Title prompt and diff pages `prompt <action> a<attempt>` and `diff <chunk-id> a<attempt>`. Title a verification page `verification <chunk-id> a<attempt>`. The Orchestrator creates that verification page when the verifier reply arrives.
 
 ### Chunks
 

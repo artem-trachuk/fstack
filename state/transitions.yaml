@@ -156,7 +156,7 @@ next_rules:
     action: launch_verifier
     detail: Pass the verify prompt and the patch only. Record verifier_launched before waiting.
   - id: apply_filed_verdict
-    when: a verdict file exists for this chunk, attempt, and head_sha, and the chunk is still in_review or needs_verify
+    when: a verification page exists for this chunk, attempt, and head_sha, and the chunk is still in_review or needs_verify
     action: apply_verdict
     detail: Do not launch a second verifier. A verdict of not_implemented is not a pass.
   - id: not_implemented
@@ -689,15 +689,25 @@ memory_fields:
 # A page is reachable when a path of these relations leads to it from the product page.
 required_relations:
   product: []
-  feature: [Product, Chunks, Nodes read, Nodes added, Nodes changed, Nodes removed]
-  chunk: [Product, Feature, Touched nodes, Depends on]
+  feature: [Product, Chunks, Nodes read, Nodes added, Nodes changed]
+  chunk: [Product, Feature, Touched nodes]
   graph_node: [Product]
   graph_edge: [Product, From, To]
   survey: [Product, Nodes]
-  coverage: [Product, Feature, Node]
+  coverage: [Product, Feature]
   decision: [Product, Feature]
   verification: [Product, Chunk]
   memory: [Product]
+  workflow: [Product]
+
+# Empty is allowed. fstack-status must not call these unlinked.
+optional_relations:
+  feature: [Nodes removed]
+  chunk: [Depends on]
+  coverage: [Node]
+  survey: [Feature]
+  memory: [Feature]
+  workflow: [Feature]
 
 workflow_fields:
   - scope

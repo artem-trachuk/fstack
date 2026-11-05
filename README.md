@@ -54,6 +54,7 @@ flowchart TD
   verify[verify]
   review[review-stack]
   release[release]
+  graph[update-graph]
   done([Next feature])
 
   human -->|asks in chat| collect
@@ -72,7 +73,8 @@ flowchart TD
   review -->|changes on one chunk| pick
   review -->|review done, next turn| release
   release -->|Approve release?| human
-  human -->|explicit approval| done
+  human -->|explicit approval| graph
+  graph -->|promote the delta| done
 ```
 
 `build-context` writes a Notion child page named `prompt verify a<attempt>` on the chunk before `verify` is called. The skill does not use that page to judge the chunk. It returns `verdict: not_implemented` and the message `Verification is not implemented yet, so these changes cannot be verified.` The orchestrator sends that sentence through `tldr` and leaves the chunk in `awaiting_verification_decision`. `accept_unverified` is logged and is not a pass. `stop` ends the feature and leaves pull requests open.
@@ -150,7 +152,7 @@ Pull requests are still the code handoff: a branch and a short description of th
 
 ## Workspace
 
-The Notion databases above are the feature workspace. They are not a git branch.
+The Notion databases above hold the feature. They are not a git branch.
 
 A chunk id is `NN-slug`. Status values and the events that change them are only those in [`state/transitions.yaml`](state/transitions.yaml).
 

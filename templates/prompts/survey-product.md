@@ -1,16 +1,11 @@
 # Prompt: survey-product
 
-Repository: {{feature}}
-
-Read this one code location at one pinned commit. Do not modify it. Do not open a pull request.
-
-Describe current behaviour:
-
-- Features and screens
-- Routes and APIs
-- Data model
-- Flags
-
-Every claim names a file and a line. Skip a claim you cannot point at.
-
+Code location: {{code_location}}
+Feature: {{feature}}
 Pinned commit: {{shas}}
+
+Read the product graph for this location first. Re-read only nodes whose last-verified commit is not the pinned commit, and areas the graph does not cover. Do not read the whole location when the graph already covers it.
+
+Do not modify the location. Do not open a pull request.
+
+Write graph nodes, not a copy of the facts on the feature page. Every claim names a file and a line.

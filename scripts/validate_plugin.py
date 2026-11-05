@@ -62,6 +62,9 @@ TOKENS = {
     "advisor_name",
     "artifact",
     "dispute_reason",
+    "sources",
+    "graph",
+    "code_location",
     "max_calls",
     "reserve",
     "need",
@@ -273,7 +276,8 @@ def main() -> int:
     check("## Q1" not in questions, "questions template must not ship a blank question")
     chunk = (ROOT / "templates" / "feature" / "chunks" / "chunk.md").read_text(encoding="utf-8")
     check("## Implementer notes" not in chunk, "chunk body must not store implementer notes")
-    check("status: planned" in chunk and "allowed_files:" in chunk and "verified_sha:" in chunk, "chunk frontmatter lost machine fields")
+    check("## Spec" in chunk and "## Acceptance criteria" in chunk and "## Out of scope" in chunk, "chunk body lost its sections")
+    check(not chunk.startswith("---") and "status: planned" not in chunk, "chunk template must not repeat status in frontmatter")
     check((ROOT / "templates" / "feature" / "feature.yaml").is_file(), "feature state template missing")
 
     orchestrator = (ROOT / "agents" / "orchestrator.md").read_text(encoding="utf-8")
@@ -365,6 +369,14 @@ def main() -> int:
     for message in stale_project_name_errors(ROOT):
         check(False, message)
     check(True, "the top-level entity is a product")
+    for message in file_wording_errors(ROOT):
+        check(False, message)
+    check(True, "state wording names Notion pages")
+    for bot_name in ("verifier.yaml", "advisor.yaml"):
+        bot = yaml.safe_load((ROOT / "bots" / bot_name).read_text(encoding="utf-8"))
+        check("tldr" in (bot.get("skills") or []), f"{bot_name} must include tldr")
+    advisor_bot = yaml.safe_load((ROOT / "bots" / "advisor.yaml").read_text(encoding="utf-8"))
+    check("advisors" not in (advisor_bot.get("skills") or []), "the advisor bot must not run the orchestrator launch steps")
     for message in durable_fact_errors(ROOT):
         check(False, message)
     check(True, "durable product facts are graph nodes")
@@ -611,6 +623,7 @@ def relation_declaration_errors(table: dict, design: str) -> list[str]:
         "decision",
         "verification",
         "memory",
+        "workflow",
     }
     if set(required) != expected:
         errors.append(f"required_relations must name {sorted(expected)}")
@@ -627,7 +640,28 @@ def relation_declaration_errors(table: dict, design: str) -> list[str]:
         "decision": ("decision", "decision_extra"),
         "verification": ("verification", "verification_extra"),
         "memory": ("memory", "memory_extra"),
+        "workflow": ("workflow", "workflow_extra"),
     }
+    optional = table.get("optional_relations") or {}
+    for entity, names in optional.items():
+        if entity not in groups and entity != "product":
+            errors.append(f"optional relation entity {entity} is unknown")
+            continue
+        if entity == "product":
+            continue
+        fields_key, extra_key = groups[entity]
+        props = {}
+        for spec in (schema.get(fields_key) or {}).values():
+            if isinstance(spec, dict):
+                props[spec.get("name")] = spec.get("type")
+        for spec in schema.get(extra_key) or []:
+            if isinstance(spec, dict):
+                props[spec.get("name")] = spec.get("type")
+        for name in names:
+            if props.get(name) != "relation":
+                errors.append(f"{entity} optional relation {name} is not declared as a relation")
+            if f"| {name} |" not in design:
+                errors.append(f"DESIGN.md is missing optional relation {name} for {entity}")
     for entity, names in required.items():
         if entity == "product":
             continue
@@ -679,6 +713,30 @@ def durable_fact_errors(root: Path) -> list[str]:
             if re.search(r"\b(do not|not)\b", line, re.IGNORECASE):
                 continue
             errors.append(f"{path.relative_to(root).as_posix()} stores a durable fact on the feature page")
+    return errors
+
+
+def file_wording_errors(root: Path) -> list[str]:
+    """State lives on Notion pages. These phrases treat it as files."""
+    banned = (
+        "feature folder exists",
+        "verdict file exists",
+        "## Chunk file",
+        "critique path",
+        "feature workspace",
+    )
+    errors = []
+    paths = [root / "README.md", root / "DESIGN.md", root / "state" / "transitions.yaml"]
+    paths += list((root / "skills").glob("*/SKILL.md"))
+    paths += list((root / "templates").rglob("*"))
+    paths += list((root / "agents").glob("*.md"))
+    for path in paths:
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        for phrase in banned:
+            if phrase in text:
+                errors.append(f"{path.relative_to(root).as_posix()} still says {phrase!r}")
     return errors
 
 

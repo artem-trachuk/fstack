@@ -16,7 +16,7 @@ A second opinion. The caller decides what to do with it.
 
 ## Budget
 
-`max_calls_per_feature` is 6. `reserve.verify_tiebreak` is 2. Planner calls may use the other 4. A launched, finished, or failed row counts. A skipped row does not. Write the row as `launched` before you wait, then update it to `finished` or `failed`. A crash still counts. A local CLI fallback is its own call and counts too.
+`max_calls_per_feature` is 6. `reserve.verify_tiebreak` is 2. Planner calls may use the other 4. A launched, finished, or failed row counts. A skipped row does not. The ledger is the Advisor calls page related to the feature and the product. Write the row there as `launched` before you wait, then update it to `finished` or `failed`. A crash still counts. A local CLI fallback is its own call and counts too. Do not keep the ledger in a file.
 
 Review one artifact hash once. A duplicate returns `skipped: duplicate` and does not count.
 
@@ -52,7 +52,7 @@ If Cursor cannot start and every fallback is disabled, unavailable, or not signe
 
 3. Record `advisor_launched` or `tiebreak_launched`, then start the advisor. On Grok Bot, send the handoff in `bots/orchestrator.yaml` to the teammate whose profile name is `fstack-advisor` and end the turn. The reply starts with `fstack-reply` and the critique is the `critique` field. If that teammate is unavailable, or a Cursor advisor model cannot start because of credits or an unavailable model, use the local CLI above. On the Cursor plugin, launch the advisor agent. On a credit or unavailable-model failure, mark that row `failed` and try the local CLI list above. Record a new launched row before the CLI runs. Same-model tie-break still skips and does not use the CLI or the teammate.
 
-4. Record `advisor_finished` or `tiebreak_finished` with the critique path. A planner failure does not stop the feature. A tie-break failure does not become the verdict. The orchestrator records `decide_dispute`.
+4. Record `advisor_finished` or `tiebreak_finished` on the Advisor calls page, and store the critique on the Notion page `advisor output <n>` under the feature. A planner failure does not stop the feature. A tie-break failure does not become the verdict. The orchestrator records `decide_dispute`.
 
 ## Events
 

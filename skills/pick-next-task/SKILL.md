@@ -12,11 +12,11 @@ Apply `next_rules` in `state/transitions.yaml` from top to bottom. The first rul
 
 ## When to use
 
-The feature folder exists and the orchestrator needs the next legal action.
+The Notion feature page exists and the orchestrator needs the next legal action.
 
 ## Steps
 
-1. Read the Notion feature page, every chunk page in id order, and any verification page whose applied flag is false. Take the lease when it is free or already yours. A lease held by someone else until it expires means you stop.
+1. Read the Notion feature page, every chunk page in id order, and any verification page whose applied flag is false. When a verifier reply arrives and that page does not exist yet, create it before you read it. Title it `verification <chunk-id> a<attempt>`. Set Product, Feature, and Chunk relations. Store the verdict, the message, `base_sha`, and `head_sha` from the reply. Set applied to false. The verifier does not create this page. Take the lease when it is free or already yours. A lease held by someone else until it expires means you stop.
 
 2. Do that one action.
 

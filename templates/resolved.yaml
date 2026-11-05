@@ -1,8 +1,5 @@
-# Resolved models
-
-On the Cursor plugin, setup-product writes this file to `.fstack/resolved.yaml`. It is gitignored. It holds resolved model slugs and Notion page and database ids. It is not a copy of feature state. Do not put the fstack repository URL or `applied_commit` here. On Grok Bot, keep the same notes in the bot's persistent state and do not create this file in the product repository. Do not commit it. Do not copy these values into `fstack.yaml`.
-
-```yaml
+# Cursor checkout only. On Grok Bot the same keys live in the bot's persistent state.
+# Do not commit this file. Do not store the skill-repo URL or applied_commit here.
 resolved_at:
 source:
 plugin_version:
@@ -13,6 +10,7 @@ roles:
   orchestrator: inherit
   verifier: inherit
   implementer: inherit
+  advisor: inherit
 runtime: cloud
 runtime_note:
 fallbacks: {}
@@ -23,6 +21,15 @@ advisor_cli:
     enabled: true
     available: false
     signed_in: false
-```
-
-`inherit` means the parent Cursor model. `runtime` is `cloud` or `local_worktree`. `advisor_cli` records whether a configured local advisor command is on `PATH` and signed in. It stores no paths and no tokens.
+notion:
+  product_page:
+  features_db:
+  chunks_db:
+  memories_db:
+  coverage_db:
+  graph_nodes_db:
+  graph_edges_db:
+  workflow_db:
+  survey_db:
+  decision_db:
+  verification_db:

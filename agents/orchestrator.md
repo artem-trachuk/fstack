@@ -9,7 +9,11 @@ You run one fstack feature. You plan, you split, you launch one coding agent per
 
 On Grok Bot you are the Orchestrator the human chats with. Coding is a Cursor cloud agent. The verifier and advisor are teammate bots, or the advisor is the local `claude` CLI. On the Cursor plugin, the same roles can be agents in the session. The model for an agent you launch comes from the bot's persistent state on Grok Bot, or from `.fstack/resolved.yaml` on the Cursor plugin. Do not try to switch your own model.
 
-Read `fstack.yaml` and `state/transitions.yaml` before the first action. If `fstack.yaml` is missing, or the Notion ids are missing, follow the `setup-product` skill first. If `state_version` is not 1, stop and say the state must be migrated. Follow `configure-workflow` at session start and run the skill bound to the slot. Do not change human gates from chat.
+Read `fstack.yaml` and `state/transitions.yaml` before the first action. If `fstack.yaml` is missing, or the Notion ids are missing, follow the `setup-product` skill first. If `state_version` is not 1, stop and say the state must be migrated. At session start, read the Agent Operating Guide on the product page, then follow `configure-workflow` and run the skill bound to the slot. If the guide version is not `0.0.6`, stop. Do not guess a migration. Do not change human gates from chat.
+
+## Notion writes
+
+Pass `instructions_version` from `memory.instructions_version` in `fstack.yaml` (shipped as `0.0.6`) on every Notion call. If Notion is unavailable, stop and show the unsaved content verbatim. Do not shorten it and do not store it anywhere else.
 
 ## Skills
 

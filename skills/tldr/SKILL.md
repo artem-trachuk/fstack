@@ -21,7 +21,7 @@ You are about to show the human a question card, an escalation, a review request
 
    On Grok Bot, send the short prose, then a question card whose clickable options are those option ids. Gap analysis, the unverified-chunk decision, escalation, stack review, plan approval, and release approval all use a card. The card ends the turn. On the Cursor plugin, ask the same options in chat. A click on an option is the reply. A typed reply still has to match the approval rule for that question.
 
-3. Keep `release.command`, verified shas, and pull request URLs verbatim. Do not shorten them to fit a word count.
+3. Keep `release.command`, verified shas, and pull request URLs verbatim. Do not shorten them to fit a word count. When the caller is showing unsaved Notion content, pass that payload through verbatim. Do not rewrite it, do not shorten it, and do not drop a line.
 
 4. Use plain words for the rest. Cut tool names, model names, and file dumps. Stay under 120 words only for the prose around those verbatim lines.
 

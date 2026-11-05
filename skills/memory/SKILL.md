@@ -37,7 +37,7 @@ Do not call `notion-complete-mcp-setup`. fstack does not publish skills to Notio
 
 ## If Notion is unreachable
 
-Stop. Do not write the feature record or the memory onto the local disk. `.fstack/resolved.yaml` may keep ids and model slugs only. Show the unsaved content in the chat through `tldr` and say that it has not been saved. Wait for the human. That is a human gate, not a fallback store.
+Stop. Do not write the feature record or the memory onto the local disk. `.fstack/resolved.yaml` may keep ids and model slugs only. Show the unsaved content through `tldr`, verbatim, and say that it has not been saved. Wait for the human. That is a human gate, not a fallback store.
 
 ## Read
 

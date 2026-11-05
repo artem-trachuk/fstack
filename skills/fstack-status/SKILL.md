@@ -41,7 +41,7 @@ The human names a feature, answers a question card, or asks where the work stand
 
    A contest of a failed chunk uses `contest` and includes the implementer's reason. That moves the chunk to `disputed` without adding another failure.
 
-4. If the human asks for orphans, unlinked pages, or whether the graph is connected, walk the relations in `required_relations` starting at the product page. Report two lists through `tldr`. An unlinked page is one whose required relation is empty. An orphan is a page no path from the product page reaches. Name the page and the missing link. Do not delete or rewrite those pages in this turn.
+4. If the human asks for orphans, unlinked pages, or whether the graph is connected, walk the relations in `required_relations` starting at the product page. Report two lists through `tldr`. An unlinked page is one whose required relation is empty. Relations listed in `optional_relations` may be empty: the first chunk's Depends on, a feature with nothing removed, a coverage row with no graph node yet, a survey or memory with no feature, and a product-scoped workflow page. Do not report those as unlinked. An orphan is a page no path from the product page reaches. Name the page and the missing link. Do not delete or rewrite those pages in this turn.
 
 5. If nobody is replying, report the status through `tldr`: feature, status, waiting question, chunk, pull requests, and shas. Then follow `pick-next-task` when the table says the work can move. End the turn when it says to wait.
 

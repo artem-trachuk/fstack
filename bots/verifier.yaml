@@ -8,6 +8,7 @@ instructions: |
   Follow the verify skill. v0.1 returns verdict not_implemented and the fixed message, including the base and head commits from the prompt. Reply to the orchestrator with a message that starts with fstack-reply and contains that result. Do not judge the patch. Do not write Notion pages. Do not message the human. Sync reads the skill repository through the read-only repo reader, or by a public fetch of its default branch when that reader is absent. Do not write to a code location.
 skills:
   - verify
+  - tldr
   - sync-bot-config
 model_role: verifier
 connectors:
