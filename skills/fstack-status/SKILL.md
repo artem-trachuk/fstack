@@ -7,17 +7,15 @@ description: >
 
 # Status
 
-A new chat does not remember the last turn. The feature files do. They are not in the git repository.
+A new chat does not remember the last turn. Notion does. Feature pages are not in the git repository.
 
 ## When to use
 
-The human names a feature, answers a question id, or asks where the work stands. With no slug, list every feature directory under the state root and its `feature_status`.
-
-The state root is the Orchestrator's `state.path` from `fstack.yaml`, shipped as `~/.fstack/<project>/features/<name>/`. `<project>` is the repository directory name. Expand `~` on this machine. Do not look in GitHub and do not look for a committed copy. If the folder is missing, the feature was started on another machine and its state was not published.
+The human names a feature, answers a question id, or asks where the work stands. With no slug, list Features pages and their Status. If Notion is unreachable, stop and say so. Do not look for a local feature folder.
 
 ## Steps
 
-1. Read `feature.yaml` from that folder, plus `waiting_on`, the lease, and `state/transitions.yaml`. If `state_version` is not 1, stop and say it must be migrated. If the folder is missing, stop. Nothing was committed.
+1. Read the feature page from Notion, including Status, Waiting on, and the linked chunks, and read `state/transitions.yaml`. If `state_version` is not 1, stop and say it must be migrated. If the page is missing, stop. Nothing was committed.
 
 2. If the lease belongs to someone else and has not expired, report it and stop. `take_lease` requires a human quote and the new owner. The lease lasts 30 minutes. Two writers can still race. See `stubs/enforcement.md`.
 

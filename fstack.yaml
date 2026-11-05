@@ -1,15 +1,21 @@
 # fstack v0.1
-# Shareable project config. Paths in fallback are relative to this file.
-# Feature state is not committed. Session notes go in the state root.
+# Shareable project config. Notion ids and resolved model slugs are not stored here.
 
 version: "0.1"
 state_version: 1
 
-# Feature files stay on the Orchestrator's machine, outside the repository.
-# <project> is the repository directory name. <name> is the feature slug.
+# Feature state and memory live in the user's Notion workspace.
+# Machine-specific ids and model slugs stay in gitignored .fstack/resolved.yaml.
 state:
-  backend: orchestrator-local
-  path: ~/.fstack/<project>/features/<name>
+  backend: notion
+
+# Cross-feature memory uses the same Notion workspace.
+# instructions_version matches Notion's agent setup guide.
+memory:
+  backend: notion
+  instructions_version: "0.0.6"
+  published: "2026-10-30"
+  setup_guide: https://developers.notion.com/prompts/setup
 
 # notify does not wait for plan approval. approve waits.
 # The default is off.

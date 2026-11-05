@@ -16,15 +16,15 @@ Write the stack. Chunk ids look like `01-slug`, in order. The first chunk's base
 
 ## Chunk file
 
-Copy `.fstack/templates/feature/chunks/chunk.md`. The frontmatter is the only place for status, branch, base, shas, allowed files, and attempt counts. The body has spec, acceptance criteria, and out of scope. Do not add an implementer-notes section.
+Copy `templates/feature/chunks/chunk.md` from the plugin into the chunk page body. The Notion properties are the only place for status, branch, base, shas, allowed files, and attempt counts. The page body has spec, acceptance criteria, and out of scope. Do not add an implementer-notes section.
 
 Allowed files are concrete paths or globs. They must not include `.fstack/` or the Orchestrator's state path. One chunk at a time is the v0.1 rule.
 
 ## Steps
 
-1. Follow `build-context` for `split-into-chunks`.
+1. Follow `memory` and search for memories that bear on the plan. Then follow `build-context` for `split-into-chunks`. If Notion is unreachable, show the unsaved plan and stop.
 
-2. Write `plan.md`, including the Release section. Record `default_branch` and `default_branch_sha` on `feature.yaml`.
+2. Write the Plan section and one Chunks page per chunk, as in `DESIGN.md`. Record `default_branch` and `default_branch_sha` on the feature.
 
 3. Record `save_plan`.
 

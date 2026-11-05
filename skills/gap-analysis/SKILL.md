@@ -16,9 +16,9 @@ Read the confirmed requirements and list what is still open.
 
 ## Steps
 
-1. Follow `build-context` for `gap-analysis`.
+1. Follow `memory` and search for memories that bear on this feature. Then follow `build-context` for `gap-analysis`. If Notion is unreachable, show the unsaved questions and stop.
 
-2. A question is open when a wrong guess would change the spec, the acceptance criteria, or the scope. Record `record_questions`.
+2. A question is open when a wrong guess would change the spec, the acceptance criteria, or the scope. Record `record_questions` on the feature page.
 
    An empty list is `no_open_questions`. Set `questions_status: none` and `feature_status: ready_to_plan`. Tell the human there is nothing to answer, and log that event. Then continue to `split-into-chunks`.
 

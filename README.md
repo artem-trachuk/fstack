@@ -20,7 +20,7 @@ From a team marketplace, install **fstack** from Customize after an admin import
 
 In the product repository, with the plugin installed:
 
-1. Invoke `/setup-project`. This writes `fstack.yaml` when it is missing, ignores `.fstack/` as a guard, and creates `~/.fstack/<project>/` on the Orchestrator's machine. `<project>` is the repository directory name.
+1. Invoke `/setup-project`. This writes `fstack.yaml` when it is missing, ignores `.fstack/` for machine-specific config, and connects Notion. You approve the project page and databases before any schema is created.
 2. Invoke `/collect-requirements` and describe the feature. Confirm the requirements file when asked. This is the only way requirements collection starts.
 3. Answer the question card from gap analysis. If nothing is open, the orchestrator says so and continues.
 4. The orchestrator splits the feature into stacked chunks. Plan approval waits only when `plan_review` is `approve`. The shipped value is `notify`, so coding starts after the plan is shown.
@@ -81,8 +81,9 @@ The prompt shape the stub will someday use is unchanged: the orchestrator builds
 
 | Key | Shipped value | Meaning |
 | --- | --- | --- |
-| `state.backend` | `orchestrator-local` | The Orchestrator keeps feature files on its own machine |
-| `state.path` | `~/.fstack/<project>/features/<name>` | Outside the repo. `~` is that machine's home directory |
+| `state.backend` | `notion` | Feature records live in the user's Notion workspace |
+| `memory.backend` | `notion` | Decisions, corrections, preferences, conventions, and lessons |
+| `memory.instructions_version` | `0.0.6` | Sent on every Notion MCP call |
 | `plan_review` | `notify` | Show the plan and continue. `approve` waits for a yes |
 | `review.mode` | `end_of_stack` | One human review for the stack, then one release question |
 | `verify.max_failures_before_escalation` | `2` | Counted with `attempts_since_decision`, using `>=` |
@@ -118,40 +119,25 @@ If the tie-break would use the same model as the verifier, including when both a
 
 Human gates stay fixed: merge, release, and outward messages `require_approval`, and `collect_requirements` `manual_only`. setup stops when a config weakens them. Only a human quote of yes, approve, or approved counts, and only for the question id that was asked.
 
-Roles name an agent and a model. They do not list skills. The agent file is the skill list. The parent that launches a subagent passes the model from the resolved file in the state root.
+Roles name an agent and a model. They do not list skills. The agent file is the skill list. The parent that launches a subagent passes the model from `.fstack/resolved.yaml`.
 
-`implementer.runtime` ships as `cloud`. setup sets `local_worktree` in the resolved file when this session cannot start a cloud agent that opens a pull request onto a non-default base. The implementer still gets the chunk spec in the launch prompt. setup does not create a worktree for fstack state.
+`implementer.runtime` ships as `cloud`. setup sets `local_worktree` in the resolved file when this session cannot start a cloud agent that opens a pull request onto a non-default base. The implementer still gets the chunk spec in the launch prompt.
 
 ## Where state lives
 
-`state.backend` is `orchestrator-local`. The Orchestrator is the only reader and writer. Feature files go to `state.path`, shipped as `~/.fstack/<project>/features/<name>/`. `<project>` is the repository directory name. `<name>` is the feature slug. A leading `~` is the home directory of the user running the Orchestrator. The directory is outside the git repository, so a commit cannot pick it up. setup also puts `.fstack/` in `.gitignore` as a guard if a path is ever pointed inside the repo.
+`state.backend` and `memory.backend` are `notion`. The schema is in [DESIGN.md](DESIGN.md): a private project page, an Agent Operating Guide at version `0.0.6`, and Features, Chunks, and Memories databases. Feature documents are pages. Chunk specs are pages. Memories are one topic each.
 
-A relative `state.path` is allowed. setup resolves it from the Orchestrator's current directory and stops when the result is inside the repository.
+The Orchestrator is the only role that calls Notion. It copies the chunk spec into the coding agent's launch prompt, passes the verifier its prompt and patch, and passes advisors their input pages' text. `/fstack-status` reads the Features database.
 
-```
-~/.fstack/<project>/features/<name>/
-  feature.yaml
-  requirements.md
-  questions.md
-  plan.md
-  decisions.md
-  advisors.md
-  advisors/inputs/
-  advisors/outputs/
-  events/<nnnn>-<event>.yaml
-  chunks/<NN-slug>.md
-  prompts/<NN-slug>/a<attempt>/<action>.md
-  verification/<NN-slug>/a<attempt>.yaml
-  diffs/<NN-slug>/a<attempt>.diff
-```
+Gitignored `.fstack/resolved.yaml` holds resolved model slugs and Notion ids. It is not a copy of the feature. If Notion is unreachable, the Orchestrator stops and shows the unsaved content. It does not write that content to disk.
 
-The coding agent receives the chunk spec in its launch prompt and does not read this tree. The Orchestrator passes the verifier its prompt and patch. The Orchestrator writes advisor inputs and saves the critique. `/fstack-status` reads this path on the Orchestrator's machine. State started on another machine is not available, because it was never published.
+The skill files stay in this git repository. They are not uploaded to Notion Skills.
 
-The only files fstack publishes are pull requests: a branch of code changes and a short description of that change.
+Pull requests are still the code handoff: a branch and a short description of the change. They do not carry fstack's notes, prompts, or critiques.
 
 ## Workspace
 
-The tree above is the feature workspace. It is not a git branch.
+The Notion databases above are the feature workspace. They are not a git branch.
 
 A chunk id is `NN-slug`. Status values and the events that change them are only those in [`state/transitions.yaml`](state/transitions.yaml).
 
@@ -171,8 +157,9 @@ A chunk id is `NN-slug`. Status values and the events that change them are only 
 | `advisors` | Gap analysis, split, one dispute per attempt | Read-only critique. A local CLI fallback counts toward the same cap |
 | `escalate` | Orchestrator | Stops for retry, accept, a spec change, or stop |
 | `review-stack` | Orchestrator, after every chunk is verified | Asks for review and waits |
-| `release` | Orchestrator, after review | Asks, then merges only the approved shas |
-| `fstack-status` | Human or a fresh session | Reads saved state and routes a reply |
+| `release` | Orchestrator, after review | Asks, then merges only the approved shas, then proposes memories |
+| `fstack-status` | Human or a fresh session | Reads Notion and routes a reply |
+| `memory` | Orchestrator | Reads and writes Notion memories. Does not publish skills |
 
 ## What is not enforced yet
 

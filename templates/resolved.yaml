@@ -1,6 +1,6 @@
 # Resolved models
 
-setup-project writes this file to `~/.fstack/<project>/resolved.yaml` on the Orchestrator's machine. `<project>` is the repository directory name. Do not commit it. Do not copy these values into `fstack.yaml`.
+setup-project writes this file to `.fstack/resolved.yaml`. It is gitignored. It holds resolved model slugs and Notion page and database ids. It is not a copy of feature state. Do not commit it. Do not copy these values into `fstack.yaml`.
 
 ```yaml
 resolved_at:

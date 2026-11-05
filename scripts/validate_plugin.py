@@ -27,6 +27,7 @@ CORE_SKILLS = {
     "release",
     "review-stack",
     "fstack-status",
+    "memory",
 }
 
 TOKENS = {
@@ -171,9 +172,9 @@ def main() -> int:
 
     table = yaml.safe_load((ROOT / "state" / "transitions.yaml").read_text(encoding="utf-8"))
     check(table.get("state_version") == 1, "transition table state_version must be 1")
-    check(table.get("storage", {}).get("backend") == "orchestrator-local", "transition table must use the orchestrator-local backend")
-    check(table.get("storage", {}).get("path") == "~/.fstack/<project>/features/<name>", "transition table path drifted")
-    check(table.get("storage", {}).get("writer") == "orchestrator", "only the orchestrator writes state")
+    check(table.get("storage", {}).get("backend") == "notion", "transition table must store state in Notion")
+    check(table.get("storage", {}).get("writer") == "orchestrator", "only the orchestrator writes Notion state")
+    check(table.get("storage", {}).get("instructions_version") == "0.0.6", "Notion instructions_version drifted")
     check(REQUIRED_FEATURE_STATUSES <= set(table.get("feature_statuses") or []), "feature statuses drifted")
     check(REQUIRED_CHUNK_STATUSES <= set(table.get("chunk_statuses") or []), "chunk statuses drifted")
     check(table.get("review_mode") == "end_of_stack", "review mode must be one gate for the stack")
@@ -272,6 +273,14 @@ def main() -> int:
     check("TODO: intended verifier" in verify_skill, "verify must keep the intended design as a TODO")
     check("not_implemented" in skill_text["pick-next-task"] and "tldr" in skill_text["pick-next-task"], "the orchestrator must relay not_implemented through tldr")
     check("accept_unverified" in skill_text["fstack-status"], "accept_unverified must be logged from fstack-status")
+    check("instructions_version" in skill_text["setup-project"], "setup must pass Notion instructions_version")
+    check("notion-fetch" in skill_text["memory"] or "notion://docs/memory" in skill_text["memory"], "memory skill must load Notion's memory guide")
+    check("notion-memory-search" in skill_text["memory"], "memory skill must search before creating memories")
+    check("unsaved" in skill_text["memory"], "a Notion outage must show unsaved content")
+    check("notion-upload-skill" not in skill_text["memory"], "skills are not published to Notion")
+    for reader in ("collect-requirements", "gap-analysis", "split-into-chunks"):
+        check("memory" in skill_text[reader], f"{reader} must read project memory first")
+    check("memory" in skill_text["release"], "release must propose durable memories")
     advisors_skill = skill_text["advisors"]
     check("Buy credits or switch to a Grok model" in advisors_skill, "advisors must recognize a credit failure")
     check("Read,Grep,Glob" in advisors_skill and "Bash" in advisors_skill, "the Claude CLI fallback must be read-only")
@@ -329,13 +338,17 @@ def validate_config(data: dict) -> list[str]:
     if workspace is not None:
         errors.append("workspace does not belong in fstack.yaml; state lives outside the repo")
     state = data.get("state") or {}
-    if state.get("backend") != "orchestrator-local":
-        errors.append("state.backend must be orchestrator-local")
-    path = state.get("path")
-    if path != "~/.fstack/<project>/features/<name>":
-        errors.append("state.path must be ~/.fstack/<project>/features/<name>")
-    if isinstance(path, str) and (path.startswith(("/", "\\")) or ".." in path.split("/")):
-        errors.append("state.path must be relative or start with ~")
+    if state.get("backend") != "notion":
+        errors.append("state.backend must be notion")
+    if "path" in state:
+        errors.append("state.path is not used; feature state lives in Notion")
+    memory = data.get("memory") or {}
+    if memory.get("backend") != "notion":
+        errors.append("memory.backend must be notion")
+    if memory.get("instructions_version") != "0.0.6":
+        errors.append("memory.instructions_version must be 0.0.6")
+    if memory.get("published") != "2026-10-30":
+        errors.append("memory.published must be 2026-10-30")
     if data.get("plan_review") != "notify":
         errors.append("shipped plan_review must be notify")
     if data.get("review", {}).get("mode") != "end_of_stack":
@@ -415,7 +428,9 @@ def state_publish_errors(root: Path) -> list[str]:
     forbidden = (
         ".fstack-worktrees",
         "state.backend: git",
+        "state.backend: orchestrator-local",
         "orphan branch",
+        "~/.fstack/<project>/features",
     )
     for path in paths:
         text = path.read_text(encoding="utf-8")

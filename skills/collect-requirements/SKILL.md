@@ -17,19 +17,19 @@ The human typed `/collect-requirements` and wants a feature started.
 
 ## Steps
 
-1. Read `fstack.yaml`. If it is missing, or the resolved file from `setup-project` is missing, follow `setup-project`, then continue.
+1. Read `fstack.yaml`. If it is missing, or `.fstack/resolved.yaml` has no Notion database ids, follow `setup-project`, then continue.
 
-2. Agree a feature slug: lowercase letters, digits, and hyphens. Create `~/.fstack/<project>/features/<slug>/` from `state.path`, using the same `<project>` rule as `setup-project`. Copy templates from `~/.fstack/<project>/templates` or the plugin. Replace `{{feature}}`, `{{max_calls}}`, and `{{reserve}}`. Do not copy a blank question into `questions.md`.
+2. Follow `memory` and search for memories about this project and the feature the human described. Pass the excerpts into the requirements. If Notion is unreachable, stop and show the unsaved requirements through `tldr`.
 
-   Do not create a branch for this folder. Do not commit it and do not push it. This state stays on the Orchestrator's machine.
+3. Agree a feature slug: lowercase letters, digits, and hyphens. Create a Features page in Notion from `DESIGN.md`. Do not create a local feature folder. Replace the template tokens in the page body. Do not invent a blank question.
 
-   If the folder already has a confirmed requirements file, ask whether to continue that feature or pick another slug.
+   Do not commit the feature record. If the slug already has a confirmed requirements page, ask whether to continue it or pick another slug.
 
-3. Fill `requirements.md` from the human: problem, people, outcome, constraints, out of scope, and feature acceptance. Leave `feature.yaml` `requirements_status: draft` and `feature_status: requirements_draft`. Record `save_requirements` in `events/`.
+4. Fill the Requirements section of the Notion feature page from the human: problem, people, outcome, constraints, out of scope, and feature acceptance. Leave Status `requirements_draft`. Record `save_requirements` as a decision entry on that page.
 
-4. Ask the human to confirm the file. The message names the file path and uses the question card `Q-<slug>-requirements`. A 120-word summary is not the thing they confirm. Follow the `tldr` skill, and keep the path and the question id verbatim. End the turn if you are waiting.
+5. Ask the human to confirm the Notion page. The message names the page link and uses the question card `Q-<slug>-requirements`. A 120-word summary is not the thing they confirm. Follow the `tldr` skill, and keep the link and the question id verbatim. End the turn if you are waiting.
 
-5. On a correction, edit the file and ask again. On yes, approve, or approved, set `requirements_status: confirmed` and `feature_status: requirements_confirmed`, quote them in the event, and record `confirm_requirements`.
+6. On a correction, edit the page and ask again. On yes, approve, or approved, set Status to `requirements_confirmed`, quote them on the page, and record `confirm_requirements`. If Notion is unreachable, show the unsaved page text and stop.
 
 ## Events
 

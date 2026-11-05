@@ -12,7 +12,7 @@ Prepare the project. Do not write session model slugs into `fstack.yaml`.
 ## When to use
 
 - The project has no `fstack.yaml`.
-- `~/.fstack/<project>/resolved.yaml` is missing. `<project>` is the repository directory name.
+- `.fstack/resolved.yaml` is missing, or it has no Notion database ids.
 - The human asks to set up fstack or to recheck models.
 
 ## Plugin root
@@ -23,23 +23,17 @@ The plugin root is the directory that contains `.cursor-plugin/plugin.json` whos
 
 1. If `fstack.yaml` is missing, copy the plugin's `fstack.yaml` into the project root. If it exists, leave it. Do not rewrite it to store resolved slugs.
 
-2. Read `fstack.yaml`. Stop if `version` is not `0.1` or `state_version` is not `1`, and say the project must be migrated. Stop if `state.backend` is not `orchestrator-local`. Stop if `state.path` is absolute and does not start with `~`, or if it contains `..`. Stop if `human_gates` differs from merge, release, and outward_messages `require_approval`, or `collect_requirements` `manual_only`. Do not silently change those keys.
+2. Read `fstack.yaml`. Stop if `version` is not `0.1` or `state_version` is not `1`, and say the project must be migrated. Stop if `state.backend` or `memory.backend` is not `notion`. Stop if `human_gates` differs from merge, release, and outward_messages `require_approval`, or `collect_requirements` `manual_only`. Do not silently change those keys.
 
-3. Ensure `.gitignore` contains a `.fstack/` line. Append that line when it is missing. That ignore line is a guard. It is the only fstack edit that belongs in the repository. Do not commit feature files.
+3. Ensure `.gitignore` contains a `.fstack/` line. Append that line when it is missing. That line is a guard for machine-specific config. It is the only fstack edit that belongs in the repository. Do not commit feature files. Feature state is not written under `.fstack/`.
 
-4. Create the state directory on this machine. Only the Orchestrator does this.
+4. Resolve models into `.fstack/resolved.yaml` using `templates/resolved.yaml`. Detect the Cursor slugs this session can pass to a subagent. If you cannot detect any, set each model to `inherit`, set `source` to `unresolved`, and say so. Do not invent a slug. Do not put Notion page bodies in this file. It holds resolved model slugs and, after the next step, Notion ids only.
 
-   `<project>` is the final segment of the repository directory. `<name>` is the feature slug, filled when a feature is created. A leading `~` is the home directory of the user running the Orchestrator. Do not write the expanded path into `fstack.yaml` or any committed file.
-
-   The shipped path is `~/.fstack/<project>/features/<name>`. Create `~/.fstack/<project>/` and `~/.fstack/<project>/features/`. Write resolved models to `~/.fstack/<project>/resolved.yaml`. Copy plugin templates to `~/.fstack/<project>/templates`. Copy `templates/workspace-readme.md` to `~/.fstack/<project>/features/README.md` when that file is absent.
-
-   A relative `state.path` is resolved from the Orchestrator's current directory. If that location is inside the git repository, stop and ask for a path outside the repo. State is never committed.
-
-5. Resolve models into the resolved file chosen above, using `templates/resolved.yaml`. Detect the Cursor slugs this session can pass to a subagent. If you cannot detect any, set each model to `inherit`, set `source` to `unresolved`, and say so. Do not invent a slug.
+5. Resolve the model families into that same file.
 
    For `opus` and `argon`, walk `models.<name>.match`, then walk `effort` in list order. A slug matches a prefix when it equals the prefix or starts with the prefix plus a hyphen. The first detected slug whose effort token matches the next effort in the list wins. If the family exists but no effort matches, use the first family slug and record that under `fallbacks`. If the family is missing, use `inherit` and record why.
 
-6. Role models stay `inherit` unless `fstack.yaml` names `opus` or `argon` for that role. Resolve that short name the same way. The launcher of a subagent reads the resolved file in the state root. Agents do not switch their own model.
+6. Role models stay `inherit` unless `fstack.yaml` names `opus` or `argon` for that role. Resolve that short name the same way. The launcher of a subagent reads `.fstack/resolved.yaml`. Agents do not switch their own model.
 
 7. Set `runtime` to `cloud` when this session can start a Cursor cloud agent that opens a pull request against a non-default base. Otherwise set `local_worktree` and tell the human, through the `tldr` skill, that the implementer still receives the chunk spec in its launch prompt. Do not create a fstack worktree and do not copy state into the product checkout. Record the reason in `runtime_note`.
 
@@ -51,7 +45,19 @@ The plugin root is the directory that contains `.cursor-plugin/plugin.json` whos
 
    Set `available` and `signed_in` from those exit statuses. A local CLI runs under the user's own subscription terms.
 
-9. Branch protection is not checked. Say that the check was not run. See `stubs/enforcement.md`.
+9. Connect Notion. This step is required. There is no local feature store.
+
+   Ask the human to authenticate the Notion MCP. Confirm the connection by telling them their name and workspace name. Pass `instructions_version` from `memory.instructions_version` (`0.0.6`) on every Notion MCP call.
+
+   Follow `memory` and `DESIGN.md`. Fetch `notion://docs/memory` before creating a Memories database. Search for an existing project page and for Features, Chunks, and Memories databases. Show the human one yes-or-no question before creating any schema. Private is the default. Do not create pages until they approve. Ask again before anything is written to a shared or team space.
+
+   After approval, create or reuse a private project page, the three databases, and a private Agent Operating Guide page. Set the guide version to `0.0.6` and the published date to `2026-10-30`. Fill the guide's destinations with the real links. Leave anything you did not create as "Not set up yet". Record the page and database ids in `.fstack/resolved.yaml` only.
+
+   Do not upload skills to Notion. Do not create the daily loop unless the human asks for it in a separate yes.
+
+   If Notion is unreachable, stop and say what you could not save. Do not write feature content under `.fstack/` or `~/.fstack`.
+
+10. Branch protection is not checked. Say that the check was not run. See `stubs/enforcement.md`.
 
 ## Events
 

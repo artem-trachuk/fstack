@@ -32,7 +32,7 @@ The next rule is `release_question` or a merging rule. Stack review is already r
 
 5. When every chunk is `merged`, run `release.command` only if it is non-empty and still equals the approved string. Record `release_command_recorded`. Exit 0 sets `feature_status: done` and `release_state: done`. Any other exit sets `release_state: command_failed`, escalates, and does not roll back. An empty command finishes the same way with exit 0 and no command.
 
-6. Tell the human the release is done, through `tldr`. The next action is `next_feature`. Do not start `/collect-requirements`.
+6. Tell the human the release is done, through `tldr`. Then follow `memory` and propose the durable lessons from this feature: decisions, corrections, preferences, conventions. Write them to Notion only after the human says yes, approve, or approved for that question. If Notion is unreachable, show the unsaved lessons and stop. Do not start `/collect-requirements`.
 
 A human can record `retry_release` with a quote after a CI or command failure. Merged chunks stay merged.
 
