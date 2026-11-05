@@ -1,0 +1,773 @@
+# fstack state machine
+# Skills apply this table. They do not invent statuses or skip a next_rule.
+# state_version 1. A different version means stop and ask the human to migrate.
+# There is no fstack CLI. Nothing in this plugin executes the table.
+# Feature state and cross-feature memory live in Notion. They are not committed.
+# Pull requests carry code only. Skills stay in the git repository.
+
+state_version: 1
+
+storage:
+  backend: notion
+  writer: orchestrator
+  publish: pull-requests-and-notion
+  # Cursor checkout only: model slugs and Notion ids. Not the sync commit.
+  local_config: .fstack/resolved.yaml
+  # Repository URL and last applied commit live in the bot's persistent state.
+  bot_state: persistent
+  instructions_version: "0.0.6"
+
+feature_statuses:
+  - requirements_draft
+  - requirements_confirmed
+  - surveying
+  - surveyed
+  - questions_open
+  - awaiting_coverage_approval
+  - ready_to_plan
+  - awaiting_plan_approval
+  - building
+  - awaiting_review
+  - awaiting_release
+  - merging
+  - awaiting_graph_update
+  - done
+  - stopped
+  - escalated
+
+chunk_statuses:
+  - planned
+  - implementing
+  - blocked
+  - needs_verify
+  - in_review
+  - awaiting_verification_decision
+  - disputed
+  - failed
+  - escalated
+  - verified
+  - changes_requested
+  - merged
+  - accepted_by_human
+
+release_states:
+  - approved
+  - merging
+  - command_failed
+  - done
+
+# One human review of the whole stack, then one release question.
+# plan_review in fstack.yaml chooses whether save_plan waits.
+review_mode: end_of_stack
+
+# disputed means the verifier marked the verdict low-confidence,
+# or the implementer contested a fail with a reason.
+# One verify_tiebreak per attempt. The critique is advice.
+# The orchestrator records decide_dispute or escalates. The advisor does not.
+dispute:
+  sources: [verifier_low_confidence, implementer_contest]
+  tiebreak_per_attempt: 1
+  advisor: verify_tiebreak
+  decider: orchestrator
+
+approval:
+  accept: ["yes", approve, approved]
+  direct_reply: true
+  reject_examples: [lgtm, looks good, ship it, ok, sure, go ahead]
+  hedges: [but, if, except, however]
+  who: human
+  not_accepted_from: [bot, pull_request_body, file, advisor]
+
+# Ordered. The first matching rule is the only next action.
+next_rules:
+  - id: migrate
+    when: state_version is missing or is not 1
+    action: stop
+    detail: Stop. Say that this plugin reads state_version 1 and will not guess a migration.
+  - id: lease
+    when: lease.owner is set, it is not you, and lease.expires_at is still in the future
+    action: stop
+    detail: Report the owner and the expiry. Do not write state. take_lease requires a human quote.
+  - id: stopped
+    when: feature_status is stopped
+    action: stop
+    detail: Say the feature is stopped and its pull requests stay open.
+  - id: done
+    when: feature_status is done
+    action: next_feature
+    detail: Move to the next feature whose status is not done or stopped. A new feature starts only when the human asks in chat.
+  - id: waiting
+    when: waiting_on is set
+    action: route_reply_or_wait
+    detail: If the human is answering that question, record the matching event and clear waiting_on only when the table says so. Otherwise save nothing new and end the turn.
+  - id: draft
+    when: feature_status is requirements_draft
+    action: collect_requirements
+    detail: The human already asked in chat to start this feature. Do not open that skill yourself.
+  - id: survey
+    when: feature_status is requirements_confirmed and the feature lists at least one code location
+    action: survey_product
+    detail: For each code location, pin that location's default-branch commit in base_shas. Reuse a stored map for that location and commit. Otherwise one read-only survey per location. Do not prescribe the mechanism. If the binding skips survey, record survey_skipped instead.
+  - id: survey_skip
+    when: feature_status is requirements_confirmed and the feature lists no code locations
+    action: skip_survey
+    detail: Leave current_product absent. Gap analysis compares the other sources.
+  - id: survey_wait
+    when: feature_status is surveying
+    action: resume_survey
+    detail: Resume that read-only survey. Do not start a second one. File the map only from its result.
+  - id: gap
+    when: feature_status is surveyed
+    action: gap_analysis
+    detail: Compare sources per code location, then one coverage view. Every evidence row names its location. Classifications come from authoritative_kinds, not from source names.
+  - id: coverage_questions
+    when: feature_status is questions_open
+    action: wait_for_coverage_answers
+    detail: The exception card is still open. Do not run gap analysis again and do not split. If waiting_on is empty, restore question Q-<slug>-coverage and end the turn.
+  - id: coverage_gate
+    when: feature_status is awaiting_coverage_approval
+    action: wait_for_coverage_approval
+    detail: The human approves which rows may become chunks. Only approved partial and missing rows are planned. needs_decision, conflict, and undocumented rows are not planned unless the human chose implement and this gate approves that row.
+  - id: split
+    when: feature_status is ready_to_plan and there are no chunks
+    action: split_into_chunks
+  - id: plan_gate
+    when: feature_status is awaiting_plan_approval
+    action: wait_for_plan_approval
+    detail: Only when plan_review is approve. The default notify never enters this status.
+  - id: base_drift
+    when: a code location's default-branch commit differs from base_shas for that location and the feature is building or merging
+    action: base_moved
+    detail: Restack open branches in that location before more implementation or merges. Other locations stay as they are.
+  - id: blocked
+    when: the earliest chunk in stack order is blocked
+    action: escalate_chunk
+    detail: A block does not increment attempt or attempts_since_decision.
+  - id: resume_implementer
+    when: the earliest unfinished chunk is implementing and agent_id is set
+    action: resume_agent
+    detail: Check that agent and search the forge by head branch before launching another.
+  - id: prepare_verify
+    when: the earliest unfinished chunk is needs_verify and the diff for this attempt is not attached
+    action: build_verify_prompt
+    detail: The orchestrator builds the verify prompt on the chunk page from the patch, not from a pull request URL.
+  - id: launch_verifier
+    when: the earliest unfinished chunk is needs_verify and the diff is attached and verifier_agent_id is empty
+    action: launch_verifier
+    detail: Pass the verify prompt and the patch only. Record verifier_launched before waiting.
+  - id: apply_filed_verdict
+    when: a verification page exists for this chunk, attempt, and head_sha, and the chunk is still in_review or needs_verify
+    action: apply_verdict
+    detail: Do not launch a second verifier. A verdict of not_implemented is not a pass.
+  - id: not_implemented
+    when: a chunk is awaiting_verification_decision
+    action: wait_for_verification_decision
+    detail: Relay "Verification is not implemented yet, so these changes cannot be verified." through tldr. Do not treat it as a pass. Do not start the next chunk, review, or release. Wait for accept_unverified or stop, and log that human_decision.
+  - id: resume_verifier
+    when: the chunk is in_review and verifier_agent_id is set
+    action: resume_agent
+  - id: dispute_same_model
+    when: the chunk is disputed and the tie-break slug equals the verifier model, including when both are inherit
+    action: tiebreak_skipped
+    detail: reason same_model, then escalate to the human. Do not run the advisor.
+  - id: dispute_budget
+    when: the chunk is disputed and the tie-break reserve is already used
+    action: tiebreak_skipped
+    detail: reason budget. The orchestrator then decide_dispute or escalate_chunk.
+  - id: dispute_tiebreak
+    when: the chunk is disputed and tiebreak_for_attempt is not this attempt
+    action: launch_tiebreak
+    detail: One call. Record tiebreak_launched before waiting. The critique is not a verdict.
+  - id: dispute_decide
+    when: the chunk is disputed and the tie-break for this attempt has finished or was skipped for budget or launch_failed
+    action: decide_dispute
+    detail: pass, fail, or escalate. The orchestrator decides.
+  - id: failure_cap
+    when: the chunk is failed and attempts_since_decision is greater than or equal to verify.max_failures_before_escalation
+    action: escalate_chunk
+  - id: retry_failed
+    when: the chunk is failed and attempts_since_decision is below the cap
+    action: launch_implementer
+  - id: changes
+    when: the chunk is changes_requested
+    action: launch_implementer
+  - id: restack
+    when: a chunk that already has a branch has needs_restack
+    action: restack_chunk
+  - id: range_diff
+    when: a restacked chunk still needs reverify and range_diff is not recorded
+    action: check_range_diff
+    detail: A clean range-diff keeps the release sha and moves it to the new head. verified uses verified_sha. accepted_by_human uses accepted_sha. A real difference clears that sha. verified returns to needs_verify. accepted_by_human returns to awaiting_verification_decision.
+  - id: implement_next
+    when: the earliest planned chunk has every dependency verified, accepted_by_human, or merged
+    action: launch_implementer
+  - id: stack_review
+    when: every chunk is verified or accepted_by_human, none need restack or reverify, and review_approval is empty
+    action: open_review
+    detail: Ask the human to review the stack. End the turn. Do not ask the release question in this turn.
+  - id: release_question
+    when: feature_status is awaiting_release
+    action: open_release
+    detail: The question lists every chunk id, its code location, its pull request, and its release sha, plus release_mode, release_order, and release.command. The release sha is verified_sha, or accepted_sha when the chunk is accepted_by_human. Stacks are per location. The feature release follows release_mode.
+  - id: sha_mismatch
+    when: feature_status is merging and a pull request head differs from that chunk's release sha
+    action: void_release
+    detail: A changed sha voids the approval. Verify the new head. Do not merge it.
+  - id: already_merged
+    when: feature_status is merging and the forge says the pull request is already merged
+    action: merge_recorded
+    detail: Record it. Do not merge it again.
+  - id: merge_restack
+    when: feature_status is merging and a later chunk still needs restack or a range-diff after its parent merged
+    action: restack_then_range_diff
+  - id: merge_ci
+    when: feature_status is merging and ci is empty or pending or failing
+    action: check_or_wait_or_escalate
+    detail: pending waits. failing escalates. Do not roll back merges that already landed.
+  - id: merge_one
+    when: feature_status is merging and the next chunk that is not yet merged has a matching release sha, restack, range-diff, and ci
+    action: merge_chunk
+    detail: Merge only this pull request, then record merge_recorded.
+  - id: release_command
+    when: feature_status is merging and every chunk is merged
+    action: run_release_command_or_finish
+    detail: Run release.command only when it is non-empty and still equals the approved string. An empty command finishes the merge. Success waits for update-graph. It does not by itself mark the feature done.
+  - id: update_graph
+    when: feature_status is awaiting_graph_update
+    action: update_graph
+    detail: Promote the feature delta into the product graph only after graph.promote allows it. A stopped or abandoned feature is not promoted. Contradictions wait for the human.
+  - id: stuck
+    when: no earlier rule matched
+    action: escalate_chunk
+    detail: Record why the stack cannot move.
+
+events:
+  - name: save_requirements
+    skill: collect-requirements
+    from: [requirements_draft]
+    to: [requirements_draft]
+    writes: [feature page Requirements, feature page properties]
+  - name: confirm_requirements
+    skill: collect-requirements
+    from: [requirements_draft]
+    to: [requirements_confirmed]
+    guard: human quote accepts the requirements question, and the requirements text is non-empty
+  - name: survey_launched
+    skill: survey-product
+    from: [requirements_confirmed]
+    to: [surveying]
+    guard: record the pinned commit before waiting. The read is read-only. Only the orchestrator writes Notion.
+  - name: survey_filed
+    skill: survey-product
+    from: [requirements_confirmed, surveying]
+    to: [surveyed]
+    guard: write or refresh graph nodes for this location and commit. Do not store the product description on the feature page. Only the orchestrator writes Notion.
+  - name: survey_skipped
+    skill: survey-product
+    from: [requirements_confirmed]
+    to: [surveyed]
+    guard: no repository. current_product stays absent.
+  - name: record_coverage
+    skill: gap-analysis
+    from: [surveyed]
+    to: [questions_open, awaiting_coverage_approval]
+    guard: one Coverage row per item, with a presence entry per source. needs_decision, conflict, and undocumented open one question card. Otherwise open the coverage gate. Do not plan chunks here.
+  - name: answer_coverage_questions
+    skill: fstack-status
+    from: [questions_open]
+    to: [questions_open, awaiting_coverage_approval]
+    guard: options are implement, write_back, skip, and defer. implement makes the row buildable. skip and defer are not chunks. A pending source write stays on questions_open.
+  - name: source_write_proposed
+    skill: fstack-status
+    from: [questions_open]
+    to: [questions_open]
+    guard: save the proposed text on the row. Do not call the source writer in this event.
+  - name: source_write_applied
+    skill: fstack-status
+    from: [questions_open]
+    to: [awaiting_coverage_approval]
+    guard: call the source writer only after a direct yes, and only when that source has a writer. No, or no writer, leaves the text on the row. Then open the coverage gate.
+  - name: approve_coverage
+    skill: fstack-status
+    from: [awaiting_coverage_approval]
+    to: [ready_to_plan, stopped]
+    guard: a direct yes sets Approved on the listed partial and missing rows and moves to ready_to_plan. stop sets stopped. Unapproved rows are not planned.
+  - name: save_plan
+    skill: split-into-chunks
+    from: [ready_to_plan, awaiting_plan_approval]
+    to: [building, awaiting_plan_approval]
+    guard: plan_review approve waits. plan_review notify, the default, moves to building.
+  - name: approve_plan
+    skill: fstack-status
+    from: [awaiting_plan_approval]
+    to: [building]
+    guard: human quote accepts the plan question
+  - name: agent_launched
+    skill: implement-chunk
+    from: [building]
+    chunk_from: [planned, failed, changes_requested]
+    chunk_to: [implementing]
+    guard: record agent_id and launched_at before waiting. Increment attempt.
+  - name: handoff_failed
+    skill: implement-chunk
+    chunk_from: [implementing]
+    chunk_to: [planned, failed, escalated]
+    guard: decrement the attempt that did not start work. Increment handoff_failures. At 2, escalate.
+  - name: agent_reported
+    skill: implement-chunk
+    chunk_from: [implementing]
+    chunk_to: [needs_verify, blocked]
+    guard: FSTACK_BLOCKED or a change outside allowed_files sets blocked and decrements attempt. A change under .fstack is also blocked. Otherwise record pr, base_sha, and head_sha. Do not commit or push feature state.
+  - name: attach_diff
+    skill: build-context
+    chunk_from: [needs_verify]
+    chunk_to: [needs_verify]
+    guard: store the patch for base_sha...head_sha. On Grok Bot read it through the GitHub connector. On the Cursor plugin, git diff is enough when a checkout exists. Do not clone. Refuse a pull request URL.
+  - name: verifier_launched
+    skill: pick-next-task
+    chunk_from: [needs_verify]
+    chunk_to: [in_review]
+    guard: record verifier_agent_id before waiting. The verifier receives the prompt and the patch from the Orchestrator. The checkout is the head sha and does not include fstack notes.
+  - name: verdict_filed
+    skill: verify
+    chunk_from: [in_review, needs_verify]
+    chunk_to: [in_review, needs_verify]
+    guard: write the structured verdict and do not change status. The orchestrator applies it.
+  - name: apply_verdict
+    skill: pick-next-task
+    chunk_from: [in_review, needs_verify]
+    chunk_to: [verified, failed, disputed, awaiting_verification_decision]
+    guard: not_implemented sets awaiting_verification_decision, does not set verified, does not increment attempts_since_decision, and does not open the next chunk. The orchestrator relays the message through tldr and sets waiting_on. A future high-confidence pass would verify that head_sha. A future fail would increment attempts_since_decision. Low confidence would move to disputed.
+  - name: contest
+    skill: fstack-status
+    chunk_from: [failed]
+    chunk_to: [disputed]
+    guard: the implementer supplied a reason. Do not increment the failure count again.
+  - name: tiebreak_launched
+    skill: advisors
+    chunk_from: [disputed]
+    chunk_to: [disputed]
+    guard: one per attempt. Record the launched advisor row first.
+  - name: tiebreak_finished
+    skill: advisors
+    chunk_from: [disputed]
+    chunk_to: [disputed]
+    guard: store the critique or the failure. A failed call does not become the verdict.
+  - name: tiebreak_skipped
+    skill: advisors
+    chunk_from: [disputed]
+    chunk_to: [disputed, escalated]
+    guard: reason is same_model, budget, or launch_failed. same_model escalates.
+  - name: decide_dispute
+    skill: pick-next-task
+    chunk_from: [disputed]
+    chunk_to: [verified, failed, escalated]
+    guard: the orchestrator chooses pass, fail, or escalate after the tie-break finishes or is skipped
+  - name: escalate_chunk
+    skill: escalate
+    chunk_to: [escalated]
+    to: [escalated]
+    guard: set waiting_on. Options are retry, accept, change_spec, and stop. accept stores accepted_sha and does not set verified_sha. Later chunks that were accepted_by_human lose accepted_sha until a clean restack or a new decision.
+  - name: human_decision
+    skill: fstack-status
+    from: [escalated, building, awaiting_coverage_approval, ready_to_plan, awaiting_graph_update]
+    to: [building, stopped]
+    chunk_from: [escalated, awaiting_verification_decision, failed]
+    chunk_to: [planned, failed, accepted_by_human, escalated]
+    guard: quote required. For awaiting_verification_decision the choices are accept_unverified and stop. accept_unverified sets accepted_by_human, sets accepted_sha to head_sha, and does not set verified_sha. It is not a pass. stop sets feature_status stopped. Other escalations still use retry, accept, change_spec, and stop.
+  - name: open_review
+    skill: review-stack
+    from: [building]
+    to: [awaiting_review]
+    guard: every chunk is verified or accepted_by_human. End the turn. Do not open the release question.
+  - name: answer_review
+    skill: review-stack
+    from: [awaiting_review]
+    to: [awaiting_release, building]
+    guard: approve moves to awaiting_release. changes_requested names one chunk, resets that chunk, clears its verified_sha and accepted_sha, and marks later chunks needs_restack. Later chunks that were accepted_by_human also lose accepted_sha.
+  - name: open_release
+    skill: release
+    from: [awaiting_release]
+    to: [awaiting_release]
+    guard: the question includes shas and the exact release.command. End the turn.
+  - name: approve_release
+    skill: release
+    from: [awaiting_release]
+    to: [merging]
+    guard: direct yes or approve for this question id. Command and shas still match the question. Write the approval record. Set release_state merging.
+  - name: void_release
+    skill: release
+    from: [merging, awaiting_release]
+    to: [building]
+    guard: a changed sha or a changed release.command voids the approval. Do not merge.
+  - name: merge_recorded
+    skill: release
+    from: [merging]
+    chunk_to: [merged]
+    guard: skip a pull request the forge already merged. Record head_sha. Mark later chunks needs_restack. Do not roll back.
+  - name: restack_recorded
+    skill: release
+    chunk_to: [verified, needs_verify, planned, changes_requested, accepted_by_human, awaiting_verification_decision]
+    guard: record the new head sha and clear needs_restack. A clean restack of accepted_by_human updates accepted_sha to the new head and stays accepted_by_human. A real difference clears accepted_sha and sets awaiting_verification_decision. Do not copy accepted_sha into verified_sha.
+  - name: range_diff_recorded
+    skill: release
+    chunk_to: [needs_verify, awaiting_verification_decision]
+    guard: clean updates the release sha (verified_sha or accepted_sha) and the approval record. not clean clears that sha. verified sets needs_verify. accepted_by_human sets awaiting_verification_decision.
+  - name: ci_recorded
+    skill: release
+    guard: pending waits. failing escalates the feature and leaves merged chunks merged. none means the product has no CI.
+  - name: release_command_recorded
+    skill: release
+    from: [merging]
+    to: [awaiting_graph_update, escalated]
+    guard: exit 0 with the approved command sets awaiting_graph_update. any other exit sets release_state command_failed and escalates. Do not roll back. Do not promote the graph here.
+  - name: retry_release
+    skill: release
+    from: [escalated]
+    to: [merging]
+    guard: human quote. Merged chunks stay merged.
+  - name: base_moved
+    skill: pick-next-task
+    guard: record the new commit under base_shas for that code location. Open chunks in that location need restack. Verified chunks there need a range-diff.
+  - name: advisor_launched
+    skill: advisors
+    guard: write the launched row before the call returns. A Cursor credit or unavailable-model failure can continue to a local CLI fallback, and that CLI call counts too. Skip a duplicate artifact hash. Planner calls stop when the tie-break reserve would be eaten. If no runtime starts, log the skip and tell the human through tldr.
+  - name: advisor_finished
+    skill: advisors
+    guard: update the launched row. A planner failure does not stop the feature.
+  - name: take_lease
+    skill: fstack-status
+    guard: human quote and the new owner. Default lease is 30 minutes.
+  - name: debug_toggled
+    skill: configure-workflow
+    guard: record the old and new debug flag in the workflow change log. When the new value is on, also append a debug entry. When it turns off, append that one entry and then write nothing further.
+  - name: debug_entry
+    skill: debug-log
+    guard: append one redacted entry when debug is on. Never block the workflow. If Notion is down, buffer the entry and show it with the unsaved content.
+  - name: team_provisioned
+    skill: provision-team
+    guard: record the team map of role to bot id in the Orchestrator's persistent state. Create and rename only after the first human approval for that role. Never delete a bot. A removed role is marked retired.
+  - name: teammate_synced
+    skill: provision-team
+    guard: record the teammate's reply, the applied commit, and any connectors still missing. Do not authorize a connector.
+  - name: workflow_loaded
+    skill: configure-workflow
+    guard: record the effective skill and config version for each slot on the feature. A chunk step also records bound_skill on the chunk. Do not change status. Do not read human gates from Notion.
+  - name: graph_promoted
+    skill: update-graph
+    from: [awaiting_graph_update]
+    to: [done]
+    guard: graph.promote require_approval needs a human yes. notify may promote in the same turn after showing the delta. Update evidence commits and supersedes edges. Do not copy the facts onto the feature page.
+  - name: graph_flagged
+    skill: update-graph
+    from: [awaiting_graph_update]
+    to: [awaiting_graph_update]
+    guard: a contradiction waits for the human. Do not promote the contradicted node.
+  - name: workflow_changed
+    skill: configure-workflow
+    guard: one change log entry with who, when, old, and new. A feature-only change stays on the feature override. Do not change human gates or who writes Notion.
+
+# Fields the orchestrator keeps on the Notion feature page and chunk pages.
+# Each decision is its own Decision page, related to the feature and the product.
+feature_fields:
+  - state_version
+  - slug
+  - feature_status
+  - waiting_on
+  - release_state
+  - release_approval
+  - review_approval
+  - repos
+  - base_shas
+  - release_mode
+  - release_order
+  - lease
+  - handoff_failures
+  - requirements_status
+  - config_version
+  - step_bindings
+  - nodes_read
+  - nodes_added
+  - nodes_changed
+  - nodes_removed
+
+chunk_fields:
+  - id
+  - title
+  - repo
+  - status
+  - depends_on
+  - allowed_files
+  - branch
+  - base
+  - base_sha
+  - head_sha
+  - verified_sha
+  - accepted_sha
+  - pr
+  - attempt
+  - attempts_since_decision
+  - agent_id
+  - launched_at
+  - verifier_agent_id
+  - needs_restack
+  - needs_reverify
+  - marked_for_review
+  - tiebreak_for_attempt
+  - blocked_reason
+  - bound_skill
+  - nodes
+
+# Notion property names for feature_fields and chunk_fields.
+# DESIGN.md must use these names. Extras are display columns, not state fields.
+notion_schema:
+  features:
+    state_version: {name: State version, type: text}
+    slug: {name: Slug, type: text}
+    feature_status: {name: Status, type: select}
+    waiting_on: {name: Waiting on, type: text}
+    release_state: {name: Release state, type: select}
+    release_approval: {name: Release approval, type: text}
+    review_approval: {name: Review approval, type: text}
+    repos: {name: Code locations, type: text}
+    base_shas: {name: Base SHAs, type: text}
+    release_mode: {name: Release mode, type: select}
+    release_order: {name: Release order, type: text}
+    lease: {name: Lease, type: text}
+    handoff_failures: {name: Handoff failures, type: number}
+    requirements_status: {name: Requirements status, type: select}
+    config_version: {name: Config version, type: text}
+    step_bindings: {name: Step bindings, type: text}
+    nodes_read: {name: Nodes read, type: relation}
+    nodes_added: {name: Nodes added, type: relation}
+    nodes_changed: {name: Nodes changed, type: relation}
+    nodes_removed: {name: Nodes removed, type: relation}
+  feature_extra:
+    - {name: Name, type: title}
+    - {name: Summary, type: text}
+    - {name: Confirmed, type: date}
+    - {name: Chunks, type: relation}
+    - {name: Memories, type: relation}
+    - {name: Product, type: relation}
+  chunks:
+    id: {name: Name, type: title}
+    title: {name: Title, type: text}
+    repo: {name: Code location, type: text}
+    status: {name: Status, type: select}
+    depends_on: {name: Depends on, type: relation}
+    allowed_files: {name: Allowed files, type: text}
+    branch: {name: Branch, type: text}
+    base: {name: Base, type: text}
+    base_sha: {name: Base SHA, type: text}
+    head_sha: {name: Head SHA, type: text}
+    verified_sha: {name: Verified SHA, type: text}
+    accepted_sha: {name: Accepted SHA, type: text}
+    pr: {name: Pull request, type: url}
+    attempt: {name: Attempt, type: number}
+    attempts_since_decision: {name: Attempts since decision, type: number}
+    agent_id: {name: Agent, type: text}
+    launched_at: {name: Launched at, type: text}
+    verifier_agent_id: {name: Verifier, type: text}
+    needs_restack: {name: Needs restack, type: checkbox}
+    needs_reverify: {name: Needs reverify, type: checkbox}
+    marked_for_review: {name: Marked for review, type: checkbox}
+    tiebreak_for_attempt: {name: Tie-break attempt, type: number}
+    blocked_reason: {name: Blocked reason, type: text}
+    bound_skill: {name: Bound skill, type: text}
+    nodes: {name: Touched nodes, type: relation}
+  chunk_extra:
+    - {name: Feature, type: relation}
+    - {name: Accepted unverified, type: checkbox}
+    - {name: Product, type: relation}
+  coverage:
+    item: {name: Name, type: title}
+    repo: {name: Code location, type: text}
+    commit: {name: Commit, type: text}
+    node: {name: Node, type: relation}
+    presences: {name: Presences, type: text}
+    classification: {name: Classification, type: select}
+    next_action: {name: Next action, type: select}
+    decision: {name: Decision, type: select}
+    write_back: {name: Write-back, type: text}
+    approved: {name: Approved, type: checkbox}
+  coverage_extra:
+    - {name: Feature, type: relation}
+    - {name: Product, type: relation}
+  workflow:
+    scope: {name: Scope, type: select}
+    config_version: {name: Config version, type: text}
+    slot: {name: Slot, type: text}
+    skill: {name: Skill, type: text}
+    params: {name: Params, type: text}
+    notes: {name: Notes, type: text}
+    skip: {name: Skip, type: checkbox}
+    who: {name: Who, type: text}
+    when: {name: When, type: date}
+    old: {name: Old, type: text}
+    new: {name: New, type: text}
+  graph_nodes:
+    kind: {name: Kind, type: text}
+    status: {name: Status, type: select}
+    evidence: {name: Evidence, type: text}
+    provenance: {name: Provenance, type: text}
+    last_verified: {name: Last verified, type: text}
+  graph_node_extra:
+    - {name: Name, type: title}
+    - {name: Product, type: relation}
+  graph_edges:
+    kind: {name: Kind, type: text}
+    from_node: {name: From, type: relation}
+    to_node: {name: To, type: relation}
+  graph_edge_extra:
+    - {name: Name, type: title}
+    - {name: Product, type: relation}
+  survey:
+    commit: {name: Commit, type: text}
+  survey_extra:
+    - {name: Name, type: title}
+    - {name: Product, type: relation}
+    - {name: Feature, type: relation}
+    - {name: Nodes, type: relation}
+  decision:
+    summary: {name: Summary, type: text}
+  decision_extra:
+    - {name: Name, type: title}
+    - {name: Product, type: relation}
+    - {name: Feature, type: relation}
+  verification:
+    verdict: {name: Verdict, type: text}
+  verification_extra:
+    - {name: Name, type: title}
+    - {name: Product, type: relation}
+    - {name: Feature, type: relation}
+    - {name: Chunk, type: relation}
+  memory:
+    type: {name: Type, type: select}
+    source: {name: Source, type: url}
+    uncertainty: {name: Uncertainty, type: text}
+    forgotten: {name: Forgotten, type: checkbox}
+    confirmed: {name: Confirmed, type: date}
+  memory_extra:
+    - {name: Name, type: title}
+    - {name: Product, type: relation}
+    - {name: Feature, type: relation}
+  debug_log:
+    opened: {name: Opened, type: date}
+  debug_log_extra:
+    - {name: Name, type: title}
+    - {name: Product, type: relation}
+    - {name: Previous, type: relation}
+  workflow_extra:
+    - {name: Name, type: title}
+    - {name: Feature, type: relation}
+    - {name: Product, type: relation}
+
+coverage_fields:
+  - item
+  - repo
+  - commit
+  - node
+  - presences
+  - classification
+  - next_action
+  - decision
+  - write_back
+  - approved
+
+graph_node_fields:
+  - kind
+  - status
+  - evidence
+  - provenance
+  - last_verified
+
+graph_edge_fields:
+  - kind
+  - from_node
+  - to_node
+
+survey_fields:
+  - commit
+
+decision_fields:
+  - summary
+
+verification_fields:
+  - verdict
+
+memory_fields:
+  - type
+  - source
+  - uncertainty
+  - forgotten
+  - confirmed
+
+debug_log_fields:
+  - opened
+
+# Every page type names the relations that keep it connected.
+# product is the root and has no required outgoing relation.
+# A page is reachable when a path of these relations leads to it from the product page.
+required_relations:
+  product: []
+  feature: [Product, Chunks, Nodes read, Nodes added, Nodes changed]
+  chunk: [Product, Feature, Touched nodes]
+  graph_node: [Product]
+  graph_edge: [Product, From, To]
+  survey: [Product, Nodes]
+  coverage: [Product, Feature]
+  decision: [Product, Feature]
+  verification: [Product, Chunk]
+  memory: [Product]
+  workflow: [Product]
+  debug_log: [Product]
+
+# Empty is allowed. fstack-status must not call these unlinked.
+optional_relations:
+  feature: [Nodes removed]
+  chunk: [Depends on]
+  coverage: [Node]
+  survey: [Feature]
+  memory: [Feature]
+  workflow: [Feature]
+  debug_log: [Previous]
+
+workflow_fields:
+  - scope
+  - config_version
+  - slot
+  - skill
+  - params
+  - notes
+  - skip
+  - who
+  - when
+  - old
+  - new
+
+coverage_classifications:
+  - done
+  - partial
+  - missing
+  - needs_decision
+  - conflict
+  - undocumented
+
+waiting_kinds:
+  - questions
+  - coverage_questions
+  - source_write
+  - coverage_approval
+  - graph_promotion
+  - plan
+  - stack_review
+  - release
+  - escalation
+  - verification_unimplemented
+  - ci
+  - release_command
+
+prompt_page: prompt <action> a<attempt>
+verdict_page: verification <chunk-id> a<attempt>
+decision_log: Decision pages related to the feature
+chunk_id: NN-slug

@@ -1,0 +1,35 @@
+# Cursor checkout only. On Grok Bot the same keys live in the bot's persistent state.
+# Do not commit this file. Do not store the skill-repo URL or applied_commit here.
+resolved_at:
+source:
+plugin_version:
+models:
+  opus: inherit
+  argon: inherit
+roles:
+  orchestrator: inherit
+  verifier: inherit
+  implementer: inherit
+  advisor: inherit
+runtime: cloud
+runtime_note:
+fallbacks: {}
+advisor_cli:
+  - runtime: claude-cli
+    command: claude
+    model: opus
+    enabled: true
+    available: false
+    signed_in: false
+notion:
+  product_page:
+  features_db:
+  chunks_db:
+  memories_db:
+  coverage_db:
+  graph_nodes_db:
+  graph_edges_db:
+  workflow_db:
+  survey_db:
+  decision_db:
+  verification_db:

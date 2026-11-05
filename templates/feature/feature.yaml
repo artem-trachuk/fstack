@@ -1,0 +1,22 @@
+state_version: 1
+slug: {{feature}}
+feature_status: requirements_draft
+requirements_status: draft
+waiting_on:
+release_state:
+release_approval:
+review_approval:
+repos: []
+base_shas: {}
+release_mode: all_or_none
+release_order: []
+handoff_failures: 0
+lease:
+  owner:
+  expires_at:
+config_version:
+step_bindings:
+nodes_read: []
+nodes_added: []
+nodes_changed: []
+nodes_removed: []

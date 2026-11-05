@@ -1,0 +1,191 @@
+# fstack v0.1
+# Shareable product config. Notion ids and resolved model slugs are not stored here.
+
+version: "0.1"
+state_version: 1
+
+# Feature state and memory live in the user's Notion workspace.
+# Machine-specific ids and model slugs stay out of this file.
+# The host keeps them in its persistent state, or in gitignored .fstack/resolved.yaml when a checkout exists.
+# The sync commit is never stored in a product code location.
+# This file may live in any one code location, or only in the Notion product when there are several.
+state:
+  backend: notion
+
+# Cross-feature memory uses the same Notion workspace.
+# instructions_version matches Notion's agent setup guide.
+memory:
+  backend: notion
+  instructions_version: "0.0.6"
+  published: "2026-10-30"
+  setup_guide: https://developers.notion.com/prompts/setup
+
+# notify does not wait for plan approval. approve waits.
+# The default is off.
+plan_review: notify
+
+review:
+  mode: end_of_stack
+
+# conversation means this chat. Any other value is an outward message
+# and waits for approval of the exact text.
+notify: conversation
+
+roles:
+  orchestrator:
+    description: Runs the feature flow, plans the work, launches coding agents, and reports to the human.
+    agent: orchestrator
+    model: inherit
+  verifier:
+    description: Returns a structured verdict for one chunk. Does not write feature state.
+    agent: verifier
+    model: inherit
+  implementer:
+    description: Cursor coding agent. Implements one chunk and opens or updates a stacked pull request.
+    agent: cursor-coding-agent
+    model: inherit
+    runtime: cloud
+  advisor:
+    description: Read-only critique. Does not edit the product or decide a verdict.
+    agent: advisor
+    model: opus
+
+# Preference order is the list order. The first detected effort wins.
+# opus is Claude Opus in Cursor. argon is Gemini Argon in Cursor.
+models:
+  opus:
+    match: [claude-opus-5-5, claude-opus]
+    effort: [xhigh, max, high, medium, low]
+  argon:
+    match: [gemini-4-argon, gemini-argon]
+    effort: [high, medium, low]
+
+advisors:
+  planner_review:
+    model: opus        # e.g. Claude Opus 5.5 in Cursor
+    when: [gap-analysis, split-into-chunks]
+  verify_tiebreak:
+    model: argon       # Gemini 4 Argon in Cursor
+    when: [verifier-disputed]
+    fallback: [opus]
+    must_differ_from: verifier
+  max_calls_per_feature: 6
+  reserve:
+    verify_tiebreak: 2
+  # Local CLIs used only when Cursor cannot start the advisor.
+  # command is a name on PATH, never a filesystem path.
+  # A local CLI runs under the user's own subscription terms.
+  fallback:
+    - runtime: claude-cli
+      command: claude
+      model: opus
+      enabled: true
+
+# Fixed policy. setup-product stops if a value differs. The validator checks the same.
+human_gates:
+  merge: require_approval
+  release: require_approval
+  outward_messages: require_approval
+  collect_requirements: manual_only
+  coverage: require_approval
+  source_write: require_approval
+
+# Zero or more code locations. A name, a role, an optional monorepo subpath, and a default branch.
+# Empty is valid. Nothing here is "the" repo.
+code_locations: []
+
+# Feature release across locations. all_or_none merges one location fully before the next.
+# per_repo lets locations finish independently. order is location names; empty uses the product list.
+release_policy:
+  mode: all_or_none
+  order: []
+
+# Off by default. A product page or a feature override may turn it on.
+debug: false
+
+# Product graph. Kinds are open; a product page may add more. promote is a preference, not a fixed gate.
+graph:
+  promote: require_approval
+  node_kinds: [capability, component, entity, interface, requirement, decision, constraint]
+  edge_kinds: [depends_on, implements, part_of, touches, constrains, supersedes, conflicts_with]
+
+# Which source kinds count as authoritative. Others are inputs, not orders to build.
+authoritative_kinds: [requirements]
+
+# A source is a kind plus how this host reads it. ref and reader may be empty.
+# writer is optional. Kind is a role name, not a product name.
+sources:
+  - kind: requirements
+    ref: ""
+    reader: ""
+    writer: ""
+  - kind: design
+    ref: ""
+    reader: ""
+    writer: ""
+  - kind: current_product
+    ref: ""
+    reader: survey-product
+    writer: ""
+
+# Repo default for the Notion workflow config. A product page overrides this.
+# A feature page overrides the product page. Human gates are not in this block.
+workflow:
+  version: 1
+  slots:
+    survey:
+      skill: survey-product
+      contract: survey
+      params: {}
+      notes: ""
+      skippable: true
+    gap_analysis:
+      skill: gap-analysis
+      contract: gap_analysis
+      params: {}
+      notes: ""
+      skippable: false
+    split:
+      skill: split-into-chunks
+      contract: split
+      params: {}
+      notes: ""
+      skippable: false
+    implement:
+      skill: implement-chunk
+      contract: implement
+      params: {}
+      notes: ""
+      skippable: false
+    verify:
+      skill: verify
+      contract: verify
+      params: {}
+      notes: ""
+      skippable: false
+    review:
+      skill: review-stack
+      contract: review
+      params: {}
+      notes: ""
+      skippable: false
+    release:
+      skill: release
+      contract: release
+      params: {}
+      notes: ""
+      skippable: false
+    update_graph:
+      skill: update-graph
+      contract: update_graph
+      params: {}
+      notes: ""
+      skippable: false
+
+verify:
+  max_failures_before_escalation: 2
+  commands: []
+
+release:
+  # Quoted in the release question. Empty means an approved release merges the stack and stops.
+  command: ""
