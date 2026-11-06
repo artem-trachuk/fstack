@@ -40,7 +40,7 @@ The release skill is the procedure the orchestrator follows by hand. There is no
 
 Intended behavior. A `beforeShellExecution` hook, fail-closed, denies `gh pr merge`, `git merge` (not `merge-base` or `mergetool`), and `glab mr merge`, plus the configured `release.command`, unless the approval record is present, not void, and its shas still match. A `beforeMCPExecution` hook denies merge and release tool calls the same way. Commands in a repository with no `fstack.yaml` are left alone.
 
-The hook is not registered. `hooks.json` is intentionally absent so Cursor does not load a stub that pretends to enforce this.
+The hook is not registered. `hooks.json` is intentionally absent so neither Cursor nor Claude Code loads a stub that pretends to enforce this. Claude Code reads `hooks/hooks.json` from the plugin root by default, so that file must stay absent until the hook is real.
 
 ## TODO: branch protection
 

@@ -22,9 +22,13 @@ The human says "update fstack", "upgrade fstack", or "sync fstack".
 
 1. Read the `repository` field in `plugin.json` and the `version` there. Read the current commit on that repository's main branch. Read `fstack_version` and `fstack_commit` from this bot's persistent state, and the latest fstack line in the Agent Operating Guide's Version history. If both the version and the commit already match, say so and stop. A second run with the same commit changes nothing.
 
+   On Claude Code, the installed version is the `version` in `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json`, and the installed commit is the latest fstack line in the guide's Version history. Nothing is read from or written to a bot's persistent state.
+
 2. Summarise what changed between the installed commit and main. Use `CHANGELOG.md` and the diff. Cover skills added, changed, or removed, bot config, workflow-config defaults, and the Notion model or `required_relations`. Do not paste full files.
 
 3. Follow `sync-bot-config` for the Orchestrator. That records `applied_commit` on every successful apply.
+
+   On Claude Code, skip steps 3 and 4. Show the human the update commands from the README, `claude plugin marketplace update fstack` and then `claude plugin update fstack@fstack`, and ask them to restart the session. Do not run them yourself. A new copy arrives only when `version` changed. After the restart, continue from step 5.
 
 4. Follow `provision-team` so teammates match the new config. Message each one to follow `sync-bot-config` for its own yaml at this commit. Collect each reply. A missing reply is reported, not invented.
 
@@ -34,7 +38,7 @@ The human says "update fstack", "upgrade fstack", or "sync fstack".
 
 7. Follow `fstack-status`. Report orphans and any pending migration, including a feature page that is really a bug.
 
-8. Record the new `fstack_version` and `fstack_commit` in persistent state, and append the same pair to the Operating Guide's Version history. Leave the guide's `0.0.6` line as it is. Then report a short summary: what changed, what was applied, and what is waiting on the human.
+8. Record the new `fstack_version` and `fstack_commit` in persistent state, except on Claude Code, and append the same pair to the Operating Guide's Version history. Leave the guide's `0.0.6` line as it is. Then report a short summary: what changed, what was applied, and what is waiting on the human.
 
 If Notion is unreachable, show the unsaved summary and stop. Do not invent a local copy of the version record.
 

@@ -42,7 +42,7 @@ roles:
     agent: verifier
     model: inherit
   implementer:
-    description: Cursor coding agent. Implements one chunk and opens or updates a stacked pull request.
+    description: Coding agent. A Cursor cloud agent on Grok Bot and Cursor, or the fstack:implementer subagent on Claude Code. Implements one chunk and opens or updates a stacked pull request.
     agent: cursor-coding-agent
     model: inherit
     runtime: cloud

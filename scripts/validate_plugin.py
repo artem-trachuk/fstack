@@ -449,6 +449,9 @@ def main() -> int:
     check("is not the fstack version" in upgrade and "0.0.6" in upgrade, "the Notion setup guide version stays separate from the fstack version")
     check("changes nothing" in upgrade and "sync-bot-config" in upgrade and "provision-team" in upgrade, "upgrade-fstack must be idempotent and refresh the team")
     check("fstack-status" in upgrade and "workflow_changed" in upgrade, "upgrade-fstack must migrate config and report status")
+    for message in claude_code_errors(ROOT, skill_names, skill_text, manifest_version):
+        check(False, message)
+    check(True, "Claude Code plugin and subagents")
     for message in fix_intake_errors(table, skill_text):
         check(False, message)
     check(True, "a fix stays on the existing feature")
@@ -773,6 +776,7 @@ def file_wording_errors(root: Path) -> list[str]:
     paths += list((root / "skills").glob("*/SKILL.md"))
     paths += list((root / "templates").rglob("*"))
     paths += list((root / "agents").glob("*.md"))
+    paths += list((root / "claude" / "agents").glob("*.md"))
     for path in paths:
         if not path.is_file():
             continue
@@ -790,6 +794,7 @@ def stale_project_name_errors(root: Path) -> list[str]:
     paths += list((root / "skills").glob("*/SKILL.md"))
     paths += list((root / "bots").glob("*.yaml"))
     paths += list((root / "agents").glob("*.md"))
+    paths += list((root / "claude" / "agents").glob("*.md"))
     paths += list((root / "rules").glob("*.mdc"))
     paths += list((root / "templates").rglob("*"))
     pattern = re.compile(r"\bproject\b", re.IGNORECASE)
@@ -810,6 +815,7 @@ def vendor_name_errors(root: Path) -> list[str]:
     paths += list((root / "templates").rglob("*.md"))
     paths += list((root / "rules").glob("*.mdc"))
     paths += list((root / "agents").glob("*.md"))
+    paths += list((root / "claude" / "agents").glob("*.md"))
     pattern = re.compile(r"\b(" + "|".join(VENDOR_NAMES) + r")\b", re.IGNORECASE)
     for path in paths:
         if not path.is_file():
@@ -1218,6 +1224,154 @@ def bot_config_errors(root: Path, skill_names: set[str], role_names: set[str]) -
     return errors
 
 
+CLAUDE_AGENTS = {"orchestrator", "verifier", "advisor", "implementer"}
+READ_ONLY_TOOLS = {"Read", "Grep", "Glob"}
+IMPLEMENTER_TOOLS = {"Read", "Edit", "Write", "Grep", "Glob", "Bash"}
+# Plugin subagents ignore these fields, so they must not look like they enforce anything.
+IGNORED_AGENT_FIELDS = ("permissionMode", "hooks", "mcpServers")
+
+
+def tool_set(value) -> set[str]:
+    if isinstance(value, str):
+        return {item.strip() for item in value.split(",") if item.strip()}
+    if isinstance(value, list):
+        return {str(item).strip() for item in value}
+    return set()
+
+
+def claude_code_errors(root: Path, skill_names: set[str], skill_text: dict, version: str) -> list[str]:
+    """Claude Code runs the bots as subagents of one orchestrator session."""
+    errors = []
+    manifest_path = root / ".claude-plugin" / "plugin.json"
+    market_path = root / ".claude-plugin" / "marketplace.json"
+    if not manifest_path.is_file() or not market_path.is_file():
+        return ["Claude Code needs .claude-plugin/plugin.json and .claude-plugin/marketplace.json"]
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("name") != "fstack":
+        errors.append("Claude Code plugin name must be fstack")
+    if str(manifest.get("version") or "") != version:
+        errors.append("Claude Code manifest version must match plugin.json")
+    if "hooks" in manifest:
+        errors.append("the Claude Code manifest must not register a hook while the gate hook is a stub")
+    agents = manifest.get("agents")
+    if not isinstance(agents, list) or not agents:
+        errors.append("Claude Code agents must be a list of files, which replaces the default agents/ scan")
+        agents = []
+    listed = set()
+    for entry in agents:
+        entry = str(entry)
+        if not entry.startswith("./claude/agents/") or not entry.endswith(".md") or ".." in entry:
+            errors.append(f"Claude Code agent {entry} must be a .md file under ./claude/agents/")
+            continue
+        if not (root / entry).is_file():
+            errors.append(f"Claude Code agent {entry} is missing")
+            continue
+        listed.add(Path(entry).stem)
+    if listed != CLAUDE_AGENTS:
+        errors.append(f"Claude Code agents must be {sorted(CLAUDE_AGENTS)}, found {sorted(listed)}")
+    on_disk = {path.stem for path in (root / "claude" / "agents").glob("*.md")}
+    if on_disk - listed:
+        errors.append(f"Claude Code agent files are not in the manifest: {sorted(on_disk - listed)}")
+
+    market = json.loads(market_path.read_text(encoding="utf-8"))
+    entries = market.get("plugins") or []
+    if not market.get("name") or not (market.get("owner") or {}).get("name"):
+        errors.append("marketplace.json needs a name and an owner")
+    if len(entries) != 1 or entries[0].get("name") != "fstack" or entries[0].get("source") != "./":
+        errors.append("marketplace.json must list one plugin named fstack with source ./")
+    elif "version" in entries[0]:
+        errors.append("the plugin version is set only in .claude-plugin/plugin.json")
+
+    bodies = {}
+    for name in sorted(listed):
+        meta, body = split_frontmatter((root / "claude" / "agents" / f"{name}.md").read_text(encoding="utf-8"))
+        bodies[name] = body
+        label = f"claude/agents/{name}.md"
+        if meta.get("name") != name:
+            errors.append(f"{label} frontmatter name must match its file")
+        if re.search(r"\buse\b", str(meta.get("description") or ""), re.IGNORECASE) is None:
+            errors.append(f"{label} description must say when to use it")
+        for field in IGNORED_AGENT_FIELDS:
+            if field in meta:
+                errors.append(f"{label} sets {field}, which plugin subagents ignore")
+        for skill in meta.get("skills") or []:
+            if skill not in skill_names:
+                errors.append(f"{label} preloads unknown skill {skill}")
+            if skill == "collect-requirements":
+                errors.append(f"{label} must not preload the manual collect-requirements skill")
+        tools = tool_set(meta.get("tools"))
+        if name == "orchestrator":
+            if "tools" in meta:
+                errors.append(f"{label} must inherit every tool, including Notion and the question tool")
+        elif name in {"verifier", "advisor"}:
+            if not tools or not tools <= READ_ONLY_TOOLS:
+                errors.append(f"{label} tools must be a subset of Read, Grep, and Glob")
+        elif name == "implementer":
+            if not tools or not tools <= IMPLEMENTER_TOOLS:
+                errors.append(f"{label} tools must be a subset of {sorted(IMPLEMENTER_TOOLS)}")
+        if name != "orchestrator" and any(tool.startswith("mcp__") or tool in {"Agent", "AskUserQuestion"} for tool in tools):
+            errors.append(f"{label} must not reach Notion, other agents, or the human")
+        if name != "orchestrator":
+            if "fstack-handoff" not in body or "fstack-reply" not in body:
+                errors.append(f"{label} must read fstack-handoff and reply fstack-reply")
+            if "Do not try to switch" not in body:
+                errors.append(f"{label} must leave the model to the orchestrator")
+
+    orchestrator = bodies.get("orchestrator", "")
+    for phrase in (
+        "${CLAUDE_PLUGIN_ROOT}",
+        "fstack:verifier",
+        "fstack:advisor",
+        "fstack:implementer",
+        "fstack-handoff",
+        "fstack-reply",
+        "AskUserQuestion",
+        "You never start it.",
+        "Do not try to switch",
+        "rules/human-gates.mdc",
+        "collect-requirements/SKILL.md",
+        ".fstack/resolved.yaml",
+    ):
+        if phrase not in orchestrator:
+            errors.append(f"claude/agents/orchestrator.md must say {phrase!r}")
+    for skill in ("setup-product", "configure-workflow", "survey-product", "gap-analysis", "split-into-chunks", "pick-next-task", "implement-chunk", "review-stack", "release", "fstack-status", "escalate"):
+        if skill not in orchestrator:
+            errors.append(f"claude/agents/orchestrator.md must name {skill}")
+    verifier = bodies.get("verifier", "")
+    if "verdict: not_implemented" not in verifier or "Do not open Notion" not in verifier:
+        errors.append("the Claude Code verifier must return not_implemented and stay out of Notion")
+    implementer = bodies.get("implementer", "")
+    if "FSTACK_BLOCKED" not in implementer or "Do not merge" not in implementer or "Do not clone" not in implementer:
+        errors.append("the Claude Code implementer must block, not merge, and not clone")
+
+    for skill, phrase in (
+        ("implement-chunk", "fstack:implementer"),
+        ("pick-next-task", "fstack:verifier"),
+        ("advisors", "fstack:advisor"),
+        ("verify", "fstack:verifier"),
+        ("tldr", "AskUserQuestion"),
+        ("setup-product", "${CLAUDE_PLUGIN_ROOT}"),
+        ("setup-product", "runtime` to `subagent"),
+        ("sync-bot-config", "On Claude Code"),
+        ("provision-team", "On Claude Code"),
+        ("upgrade-fstack", "On Claude Code"),
+        ("fstack-status", "On Claude Code"),
+        ("collect-requirements", "/fstack:collect-requirements"),
+    ):
+        if phrase not in skill_text.get(skill, ""):
+            errors.append(f"{skill} must cover Claude Code: {phrase!r}")
+
+    readme = (root / "README.md").read_text(encoding="utf-8")
+    if "## Claude Code" not in readme or readme.find("## Claude Code") > readme.find("## Cursor plugin"):
+        errors.append("README needs a Claude Code section before the Cursor plugin")
+    for phrase in ("claude plugin install fstack@fstack", "claude --agent fstack:orchestrator", "claude plugin update fstack@fstack"):
+        if phrase not in readme:
+            errors.append(f"README must show {phrase}")
+    if "## Claude Code" not in (root / "DESIGN.md").read_text(encoding="utf-8"):
+        errors.append("DESIGN needs a Claude Code section")
+    return errors
+
+
 def transition_graph_errors(table: dict) -> list[str]:
     errors = []
     feature_terminal = {"done", "stopped"}
@@ -1259,6 +1413,7 @@ def state_publish_errors(root: Path) -> list[str]:
     paths += list((root / "skills").glob("*/SKILL.md"))
     paths += list((root / "templates").rglob("*.md"))
     paths += list((root / "agents").glob("*.md"))
+    paths += list((root / "claude" / "agents").glob("*.md"))
     forbidden = (
         ".fstack-worktrees",
         "state.backend: git",

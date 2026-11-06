@@ -18,6 +18,10 @@ The human creates only the Orchestrator. This skill provisions the other roles. 
 
 You are the Orchestrator, and `sync-bot-config` has just applied `bots/orchestrator.yaml`, or the human asked you to install fstack. Another role does not run this skill.
 
+## On Claude Code
+
+The team is the plugin's subagents: `fstack:verifier`, `fstack:advisor`, and `fstack:implementer`. They ship with the plugin and replace the teammate bots. There is nothing to create, rename, retire, or kick off, and no connector to approve for them. They have no Notion tool. Check that those three subagents are available in this session. When one is missing, tell the human to reinstall or update the plugin. Do not write the `team` map and do not record an event. This run changes nothing.
+
 ## State
 
 Persistent state holds:

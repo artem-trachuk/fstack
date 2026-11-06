@@ -1,0 +1,14 @@
+{
+  "name": "fstack",
+  "description": "The fstack plugin: one feature at a time, from requirements to a human release approval.",
+  "owner": {
+    "name": "Artem Trachuk"
+  },
+  "plugins": [
+    {
+      "name": "fstack",
+      "source": "./",
+      "description": "Deliver one feature with an orchestrator and verifier, advisor, and implementer subagents. State lives in Notion."
+    }
+  ]
+}

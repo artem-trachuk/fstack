@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0
+
+- Add Claude Code as a host. Install from this repository's marketplace with `claude plugin install fstack@fstack`, then run `claude --agent fstack:orchestrator`.
+- On Claude Code the bots are subagents: `fstack:verifier`, `fstack:advisor`, and `fstack:implementer`, in `claude/agents/`. They use the same `fstack-handoff` and `fstack-reply` messages. None of them has a Notion tool.
+- The implementer subagent replaces the Cursor cloud agent on Claude Code. Question cards are AskUserQuestion calls. The plugin update replaces `sync-bot-config`.
+
 ## 0.2.0
 
 - Add `upgrade-fstack`. "update fstack", "upgrade fstack", and "sync fstack" bring the installed commit up to main, migrate workflow defaults, and record the fstack version apart from Notion's `0.0.6` setup guide.

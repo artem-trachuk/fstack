@@ -1,0 +1,24 @@
+{
+  "name": "fstack",
+  "version": "0.3.0",
+  "description": "A shareable feature stack. A small team of agents takes a feature from requirements through gap analysis, stacked chunks, coding agents, independent verification, and a human release approval.",
+  "author": {
+    "name": "Artem Trachuk"
+  },
+  "homepage": "https://github.com/artem-trachuk/fstack",
+  "repository": "https://github.com/artem-trachuk/fstack",
+  "license": "MIT",
+  "keywords": [
+    "fstack",
+    "feature-stack",
+    "workflow",
+    "verification",
+    "agents"
+  ],
+  "agents": [
+    "./claude/agents/orchestrator.md",
+    "./claude/agents/verifier.md",
+    "./claude/agents/advisor.md",
+    "./claude/agents/implementer.md"
+  ]
+}

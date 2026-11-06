@@ -1,12 +1,12 @@
 # fstack design
 
-Grok Bot is the primary host. The human chats with the Orchestrator. It asks with question cards, keeps state in Notion, launches Cursor cloud agents for code, and messages the Verifier and Advisor. The Cursor plugin is a secondary host for the same skills.
+Grok Bot is the primary host. The human chats with the Orchestrator. It asks with question cards, keeps state in Notion, launches Cursor cloud agents for code, and messages the Verifier and Advisor. Claude Code is a second host, where the bots are subagents of the Orchestrator's session. The Cursor plugin is a third host for the same skills.
 
 This is the one deviation from Notion's official agent setup. The git repository named by the `repository` field in `plugin.json` is the single source of skill files, and bots copy them from that repo. Skills are not saved as Notion Skills, even when the human picks the Shared context layer, which covers memory and artifacts only. The Agent Operating Guide lists that repository, with its link, under Skills, and adds this line under User preferences and exclusions: Skills are kept in GitHub only. Do not save them to Notion Skills.
 
 Feature state and cross-feature memory live in the user's Notion workspace. The Orchestrator is the only role that reads or writes Notion. Coding agents, the verifier, and advisors receive excerpts in the prompts the Orchestrator writes. If Notion is unreachable, the Orchestrator stops, shows the unsaved content, and does not store it anywhere else.
 
-On Grok Bot, resolved model slugs, the advisor CLI check, and Notion page ids live in the bot's persistent state. On the Cursor plugin they stay in gitignored `.fstack/resolved.yaml`. The repository URL and the last applied skill commit also live in that persistent state, never in the product repository. None of this is a second copy of the feature.
+On Grok Bot, resolved model slugs, the advisor CLI check, and Notion page ids live in the bot's persistent state. On Claude Code and the Cursor plugin they stay in gitignored `.fstack/resolved.yaml`. The repository URL and the last applied skill commit also live in that persistent state, never in the product repository. None of this is a second copy of the feature.
 
 ## Notion schema
 
@@ -289,3 +289,26 @@ The Orchestrator reads sources through whatever reader the product config names.
 A pull-request routine on the Orchestrator listens for opened, pushed, merged, and commented events on `fstack/` branches. The yaml key is quoted `"on"` because an unquoted `on` is a YAML boolean. The public routine docs confirm GitHub events and that the schedule uses Settings, Bot, Timezone. They do not publish the event payload fields, so the bot maps those four words onto the host trigger.
 
 Bootstrap is the Install section of the README: create the bot, paste the persona and instructions, then send one message that names `sync-bot-config` and the yaml file.
+
+## Claude Code
+
+Claude Code replaces the bots with subagents. The human runs `claude --agent fstack:orchestrator` in a checkout of a code location, or in a folder that holds several checkouts. That main thread is the Orchestrator. It launches the other roles with the Agent tool. Subagents do not talk to each other, and nothing else talks to the human.
+
+| Role | Subagent | Tools | Model |
+| --- | --- | --- | --- |
+| Orchestrator | `fstack:orchestrator`, the main thread | Inherited, including Notion and the question tool | The session's model |
+| Verifier | `fstack:verifier` | Read, Grep, Glob | `roles.verifier`, passed at launch |
+| Advisor | `fstack:advisor` | Read, Grep, Glob | `planner_review` or `verify_tiebreak`, passed at launch |
+| Implementer | `fstack:implementer` | Read, Edit, Write, Grep, Glob, Bash | `roles.implementer`, passed at launch |
+
+The files are in `claude/agents/`, and `.claude-plugin/plugin.json` lists them by path. That list replaces the default `agents/` scan, so the Cursor agent files do not load on this host. Plugin subagents ignore `permissionMode`, `hooks`, and `mcpServers`. The `tools` list is what keeps a subagent read-only, and it is also what keeps Notion out of every role but the Orchestrator.
+
+The handoff text is unchanged. The Orchestrator puts the `fstack-handoff` message from `bots/orchestrator.yaml` in the subagent's prompt, with `role` set to verifier, advisor, or implementer. The subagent's final message starts with `fstack-reply`. The Orchestrator records the reply in Notion, the same as a teammate's message.
+
+The implementer works in a checkout of the chunk's code location on this computer. When that checkout is the session's own repository, the Orchestrator launches it with worktree isolation. When this computer has no checkout of that location, the Orchestrator does not clone one and tells the human which location it needs. The implementer pushes the chunk branch and opens the pull request with `gh`. `implement-chunk` records the Agent tool's id as `agent_id` before it waits. A subagent does not outlive its session, so a resume checks the pull request on the head branch.
+
+A question card is one AskUserQuestion call. Resolved models and Notion ids are in `.fstack/resolved.yaml` in the session's working directory, with `runtime: subagent`. The model families resolve to Claude Code aliases. `argon` has no Claude model and becomes `inherit`, so the tie-break uses its `opus` fallback. The same-model rule compares models after `inherit` is replaced by the session's model. The advisor does not fall back to the local `claude` CLI on this host.
+
+There is no bot to sync and no routine. The plugin install carries the skills and subagents, and `claude plugin update fstack@fstack` is the sync. `sync-bot-config` and the team half of `provision-team` do nothing here. The installed fstack version is the `version` in the installed `.claude-plugin/plugin.json`. The Orchestrator reads chunk pull requests on `fstack/` branches at session start and on resume, because no pull-request routine wakes it.
+
+Claude Code does not load `rules/*.mdc`. The Orchestrator reads both rule files at session start. `hooks/hooks.json` stays absent, because Claude Code would load it from the plugin root.

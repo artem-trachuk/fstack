@@ -4,7 +4,7 @@ contract: advise
 description: >
   Run a short read-only advisor and record the call before it returns.
   Use when the action is planner_review during gap-analysis or split-into-chunks, or one verify_tiebreak on a disputed attempt.
-  Falls back to a configured local CLI when Cursor cannot start the model. The advisor never edits the product and never owns the verdict.
+  On Claude Code the advisor is the fstack:advisor subagent. Elsewhere it falls back to a configured local CLI when Cursor cannot start the model. The advisor never edits the product and never owns the verdict.
 ---
 
 # Advisors
@@ -34,9 +34,13 @@ A second opinion. The caller decides what to do with it.
 
 Review one artifact hash once. A duplicate returns `skipped: duplicate` and does not count.
 
-If the resolved tie-break slug equals the verifier model, including when both are `inherit`, do not launch it and do not use a local CLI. On Grok Bot that slug is in the bot's persistent state. On the Cursor plugin it is in `.fstack/resolved.yaml`. Record `tiebreak_skipped` with reason `same_model` and escalate. That rule is about independence, not about credits.
+If the resolved tie-break slug equals the verifier model, including when both are `inherit`, do not launch it and do not use a local CLI. On Grok Bot that slug is in the bot's persistent state. On Claude Code and the Cursor plugin it is in `.fstack/resolved.yaml`. On Claude Code, `inherit` is the orchestrator session's model, so compare after substituting it. Record `tiebreak_skipped` with reason `same_model` and escalate. That rule is about independence, not about credits.
 
 `verify_tiebreak.fallback` is a list of other Cursor short names to try in Cursor. `advisors.fallback` is the local CLI list.
+
+## On Claude Code
+
+The advisor is the `fstack:advisor` subagent. Its tools are Read, Grep, and Glob, and it has no Notion tool. Launch it with the Agent tool and pass the resolved model: `planner_review` or `verify_tiebreak` from `.fstack/resolved.yaml`. Do not run the local CLI from Claude Code. It is the same runtime and the same account, so it is not an independent fallback. When the subagent cannot start because the model is unavailable, mark the row `failed`, then walk `verify_tiebreak.fallback` for a tie-break. When nothing can start, follow "When nothing can start" below.
 
 ## When Cursor cannot start
 
@@ -60,11 +64,11 @@ If Cursor cannot start and every fallback is disabled, unavailable, or not signe
 
 ## Steps
 
-1. Resolve the Cursor model from the bot's persistent state on Grok Bot, or from `.fstack/resolved.yaml` on the Cursor plugin. You pass that model when you launch the advisor. The advisor does not switch itself.
+1. Resolve the model from the bot's persistent state on Grok Bot, or from `.fstack/resolved.yaml` on Claude Code and the Cursor plugin. You pass that model when you launch the advisor. The advisor does not switch itself.
 
 2. Follow `build-context`. A tie-break uses `verify-tiebreak`, with the same patch as verify and no fstack notes.
 
-3. Record `advisor_launched` or `tiebreak_launched`, then start the advisor. On Grok Bot, send the handoff in `bots/orchestrator.yaml` to the teammate whose profile name is `fstack-advisor` and end the turn. The reply starts with `fstack-reply` and the critique is the `critique` field. If that teammate is unavailable, or a Cursor advisor model cannot start because of credits or an unavailable model, use the local CLI above. On the Cursor plugin, launch the advisor agent. On a credit or unavailable-model failure, mark that row `failed` and try the local CLI list above. Record a new launched row before the CLI runs. Same-model tie-break still skips and does not use the CLI or the teammate.
+3. Record `advisor_launched` or `tiebreak_launched`, then start the advisor. On Grok Bot, send the handoff in `bots/orchestrator.yaml` to the teammate whose profile name is `fstack-advisor` and end the turn. The reply starts with `fstack-reply` and the critique is the `critique` field. If that teammate is unavailable, or a Cursor advisor model cannot start because of credits or an unavailable model, use the local CLI above. On Claude Code, launch the `fstack:advisor` subagent with that same handoff text as its prompt. Its final message is the reply. On the Cursor plugin, launch the advisor agent. On a credit or unavailable-model failure, mark that row `failed` and try the local CLI list above. Record a new launched row before the CLI runs. Same-model tie-break still skips and does not use the CLI or the teammate.
 
 4. Record `advisor_finished` or `tiebreak_finished` on the Advisor calls page, and store the critique on the Notion page `advisor output <n>` under the feature. A planner failure does not stop the feature. A tie-break failure does not become the verdict. The orchestrator records `decide_dispute`.
 

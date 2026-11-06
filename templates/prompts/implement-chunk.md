@@ -4,7 +4,7 @@ Feature: {{feature}}
 Chunk: {{chunk_id}} {{chunk_title}}
 Attempt: {{attempt}}
 
-You are the Cursor coding agent for this chunk. Implement it on `{{branch}}`, based on `{{stack_base}}`. Then stop.
+You are the coding agent for this chunk. Implement it on `{{branch}}`, based on `{{stack_base}}`. Then stop.
 
 ## Spec
 

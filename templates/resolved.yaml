@@ -1,4 +1,5 @@
-# Cursor checkout only. On Grok Bot the same keys live in the bot's persistent state.
+# Claude Code or Cursor checkout only. On Grok Bot the same keys live in the bot's persistent state.
+# runtime is cloud, local_worktree, or subagent (Claude Code).
 # Do not commit this file. Do not store the skill-repo URL or applied_commit here.
 resolved_at:
 source:
