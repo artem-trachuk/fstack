@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0
+
+- Add `scripts/next_action.py`. It reads `state/transitions.yaml` and a JSON snapshot of the feature, returns the next rule, and checks an event's statuses before the orchestrator writes it. It never touches Notion.
+- `pick-next-task` and the orchestrators use it when the host can run Python. Grok Bot applies the table by hand, as before.
+- Add `tests/test_next_action.py`, which reaches every rule, and run it in CI. Three `test_gap_*` tests record table gaps: a tie-break in flight falls to `stuck`, `dispute_budget` repeats and hides `dispute_decide`, and `merge_restack` is shadowed by `restack` and `range_diff`.
+
 ## 0.3.0
 
 - Add Claude Code as a host. Install from this repository's marketplace with `claude plugin install fstack@fstack`, then run `claude --agent fstack:orchestrator`.

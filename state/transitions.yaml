@@ -1,7 +1,8 @@
 # fstack state machine
 # Skills apply this table. They do not invent statuses or skip a next_rule.
 # state_version 1. A different version means stop and ask the human to migrate.
-# There is no fstack CLI. Nothing in this plugin executes the table.
+# scripts/next_action.py reads this table to pick the next rule and to check an event.
+# It does not read or write Notion. Each rule id needs a condition there. The tests fail otherwise.
 # Feature state and cross-feature memory live in Notion. They are not committed.
 # Pull requests carry code only. Skills stay in the git repository.
 

@@ -8,6 +8,12 @@ Feature state and cross-feature memory live in the user's Notion workspace. The 
 
 On Grok Bot, resolved model slugs, the advisor CLI check, and Notion page ids live in the bot's persistent state. On Claude Code and the Cursor plugin they stay in gitignored `.fstack/resolved.yaml`. The repository URL and the last applied skill commit also live in that persistent state, never in the product repository. None of this is a second copy of the feature.
 
+## Next-action script
+
+`scripts/next_action.py` is the executable form of `next_rules` and `events` in `state/transitions.yaml`. The table stays the source of the order, the actions, the details, and the statuses. The script implements each rule's `when` once, keyed by rule id, and refuses to run when a rule in the table has no condition. It takes a JSON snapshot of the feature on stdin and never reads or writes Notion. `next` returns the matching rule. `record` checks an event's statuses before the orchestrator writes it. It does not check guards. Those stay with the skill. A snapshot with an unknown field or status is refused, which catches a Notion page that drifted from the schema.
+
+Two readings are fixed in code where the table is loose. "The chunk" in a chunk rule is the earliest unfinished chunk in stack order, where unfinished means not verified, accepted_by_human, or merged. The release queue is the unmerged chunks ordered by `release_order`, or by the feature's location list when that is empty, then by chunk id.
+
 ## Notion schema
 
 Setup searches for an existing product page and these databases before creating anything. The human approves once, in private, before any schema is created. A shared or team space needs its own approval.

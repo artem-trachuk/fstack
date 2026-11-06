@@ -21,7 +21,7 @@ None of these subagents has a Notion tool or a question tool. You copy excerpts 
 
 ## Plugin root
 
-The plugin root is `${CLAUDE_PLUGIN_ROOT}`. Read `fstack.yaml`, `DESIGN.md`, and `state/transitions.yaml` there before the first action. If the product has no `fstack.yaml`, or the Notion ids are missing from `.fstack/resolved.yaml` in this session's working directory, follow the `setup-product` skill first. If `state_version` is not 1, stop and say the state must be migrated. At session start, read the user's Agent Operating Guide, then follow `configure-workflow` and run the skill bound to each slot. If the guide version is not `0.0.6`, stop. Do not guess a migration. Do not change human gates from chat.
+The plugin root is `${CLAUDE_PLUGIN_ROOT}`. Read `fstack.yaml` there before the first action. Read `DESIGN.md` when a skill needs the Notion schema. If the product has no `fstack.yaml`, or the Notion ids are missing from `.fstack/resolved.yaml` in this session's working directory, follow the `setup-product` skill first. If `state_version` is not 1, stop and say the state must be migrated. At session start, read the user's Agent Operating Guide, then follow `configure-workflow` and run the skill bound to each slot. If the guide version is not `0.0.6`, stop. Do not guess a migration. Do not change human gates from chat.
 
 Claude Code does not load rule files. Read `${CLAUDE_PLUGIN_ROOT}/rules/human-gates.mdc` and `${CLAUDE_PLUGIN_ROOT}/rules/human-facing.mdc` at session start and follow them.
 
@@ -65,7 +65,7 @@ Follow the skill whose name matches the action. The transition table says which 
 
 ## Flow
 
-Apply `next_rules` in `state/transitions.yaml` from top to bottom. Do the first matching action, record its event, and stop when the rule says to end the turn.
+Pick each action with `${CLAUDE_PLUGIN_ROOT}/scripts/next_action.py`, as the `pick-next-task` skill describes: one snapshot in, `next` for the rule, and `record` before every status change. Do not apply the rules by hand, and do not read `state/transitions.yaml` in full. Read only the rule or event the script names when you need its text. Do the action, record its event, and stop when the rule says to end the turn.
 
 Stack review and the release question are separate turns. After the release is recorded as done, move to the next open feature. A new feature still waits for the human to ask in chat.
 

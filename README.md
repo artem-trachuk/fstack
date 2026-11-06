@@ -2,7 +2,7 @@
 
 fstack is a way to deliver one software feature with a small team of bots. You chat with the Orchestrator. It keeps the feature in Notion, asks you with question cards, and launches a Cursor cloud agent for each chunk. A Verifier and an Advisor are separate bots it messages. You review the stacked pull requests once, then approve release.
 
-The name is short for feature stack. Statuses and transitions live in [`state/transitions.yaml`](state/transitions.yaml). Skills follow that table. There is no command-line runner. Grok Bot is the host these skills are written for. [Claude Code](#claude-code) is a second host, where the bots become subagents of one session. A Cursor plugin install is a third option at the end of this file.
+The name is short for feature stack. Statuses and transitions live in [`state/transitions.yaml`](state/transitions.yaml). Skills follow that table. [`scripts/next_action.py`](scripts/next_action.py) applies it when the host can run Python, so the model does not walk the rules by hand. Grok Bot is the host these skills are written for. [Claude Code](#claude-code) is a second host, where the bots become subagents of one session. A Cursor plugin install is a third option at the end of this file.
 
 ## Install
 
@@ -230,6 +230,23 @@ The skill files stay in this git repository. They are not uploaded to Notion Ski
 
 Pull requests are still the code handoff: a branch and a short description of the change. They do not carry fstack's notes, prompts, or critiques.
 
+## Next-action script
+
+[`scripts/next_action.py`](scripts/next_action.py) reads `state/transitions.yaml` and answers two questions from a JSON snapshot of the feature on stdin:
+
+- `next` returns the first rule that matches, its action, the slot or skill to follow, the chunk or location, and the events that are legal now.
+- `record <event>` checks that the event is legal from the current statuses and returns the new ones. Exit code 2 refuses it.
+
+The orchestrator builds the snapshot from one read of the feature page and one query of its chunks, plus what it checked on the forge this turn. The script never reads or writes Notion and needs no credentials. It needs Python 3 and PyYAML. A host that cannot run it, such as Grok Bot today, applies the table by hand, as before. The snapshot keys are in the script's docstring.
+
+Run the tests with:
+
+```bash
+python3 -m unittest discover -s tests
+```
+
+`tests/test_next_action.py` reaches every rule. Tests named `test_gap_*` pin table behaviour that looks wrong today, so a fix to the table changes them on purpose.
+
 ## Workspace
 
 The Notion databases above hold the feature. They are not a git branch.
@@ -269,7 +286,7 @@ A chunk id is `NN-slug`. Status values and the events that change them are only 
 
 Add a skill by creating `skills/<name>/SKILL.md`. The frontmatter `name` matches the folder. `description` says what it does and when to use it. On the Cursor plugin, `collect-requirements` sets `disable-model-invocation: true` so Cursor does not start it. The rule on every host is the skill text: only an explicit human request in chat.
 
-Add a Cursor agent by creating `agents/<name>.md` with `name` and `description`, then a `roles` entry in `fstack.yaml` with `agent` and `model`. Put the skills it follows in the agent file. A read-only plugin agent sets `permissionMode: readonly`. When the bot needs a prompt, add `templates/prompts/<action>.md` and name the action in `build-context`. New statuses and events go in `state/transitions.yaml` first.
+Add a Cursor agent by creating `agents/<name>.md` with `name` and `description`, then a `roles` entry in `fstack.yaml` with `agent` and `model`. Put the skills it follows in the agent file. A read-only plugin agent sets `permissionMode: readonly`. When the bot needs a prompt, add `templates/prompts/<action>.md` and name the action in `build-context`. New statuses and events go in `state/transitions.yaml` first. A new next rule also needs its condition in `scripts/next_action.py`, and a test in `tests/test_next_action.py`. The tests fail until the script names every rule in the table.
 
 Add a hosted bot by creating `bots/<role>.yaml` as described under Bots. Include `sync-bot-config` in its skill list.
 

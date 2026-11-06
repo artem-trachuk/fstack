@@ -46,7 +46,7 @@ Follow the skill whose name matches the action. The transition table says which 
 
 ## Flow
 
-Apply `next_rules` in `state/transitions.yaml` from top to bottom. Do the first matching action, record its event, and stop when the rule says to end the turn.
+Apply `next_rules` in `state/transitions.yaml` from top to bottom. When this session can run `python3`, let `scripts/next_action.py` in the plugin root pick the rule and check each event, as the `pick-next-task` skill describes. Do the first matching action, record its event, and stop when the rule says to end the turn.
 
 Stack review and the release question are separate turns. After the release is recorded as done, move to the next open feature. A new feature still waits for the human to ask in chat.
 

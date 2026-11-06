@@ -1,7 +1,7 @@
 ---
 name: pick-next-task
 description: >
-  Choose the single next action from state/transitions.yaml.
+  Choose the single next action from state/transitions.yaml, with scripts/next_action.py when the host can run it.
   Use when the orchestrator is ready to implement, resume, verify, review, or release.
   Does not implement product code and does not grade a chunk.
 ---
@@ -13,6 +13,16 @@ Follow the debug-log contract.
 Follow the decision-policy contract.
 
 Apply `next_rules` in `state/transitions.yaml` from top to bottom. The first rule whose `when` matches is the only action. Do not skip ahead to release while review is still open.
+
+## The next-action script
+
+When the host can run `python3` with PyYAML, `scripts/next_action.py` in the plugin root applies the table for you. On Claude Code the path is `${CLAUDE_PLUGIN_ROOT}/scripts/next_action.py`. It reads `state/transitions.yaml`. It does not read or write Notion.
+
+1. Build one JSON snapshot from what step 1 below read. `feature` holds the feature page properties under their `feature_fields` names. `chunks` holds every chunk page under its `chunk_fields` names. Read them with one query on the Chunks database filtered by the feature, not one fetch per page. `verifications` lists each verification page whose applied flag is false. `observed` holds what you checked this turn: the default-branch commit for each code location, and per chunk whether the diff page for this attempt exists, the pull request head, whether it is merged, and its CI. The script's docstring lists every key. Leave out what you did not check.
+2. Run `python3 scripts/next_action.py next` with the snapshot on stdin. The answer names the rule, the action, the slot or skill to follow, the chunk or location, the rule's detail, and the events that are legal now. Follow that answer. Do not apply the table again by hand.
+3. Before you write a status change, run `python3 scripts/next_action.py record <event>` with the same snapshot, plus `--chunk`, `--to`, or `--chunk-to` when the event needs them. Write only the statuses it returns. Exit code 2 means the event is not legal from these statuses: do not write it, and show the reason.
+
+The script checks statuses only. The guard text it returns is still yours to follow. A refused snapshot, such as an unknown status, is a sign the Notion page drifted: report it and stop. When the host cannot run the script, apply the table by hand as the steps below describe.
 
 ## When to use
 

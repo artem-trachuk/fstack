@@ -452,6 +452,9 @@ def main() -> int:
     for message in claude_code_errors(ROOT, skill_names, skill_text, manifest_version):
         check(False, message)
     check(True, "Claude Code plugin and subagents")
+    check((ROOT / "scripts" / "next_action.py").is_file() and (ROOT / "tests" / "test_next_action.py").is_file(), "the next-action script and its tests must exist")
+    check("scripts/next_action.py" in skill_text["pick-next-task"], "pick-next-task must use the next-action script")
+    check("unittest discover -s tests" in (ROOT / ".github" / "workflows" / "validate.yml").read_text(encoding="utf-8"), "CI must run the next-action tests")
     for message in fix_intake_errors(table, skill_text):
         check(False, message)
     check(True, "a fix stays on the existing feature")
