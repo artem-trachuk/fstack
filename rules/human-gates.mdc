@@ -1,5 +1,5 @@
 ---
-description: Human approval gates for fstack on the Cursor plugin only. The primary host follows the skills. Merge, release, and outward messages wait for an explicit human approval.
+description: Human approval gates for fstack on the Cursor plugin and Claude Code. The primary host follows the skills. Merge, release, and outward messages wait for an explicit human approval.
 alwaysApply: false
 ---
 

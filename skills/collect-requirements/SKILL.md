@@ -13,7 +13,7 @@ Follow the debug-log contract.
 
 Follow the decision-policy contract.
 
-This skill runs only when the human asks in chat to start a feature, to collect requirements, or to fix a bug. On Grok Bot that is a normal message to the Orchestrator. On Cursor, a slash command is one way to ask, not the only way. Another skill must not start this one.
+This skill runs only when the human asks in chat to start a feature, to collect requirements, or to fix a bug. On Grok Bot that is a normal message to the Orchestrator. On Claude Code that is a message to the orchestrator session, which reads this file because the skill is hidden from automatic invocation. `/fstack:collect-requirements` is the same request. On Cursor, a slash command is one way to ask, not the only way. Another skill must not start this one.
 
 ## When to use
 
@@ -21,7 +21,7 @@ The human asked in chat to start a feature, or to fix a bug or a regression.
 
 ## Steps
 
-1. Read `fstack.yaml`. If it is missing, or the Notion database ids are missing from this bot's persistent state (Grok Bot) or from `.fstack/resolved.yaml` (Cursor plugin), follow `setup-product`, then continue.
+1. Read `fstack.yaml`. If it is missing, or the Notion database ids are missing from this bot's persistent state (Grok Bot) or from `.fstack/resolved.yaml` (Claude Code or the Cursor plugin), follow `setup-product`, then continue.
 
 2. Follow `memory` and search for memories about this product and the request the human described. Pass the excerpts into the requirements or the fix. If Notion is unreachable, stop and show the unsaved text through `tldr`.
 

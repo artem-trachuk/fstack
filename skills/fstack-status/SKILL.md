@@ -15,7 +15,7 @@ A new chat does not remember the last turn. Notion does. Feature pages are not i
 
 ## When to use
 
-The human names a feature, answers a question card, or asks where the work stands. On Grok Bot that is a message in the Orchestrator chat. With no slug, list Features pages and their Status. If Notion is unreachable, stop and say so. Do not look for a local feature folder.
+The human names a feature, answers a question card, or asks where the work stands. On Grok Bot that is a message in the Orchestrator chat. On Claude Code it is a message to the orchestrator session. Claude Code has no pull-request routine, so read each open chunk's pull request on its `fstack/` branch through `gh` or the GitHub tools first. Record a new head, the pull request link, and check status on the chunk page. If the head changed after verification, the approval is void and the chunk needs verify again. With no slug, list Features pages and their Status. If Notion is unreachable, stop and say so. Do not look for a local feature folder.
 
 ## Steps
 

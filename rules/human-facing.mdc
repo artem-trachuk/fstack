@@ -1,5 +1,5 @@
 ---
-description: How fstack messages to the human are written on the Cursor plugin only. The primary host follows the tldr skill.
+description: How fstack messages to the human are written on the Cursor plugin and Claude Code. The primary host follows the tldr skill.
 alwaysApply: false
 ---
 
@@ -7,7 +7,7 @@ alwaysApply: false
 
 If this workspace has no `fstack.yaml`, ignore this rule.
 
-Every bot-to-human message goes through the `tldr` skill before it is sent. Question cards, escalations, review requests, release questions, and status reports all use it. On Grok Bot a decision is a question card with clickable options. On the Cursor plugin, ask the same options in chat.
+Every bot-to-human message goes through the `tldr` skill before it is sent. Question cards, escalations, review requests, release questions, and status reports all use it. On Grok Bot a decision is a question card with clickable options. On Claude Code it is one AskUserQuestion call with the option ids as labels. On the Cursor plugin, ask the same options in chat.
 
 Keep these verbatim, outside the short rewrite: the question id, the options, the recommended default, the impact lines, `release.command`, verified shas, and pull request URLs. An unsaved Notion payload is also verbatim. Do not rewrite it.
 

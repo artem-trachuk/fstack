@@ -2,7 +2,7 @@
 
 fstack is a way to deliver one software feature with a small team of bots. You chat with the Orchestrator. It keeps the feature in Notion, asks you with question cards, and launches a Cursor cloud agent for each chunk. A Verifier and an Advisor are separate bots it messages. You review the stacked pull requests once, then approve release.
 
-The name is short for feature stack. Statuses and transitions live in [`state/transitions.yaml`](state/transitions.yaml). Skills follow that table. There is no command-line runner. Grok Bot is the host these skills are written for. A Cursor plugin install is a secondary option at the end of this file.
+The name is short for feature stack. Statuses and transitions live in [`state/transitions.yaml`](state/transitions.yaml). Skills follow that table. There is no command-line runner. Grok Bot is the host these skills are written for. [Claude Code](#claude-code) is a second host, where the bots become subagents of one session. A Cursor plugin install is a third option at the end of this file.
 
 ## Install
 
@@ -23,12 +23,88 @@ Chat with the Orchestrator. Do not start a feature from another bot.
 3. When the feature lists code locations, `survey-product` reads the product graph first. It re-surveys only nodes whose evidence is stale for that location's current commit, and areas the graph does not cover. The first survey seeds the graph. The read is read-only. With no locations, this step is skipped.
 4. Gap analysis compares the sources that are present against the graph, not against a fresh read of the code. Coverage rows point at node ids. A source is a kind, such as requirements, design, or the current product, plus whatever reader the host has. You answer one card for conflicts, items that are not backed by an authoritative source, and behaviour a location has with no requirement. The choices are implement, write back to a source, skip, or defer. A write happens only after you approve it, and only if that source has a writer.
 5. Clear partial and missing rows become chunks, one per location. A simple feature, update, or fix is one chunk per repo and goes straight to implementation. A split happens only when size, independent risk, multiple repos, or a staged rollout clearly helps. Stacks do not cross locations. A plan question is only for that multi-chunk case when `autonomy` is `ask_more`. Release is per location, then the feature follows `release_policy`: `all_or_none` or `per_repo`.
-6. For each chunk it launches one Cursor cloud agent, stacked on the previous branch. When the run finishes, the Orchestrator is revived with the branch, the pull request, and the report. It messages the Verifier. Verification is a stub, so you get a card: accept the chunk unverified, or stop. That choice is saved in Notion. The stack does not continue until you answer.
+6. For each chunk it launches one Cursor cloud agent, or the `fstack:implementer` subagent on Claude Code, stacked on the previous branch. When the run finishes, the Orchestrator is revived with the branch, the pull request, and the report. It messages the Verifier. Verification is a stub, so you get a card: accept the chunk unverified, or stop. That choice is saved in Notion. The stack does not continue until you answer.
 7. Review the stacked pull requests when the card asks. That card does not approve release.
 8. Answer the later release card. The stack is merged only after you approve the effect and the shas that card names.
 9. After the merge, `update-graph` proposes the feature's confirmed changes as graph updates. You approve that promotion when `graph.promote` is `require_approval`. A stopped feature is not promoted. Lessons go to memory, not into the graph. Then it can start the next feature, and only when you ask.
 
 A later chat with the same Orchestrator resumes from Notion. Ask where the feature stands.
+
+## Claude Code
+
+On Claude Code there are no bots. The Orchestrator is your main session. The Verifier, the Advisor, and the coding agent are subagents that ship with the plugin, so there is nothing to provision.
+
+| Grok Bot | Claude Code |
+| --- | --- |
+| Fstack Orchestrator bot | The main session, started as `fstack:orchestrator` |
+| Fstack Verifier bot | `fstack:verifier` subagent. Tools: Read, Grep, Glob |
+| Fstack Advisor bot, or the local `claude` CLI | `fstack:advisor` subagent. Tools: Read, Grep, Glob |
+| Cursor cloud agent | `fstack:implementer` subagent, in a checkout of the chunk's code location |
+| Question card | One AskUserQuestion call |
+| Bot persistent state | Gitignored `.fstack/resolved.yaml` in the session's working directory |
+| `sync-bot-config` and its weekly routine | A plugin update |
+| `provision-team` | Checks that the three subagents are present. Creates nothing |
+| Pull-request routine | The orchestrator reads `fstack/` pull requests at session start and on resume |
+
+### Install on Claude Code
+
+Add this repository as a marketplace and install the plugin:
+
+```bash
+claude plugin marketplace add artem-trachuk/fstack
+```
+
+```bash
+claude plugin install fstack@fstack
+```
+
+Inside a session, `/plugin marketplace add artem-trachuk/fstack` and `/plugin install fstack@fstack` do the same.
+
+Connect Notion and GitHub on the same computer. Notion is an MCP server. GitHub is the `gh` CLI or a GitHub MCP server.
+
+```bash
+claude mcp add --transport http notion https://mcp.notion.com/mcp
+```
+
+```bash
+gh auth login
+```
+
+### Start on Claude Code
+
+Open a terminal in a checkout of one code location, or in a folder that holds checkouts of several, and start the orchestrator as the main thread:
+
+```bash
+claude --agent fstack:orchestrator
+```
+
+Then follow the [Quick start](#quick-start). Ask it to set up a product, then ask it to start a feature. `collect-requirements` stays hidden from automatic invocation. A chat request reaches it through the orchestrator, and `/fstack:collect-requirements` is the same request.
+
+### How the team runs on Claude Code
+
+- Every subagent gets the same `fstack-handoff` text as its prompt and ends with a message that starts with `fstack-reply`. The envelope is the one in [`bots/orchestrator.yaml`](bots/orchestrator.yaml).
+- No subagent has a Notion tool or a question tool. On this host, "only the Orchestrator reads or writes Notion" is enforced by the tool lists, not only by the skill text.
+- The implementer runs in a temporary worktree when the chunk's code location is the session's own repository. For another location it works in that checkout on the chunk branch. When this computer has no checkout of that location, the orchestrator does not clone one. It tells you which location it needs. The implementer opens the pull request with `gh`.
+- The advisor does not fall back to the local `claude` CLI. That would be the same runtime and account, so it is not an independent opinion.
+- `argon` has no Claude model, so the tie-break uses its `opus` fallback. When the verifier inherits an `opus` session, the two match, the tie-break is skipped, and you are asked.
+- Plugin subagents ignore `permissionMode`, so the `tools:` list is what makes the verifier and advisor read-only.
+- Claude Code does not load the files under `rules/`. The orchestrator reads them at session start.
+
+### Update on Claude Code
+
+```bash
+claude plugin marketplace update fstack
+```
+
+```bash
+claude plugin update fstack@fstack
+```
+
+Restart the session after the update. Claude Code fetches a new copy only when `version` in [`.claude-plugin/plugin.json`](.claude-plugin/plugin.json) changes, so every release bumps it. Saying "update fstack" to the orchestrator shows these commands, then migrates the Notion workflow defaults after the restart.
+
+### Layout
+
+[`.claude-plugin/plugin.json`](.claude-plugin/plugin.json) is the Claude Code manifest, and [`.claude-plugin/marketplace.json`](.claude-plugin/marketplace.json) lists this repository as a one-plugin marketplace. The skills are the same `skills/` folder every host uses. The subagents are in [`claude/agents/`](claude/agents/). The manifest lists them by file, and that list replaces the default `agents/` scan, so the Cursor agent files are not loaded on Claude Code. `hooks/hooks.json` stays absent on this host too. Run `claude plugin validate .` after you edit either manifest.
 
 ## Cursor plugin
 
@@ -148,7 +224,7 @@ Roles name an agent and a model. They do not list skills. The agent file is the 
 
 The Orchestrator is the only role that calls Notion. It copies the chunk spec into the coding agent's launch prompt, passes the verifier its prompt and patch, and passes advisors their input pages' text. Asking the Orchestrator where the feature stands reads the Features database.
 
-On the Cursor plugin, gitignored `.fstack/resolved.yaml` holds resolved model slugs and Notion ids. On Grok Bot those same notes live in the bot's persistent state, because the bot does not clone the product repository. Neither place holds the sync commit, and neither is a copy of the feature. If Notion is unreachable, the Orchestrator stops and shows the unsaved content. It does not write that content to disk.
+On Claude Code and the Cursor plugin, gitignored `.fstack/resolved.yaml` holds resolved model slugs and Notion ids. On Grok Bot those same notes live in the bot's persistent state, because the bot does not clone the product repository. Neither place holds the sync commit, and neither is a copy of the feature. If Notion is unreachable, the Orchestrator stops and shows the unsaved content. It does not write that content to disk.
 
 The skill files stay in this git repository. They are not uploaded to Notion Skills.
 
@@ -197,11 +273,13 @@ Add a Cursor agent by creating `agents/<name>.md` with `name` and `description`,
 
 Add a hosted bot by creating `bots/<role>.yaml` as described under Bots. Include `sync-bot-config` in its skill list.
 
-Run `python3 scripts/validate_plugin.py` after the edit. It checks the manifest, the transition table, the config, the template tokens, the bot configs, and that each event is named by its skill.
+Add a Claude Code subagent by creating `claude/agents/<name>.md` with `name`, `description`, and a `tools` list, then add that file to `agents` in `.claude-plugin/plugin.json`. A read-only subagent lists only Read, Grep, and Glob. Do not give a subagent a Notion tool. Preload the skills it follows with `skills`.
+
+Run `python3 scripts/validate_plugin.py` after the edit. It checks the manifests, the Claude Code subagents, the transition table, the config, the template tokens, the bot configs, and that each event is named by its skill.
 
 ## Bots
 
-Grok Bot is the primary host. Configs in `bots/` are version `0.1`. Each file has a profile (`name`, `title`, `description`, `persona`, `instructions`), skills copied from this repo, a `model_role` from `fstack.yaml`, connectors, teammates, a handoff message, and routines. A routine has a name, a prompt, and either a five-field cron schedule or a GitHub pull-request event. Cron uses the timezone in Grok Bot settings under Bot. The files name no host, user, or bot id. Address a teammate by the `name` in its config, which is the profile name you give it at creation.
+Grok Bot is the primary host. On Claude Code the same roles are subagents. See [Claude Code](#claude-code). Configs in `bots/` are version `0.1`. Each file has a profile (`name`, `title`, `description`, `persona`, `instructions`), skills copied from this repo, a `model_role` from `fstack.yaml`, connectors, teammates, a handoff message, and routines. A routine has a name, a prompt, and either a five-field cron schedule or a GitHub pull-request event. Cron uses the timezone in Grok Bot settings under Bot. The files name no host, user, or bot id. Address a teammate by the `name` in its config, which is the profile name you give it at creation.
 
 The Orchestrator connects to Notion and GitHub. It reads other inputs through the `sources` list in the product config. It messages the Verifier and the Advisor. The message starts with `fstack-handoff` and includes the role, feature, chunk, ask (`verdict` or `critique`), and the prompt. The reply starts with `fstack-reply`. The Verifier and Advisor each have one read-only reader for the skill repository, used only by sync. An Advisor can instead be the `claude` command on the bot computer when that teammate is unavailable. See `advisors.fallback` in `fstack.yaml`.
 

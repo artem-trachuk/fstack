@@ -18,6 +18,8 @@ The git repository is the only source of skill files and bot config. This bot ap
 
 A routine named in `bots/<name>.yaml` fires, or the human asks to sync. The routine prompt says which config file you are.
 
+On Claude Code there is no bot to sync. The plugin install carries the skills and the subagents, and the plugin update is the sync. Do not copy skills, edit a profile, or create a routine. Say so, and follow `upgrade-fstack` when the human asked to update.
+
 ## Steps
 
 1. Read the `repository` field in `plugin.json`. That is the fstack skill repository. Read the latest commit on its default branch. A bot with a read-only repo reader uses that reader and does not ask for write access. A bot with no reader fetches the public default branch of that URL. Do not hardcode a user or a machine. Do not use a product code location for this read.

@@ -36,7 +36,7 @@ The Notion feature page exists and the orchestrator needs the next legal action.
 
    The orchestrator launches the verifier at `launch_verifier`. The verifier does not build its own prompt and, while the skill is a stub, does not judge the patch. Follow `build-context` for `verify` first, then record `verifier_launched` before you wait.
 
-   On Grok Bot, launching the verifier means sending the handoff in `bots/orchestrator.yaml` to the teammate whose profile name is `fstack-verifier`. End the turn. The reply arrives later and starts with `fstack-reply`. On the Cursor plugin, launch the verifier agent with the same prompt.
+   On Grok Bot, launching the verifier means sending the handoff in `bots/orchestrator.yaml` to the teammate whose profile name is `fstack-verifier`. End the turn. The reply arrives later and starts with `fstack-reply`. On Claude Code, launch the `fstack:verifier` subagent with the Agent tool. Its prompt is that same handoff text, and its final message is the reply that starts with `fstack-reply`. Pass `roles.verifier` from `.fstack/resolved.yaml` as the model. On the Cursor plugin, launch the verifier agent with the same prompt.
 
    `decide_dispute` is yours. The tie-break critique is not the verdict.
 

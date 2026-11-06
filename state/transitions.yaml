@@ -11,7 +11,7 @@ storage:
   backend: notion
   writer: orchestrator
   publish: pull-requests-and-notion
-  # Cursor checkout only: model slugs and Notion ids. Not the sync commit.
+  # Claude Code or Cursor checkout only: model slugs and Notion ids. Not the sync commit.
   local_config: .fstack/resolved.yaml
   # Repository URL and last applied commit live in the bot's persistent state.
   bot_state: persistent
